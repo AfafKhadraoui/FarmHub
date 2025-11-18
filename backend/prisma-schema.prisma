@@ -1,0 +1,187 @@
+// Prisma Schema for Farm Management System - MVP (Updated)
+// Database: PostgreSQL
+// Last Updated: November 16, 2025
+// Version: 2.0 with field history tracking and multiple workers per task
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ========================================
+// ENUMS
+// ========================================
+
+enum UserRole {
+  admin      // Farm owner
+  worker     // Farm worker
+  platform_admin // Platform developers (see all farms)
+}
+
+enum FieldStatus {
+  idle
+  planted
+  growing
+  harvesting
+}
+
+enum TaskStatus {
+  pending
+  in_progress
+  completed
+}
+
+enum Priority {
+  low
+  medium
+  high
+}
+
+// ========================================
+// MODELS
+// ========================================
+
+// Farm model - represents a farm organization
+model Farm {
+  id          Int      @id @default(autoincrement())
+  name        String   @db.VarChar(255)
+  location    String   @db.VarChar(255)
+  joinCode    String   @unique @db.VarChar(20) // e.g., "FARM-ABC123"
+  createdBy   String?  @db.VarChar(255) // Email of platform admin who created this (for tracking)
+  createdAt   DateTime @default(now()) @db.Timestamp(0)
+  updatedAt   DateTime @updatedAt @db.Timestamp(0)
+
+  // Relations
+  users  User[]
+  fields Field[]
+  tasks  Task[]
+
+  @@map("farms")
+  @@index([joinCode])
+  @@index([createdBy])
+}
+
+// User model - represents admins, workers, and platform admins
+model User {
+  id        Int      @id @default(autoincrement())
+  email     String   @unique @db.VarChar(255)
+  password  String   @db.VarChar(255) // Hashed with bcrypt
+  name      String   @db.VarChar(255)
+  phone     String?  @db.VarChar(20)
+  role      UserRole // admin, worker, or platform_admin
+  farmId    Int?     // NULL for platform_admin (they don't belong to a farm)
+  createdAt DateTime @default(now()) @db.Timestamp(0)
+  updatedAt DateTime @updatedAt @db.Timestamp(0)
+
+  // Relations
+  farm             Farm[]             @relation("FarmOwner") // For platform admins tracking
+  userFarm         Farm?              @relation(fields: [farmId], references: [id], onDelete: Cascade)
+  taskAssignments  TaskAssignment[]
+
+  @@map("users")
+  @@index([farmId])
+  @@index([email])
+  @@index([role])
+}
+
+// Field model - represents farm fields/plots WITH HISTORY TRACKING
+// When crop changes, create NEW row (don't update existing)
+// Use 'active' flag to track current vs historical records
+model Field {
+  id          Int         @id @default(autoincrement())
+  name        String      @db.VarChar(255) // e.g., "North Field", "Plot A"
+  size        Float       @db.DoublePrecision // in hectares or acres
+  cropType    String?     @db.VarChar(100)
+  status      FieldStatus @default(idle)
+  plantedDate DateTime?   @db.Date
+  harvestDate DateTime?   @db.Date
+  active      Boolean     @default(true) // TRUE = current, FALSE = historical
+  farmId      Int
+  createdAt   DateTime    @default(now()) @db.Timestamp(0)
+  updatedAt   DateTime    @updatedAt @db.Timestamp(0)
+
+  // Relations
+  farm  Farm   @relation(fields: [farmId], references: [id], onDelete: Cascade)
+  tasks Task[]
+
+  @@map("fields")
+  @@index([farmId])
+  @@index([active]) // Important for querying current fields only
+  @@index([status])
+  @@index([farmId, active]) // Composite index for better performance
+}
+
+// Task model - represents work tasks
+// Multiple workers can be assigned via TaskAssignment table
+model Task {
+  id          Int        @id @default(autoincrement())
+  title       String     @db.VarChar(255)
+  description String?    @db.Text
+  status      TaskStatus @default(pending)
+  priority    Priority   @default(medium)
+  dueDate     DateTime   @db.Timestamp(0)
+  notes       String?    @db.Text // Worker notes/comments
+  farmId      Int
+  fieldId     Int?       // Field related to task (NULL = no specific field)
+  createdAt   DateTime   @default(now()) @db.Timestamp(0)
+  updatedAt   DateTime   @updatedAt @db.Timestamp(0)
+
+  // Relations
+  farm            Farm             @relation(fields: [farmId], references: [id], onDelete: Cascade)
+  field           Field?           @relation(fields: [fieldId], references: [id], onDelete: SetNull)
+  taskAssignments TaskAssignment[] // Multiple workers assigned
+
+  @@map("tasks")
+  @@index([farmId])
+  @@index([fieldId])
+  @@index([status])
+  @@index([dueDate])
+}
+
+// TaskAssignment model - junction table for many-to-many relationship
+// Allows multiple workers per task
+model TaskAssignment {
+  id        Int      @id @default(autoincrement())
+  taskId    Int
+  workerId  Int
+  assignedAt DateTime @default(now()) @db.Timestamp(0)
+
+  // Relations
+  task   Task @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  worker User @relation(fields: [workerId], references: [id], onDelete: Cascade)
+
+  @@unique([taskId, workerId]) // Prevent duplicate assignments
+  @@map("task_assignments")
+  @@index([taskId])
+  @@index([workerId])
+}
+
+// ========================================
+// NOTES FOR DEVELOPERS
+// ========================================
+
+// 1. FIELD HISTORY TRACKING:
+//    - When user updates crop, DON'T update the row
+//    - Instead: Set current row active=false, CREATE new row with active=true
+//    - Query active fields: WHERE active = true
+//    - Query field history: WHERE active = false ORDER BY createdAt DESC
+//
+// 2. MULTIPLE WORKERS PER TASK:
+//    - Use TaskAssignment table to assign workers
+//    - One task can have many TaskAssignment records
+//    - Query worker's tasks: JOIN TaskAssignment WHERE workerId = X
+//
+// 3. PLATFORM ADMIN TRACKING:
+//    - Farm.createdBy stores email of platform admin
+//    - Used by developers to track who created which farm
+//    - Regular users don't see this field
+//
+// 4. REMOVED FIELDS:
+//    - ❌ notes from Farm table (not needed)
+//    - ❌ notes from User table (not needed)
+//    - ❌ createdById from Task table (not needed)
+//    - ❌ assignedToId from Task table (replaced by TaskAssignment)
