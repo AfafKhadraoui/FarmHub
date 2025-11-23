@@ -41,6 +41,20 @@
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
   --radius-xl: calc(var(--radius) + 4px);
+  --color-admin-primary: var(--admin-primary);
+  --color-admin-primary-dark: var(--admin-primary-dark);
+  --color-admin-secondary: var(--admin-secondary);
+  --color-admin-secondary-dark: var(--admin-secondary-dark);
+  --color-admin-text-dark: var(--admin-text-dark);
+  --color-admin-text-muted: var(--admin-text-muted);
+  --color-admin-bg: var(--admin-bg);
+  --color-admin-bg-gray: var(--admin-bg-gray);
+  --color-admin-border: var(--admin-border);
+  --color-admin-blue: var(--admin-blue);
+  --color-admin-blue-dark: var(--admin-blue-dark);
+  --color-admin-purple: var(--admin-purple);
+  --color-admin-purple-dark: var(--admin-purple-dark);
+  --color-admin-red: var(--admin-red);
 }
 
 :root {
@@ -76,6 +90,22 @@
   --sidebar-accent-foreground: oklch(0.205 0 0);
   --sidebar-border: oklch(0.922 0 0);
   --sidebar-ring: oklch(0.708 0 0);
+
+  /* Admin Dashboard Colors */
+  --admin-primary: #4baf47;
+  --admin-primary-dark: #3d9639;
+  --admin-secondary: #eec044;
+  --admin-secondary-dark: #d4a843;
+  --admin-text-dark: #1f1e17;
+  --admin-text-muted: #878680;
+  --admin-bg: #f8f8f8;
+  --admin-bg-gray: #f3f3f5;
+  --admin-border: #e5e7eb;
+  --admin-blue: #2196f3;
+  --admin-blue-dark: #1976d2;
+  --admin-purple: #9c27b0;
+  --admin-purple-dark: #7b1fa2;
+  --admin-red: #f44336;
 }
 
 .dark {
@@ -123,4 +153,24 @@
 
 body {
   @apply bg-white;
+}
+
+/* Custom select dropdown styling */
+select option {
+  background-color: white;
+  color: #1f1e17;
+  padding: 12px 16px;
+  font-family: "Inter", sans-serif;
+  font-size: 14px;
+  border: none;
+}
+
+select option:hover {
+  background-color: #f3f3f5;
+}
+
+select option:checked,
+select option:focus {
+  background-color: #4baf47;
+  color: white;
 }

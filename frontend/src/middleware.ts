@@ -6,7 +6,11 @@ export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   // Protect /admin/* routes (admin only)
-  if (pathname.startsWith("/admin")) {
+  // TEMPORARY: Bypass auth for /admin/dashboard during UI testing
+  if (
+    pathname.startsWith("/admin") &&
+    !pathname.startsWith("/admin/dashboard")
+  ) {
     if (!token) {
       return NextResponse.redirect(new URL("/login", request.url));
     }
