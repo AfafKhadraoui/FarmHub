@@ -334,16 +334,8 @@ const authController = {
 // refresh token 
 async RefreshToken(req, res) {
   try {
-    const { refreshToken } = req.body;
-    if (!refreshToken) {
-      return res.status(400).json({
-        success: false,
-        error: 'Refresh token is required',
-        code: 'BAD_REQUEST'
-      });
-    }
-
-    const result = await authService.refreshToken(refreshToken);
+    const user = req.user; // user extracted from access token
+    const result = authService.refreshToken(user);
 
     return res.status(200).json({
       success: true,
@@ -351,13 +343,14 @@ async RefreshToken(req, res) {
       data: result
     });
   } catch (error) {
-    return res.status(401).json({
+    return res.status(400).json({
       success: false,
       error: error.message,
-      code: 'INVALID_TOKEN'
+      code: 'BAD_REQUEST'
     });
   }
 }
+
 
 };
 
