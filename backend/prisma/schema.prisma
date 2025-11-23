@@ -1,7 +1,5 @@
-// Prisma Schema for Farm Management System - MVP (Updated)
-// Database: PostgreSQL
-// Last Updated: November 16, 2025
-// Version: 2.0 with field history tracking and multiple workers per task
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
 
 generator client {
   provider = "prisma-client-js"
@@ -17,8 +15,8 @@ datasource db {
 // ========================================
 
 enum UserRole {
-  admin      // Farm owner
-  worker     // Farm worker
+  admin // Farm owner
+  worker // Farm worker
   platform_admin // Platform developers (see all farms)
 }
 
@@ -47,45 +45,44 @@ enum Priority {
 
 // Farm model - represents a farm organization
 model Farm {
-  id          Int      @id @default(autoincrement())
-  name        String   @db.VarChar(255)
-  location    String   @db.VarChar(255)
-  joinCode    String   @unique @db.VarChar(20) // e.g., "FARM-ABC123"
-  createdBy   String?  @db.VarChar(255) // Email of platform admin who created this (for tracking)
-  createdAt   DateTime @default(now()) @db.Timestamp(0)
-  updatedAt   DateTime @updatedAt @db.Timestamp(0)
+  id        Int      @id @default(autoincrement())
+  name      String   @db.VarChar(255)
+  location  String   @db.VarChar(255)
+  joinCode  String   @unique @db.VarChar(20) // e.g., "FARM-ABC123"
+  createdBy String?  @db.VarChar(255) // Email of platform admin who created this (for tracking)
+  createdAt DateTime @default(now()) @db.Timestamp(0)
+  updatedAt DateTime @updatedAt @db.Timestamp(0)
 
   // Relations
   users  User[]
   fields Field[]
   tasks  Task[]
 
-  @@map("farms")
   @@index([joinCode])
   @@index([createdBy])
+  @@map("farms")
 }
 
-// User model - represents admins, workers, and platform admins
 model User {
   id        Int      @id @default(autoincrement())
   email     String   @unique @db.VarChar(255)
-  password  String   @db.VarChar(255) // Hashed with bcrypt
+  password  String   @db.VarChar(255)
   name      String   @db.VarChar(255)
   phone     String?  @db.VarChar(20)
-  role      UserRole // admin, worker, or platform_admin
-  farmId    Int?     // NULL for platform_admin (they don't belong to a farm)
+  role      UserRole
+  farmId    Int?
   createdAt DateTime @default(now()) @db.Timestamp(0)
   updatedAt DateTime @updatedAt @db.Timestamp(0)
 
   // Relations
-  farm             Farm[]             @relation("FarmOwner") // For platform admins tracking
-  userFarm         Farm?              @relation(fields: [farmId], references: [id], onDelete: Cascade)
-  taskAssignments  TaskAssignment[]
+  userFarm        Farm?            @relation(fields: [farmId], references: [id], onDelete: Cascade)
+  taskAssignments TaskAssignment[]
+  notifications   Notification[]
 
-  @@map("users")
   @@index([farmId])
   @@index([email])
   @@index([role])
+  @@map("users")
 }
 
 // Field model - represents farm fields/plots WITH HISTORY TRACKING
@@ -108,11 +105,11 @@ model Field {
   farm  Farm   @relation(fields: [farmId], references: [id], onDelete: Cascade)
   tasks Task[]
 
-  @@map("fields")
   @@index([farmId])
   @@index([active]) // Important for querying current fields only
   @@index([status])
   @@index([farmId, active]) // Composite index for better performance
+  @@map("fields")
 }
 
 // Task model - represents work tasks
@@ -126,7 +123,7 @@ model Task {
   dueDate     DateTime   @db.Timestamp(0)
   notes       String?    @db.Text // Worker notes/comments
   farmId      Int
-  fieldId     Int?       // Field related to task (NULL = no specific field)
+  fieldId     Int? // Field related to task (NULL = no specific field)
   createdAt   DateTime   @default(now()) @db.Timestamp(0)
   updatedAt   DateTime   @updatedAt @db.Timestamp(0)
 
@@ -135,19 +132,19 @@ model Task {
   field           Field?           @relation(fields: [fieldId], references: [id], onDelete: SetNull)
   taskAssignments TaskAssignment[] // Multiple workers assigned
 
-  @@map("tasks")
   @@index([farmId])
   @@index([fieldId])
   @@index([status])
   @@index([dueDate])
+  @@map("tasks")
 }
 
 // TaskAssignment model - junction table for many-to-many relationship
 // Allows multiple workers per task
 model TaskAssignment {
-  id        Int      @id @default(autoincrement())
-  taskId    Int
-  workerId  Int
+  id         Int      @id @default(autoincrement())
+  taskId     Int
+  workerId   Int
   assignedAt DateTime @default(now()) @db.Timestamp(0)
 
   // Relations
@@ -155,9 +152,42 @@ model TaskAssignment {
   worker User @relation(fields: [workerId], references: [id], onDelete: Cascade)
 
   @@unique([taskId, workerId]) // Prevent duplicate assignments
-  @@map("task_assignments")
   @@index([taskId])
   @@index([workerId])
+  @@map("task_assignments")
+}
+
+// Notification model - platform admin notifications
+model Notification {
+  id        String   @id @db.VarChar(50)
+  userId    Int
+  type      String   @db.VarChar(20)
+  title     String   @db.VarChar(255)
+  message   String   @db.Text
+  timestamp DateTime @default(now()) @db.Timestamp(0)
+  isRead    Boolean  @default(false)
+
+  // Relations
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([isRead])
+  @@index([timestamp])
+  @@map("notifications")
+}
+
+// Activity model - platform-wide activity feed
+model Activity {
+  id        String   @id @db.VarChar(50)
+  type      String   @db.VarChar(50)
+  title     String   @db.VarChar(255)
+  message   String   @db.Text
+  timestamp DateTime @default(now()) @db.Timestamp(0)
+  metadata  Json?
+
+  @@index([timestamp])
+  @@index([type])
+  @@map("activities")
 }
 
 // ========================================
