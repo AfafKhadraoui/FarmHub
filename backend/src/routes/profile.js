@@ -10,6 +10,7 @@ const { authenticate } = require("../middleware/dashboardMiddleware");
 
 // GET /profile - returns current user's profile
 router.get("/", authenticate, async (req, res) => {
+  console.log("from the profile route");
   try {
     const userId = req.user.id;
 

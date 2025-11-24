@@ -21,7 +21,6 @@ app.use("/admin", require("./routes/farms"));
 app.use("/admin", require("./routes/notifications"));
 app.use("/admin", require("./routes/admin"));
 app.use("/admin", require("./routes/activities"));
-
 // Profile routes for current user
 app.use("/profile", require("./routes/profile"));
 // Health check

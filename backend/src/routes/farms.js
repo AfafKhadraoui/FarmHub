@@ -22,22 +22,21 @@ router.get(
   handleValidationErrors,
   async (req, res) => {
     try {
-      const months = req.query.months || 6;
-
+      const months = req.query.months ? Number(req.query.months) : 6;
       // Use raw SQL because Prisma can't group by date parts yet.[web:78]
       const rows = await prisma.$queryRaw`
-        SELECT
-          TO_CHAR("created_at", 'Mon') AS month,
-          COUNT(*)::int AS farms
-        FROM "farms"
-        WHERE "created_at" >= NOW() - (${months} || ' months')::interval
-        GROUP BY TO_CHAR("created_at", 'Mon'), DATE_TRUNC('month', "created_at")
-        ORDER BY DATE_TRUNC('month', "created_at")
-      `;
+  SELECT
+    TO_CHAR("createdAt", 'Mon') AS month,
+    COUNT(*)::int AS farms
+  FROM "farms"
+  WHERE "createdAt" >= NOW() - (${months} || ' months')::interval
+  GROUP BY TO_CHAR("createdAt", 'Mon'), DATE_TRUNC('month', "createdAt")
+  ORDER BY DATE_TRUNC('month', "createdAt")
+`;
 
       res.json(rows.map((r) => ({ month: r.month, farms: r.farms })));
     } catch (err) {
-      console.error(err);
+      console.error("FARM GROWTH ERROR:", JSON.stringify(err, null, 2));
       return sendError(res, 500, "INTERNAL_ERROR", "Internal Server Error");
     }
   }

@@ -61,9 +61,11 @@ router.get("/metrics", authenticate, requirePlatformAdmin, async (req, res) => {
 
 // GET /admin/profile
 router.get("/profile", authenticate, requirePlatformAdmin, async (req, res) => {
+  console.log("from the admin profile route");
+  console.log(req.user);
   try {
     const user = await prisma.user.findUnique({
-      where: { id: req.user.id, role: UserRole.platform_admin },
+      where: { id: req.user.id },
     });
 
     if (!user) {
@@ -102,14 +104,13 @@ router.patch(
       const { name, phone, bio } = req.body;
 
       // bio, avatarUrl do not exist in schema; remove or add them to User first.
-      const updated = await prisma.user.update({
-        where: { id: req.user.id, role: UserRole.platform_admin },
-        data: {
-          ...(name !== undefined ? { name } : {}),
-          ...(phone !== undefined ? { phone } : {}),
-          // add bio if you add it to schema
-        },
-      });
+     const updated = await prisma.user.update({
+       where: { id: req.user.id },
+       data: {
+         ...(name !== undefined ? { name } : {}),
+         ...(phone !== undefined ? { phone } : {}),
+       },
+     });
 
       res.json({
         id: updated.id,
