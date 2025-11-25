@@ -9,7 +9,7 @@ export default function Hero() {
       style={{ backgroundImage: 'url(/images/img_divelementorrepeateritem5887cc6.png)', backgroundSize: 'cover' }}>
       <div className="w-full max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8">
         <div className="relative max-w-4xl">
-          <h1 className="text-6xl lg:text-8xl font-['Covered_By_Your_Grace'] text-white leading-tight mb-8">
+          <h1 className="text-6xl lg:text-8xl font-covered text-white leading-tight mb-8">
             Farm Management Made Simple
           </h1>
           
@@ -18,9 +18,12 @@ export default function Hero() {
           </p>
 
           <div className="flex items-center gap-6">
-            <Button className="bg-green-500 hover:bg-green-600 text-white px-8 py-4 text-base">
-              Get Started
-            </Button>
+            <a 
+                href="/register"
+                className="bg-[#4baf47] text-white px-8 py-4 rounded-lg font-bold text-sm hover:bg-[#3d9a39] transition-colors inline-flex items-center justify-center"
+              >
+                Get Started
+            </a>
             <img src="/images/img_elements.png" alt="" className="w-28 h-14" />
           </div>
         </div>

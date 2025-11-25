@@ -1,10 +1,19 @@
 import type { Metadata } from 'next';
-import { Manrope } from 'next/font/google';
+import { Manrope, Covered_By_Your_Grace } from 'next/font/google';
 import './globals.css';
 import Navbar from '../components/layout/Navbar';
 import Footer from '../components/layout/Footer';
 
-const manrope = Manrope({ subsets: ['latin'] });
+const manrope = Manrope({ 
+  subsets: ['latin'],
+  variable: '--font-manrope',
+});
+
+const coveredByYourGrace = Covered_By_Your_Grace({ 
+  weight: '400',
+  subsets: ['latin'],
+  variable: '--font-covered',
+});
 
 export const metadata: Metadata = {
   title: 'FarmHub',
@@ -18,7 +27,7 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      <body className={manrope.className}>
+      <body className={`${manrope.variable} ${coveredByYourGrace.variable} font-sans`}>
         <Navbar />
         {children}
         <Footer />
