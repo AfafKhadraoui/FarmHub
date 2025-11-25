@@ -20,7 +20,7 @@ export function RoleSelector({ selectedRole, onRoleChange }: RoleSelectorProps) 
             'flex-1 py-3 px-4 text-base font-semibold rounded-xl transition-all duration-200',
             'focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#5cb85c]',
             selectedRole === 'admin'
-              ? 'bg-[#5cb85c] text-white shadow-sm border-2 border-[#333333]'
+              ? 'bg-[#5cb85c] text-white shadow-sm border-2 border-[#5cb85c]'
               : 'bg-transparent text-[#666666] hover:text-[#333333] border-2 border-transparent'
           )}
         >
@@ -33,7 +33,7 @@ export function RoleSelector({ selectedRole, onRoleChange }: RoleSelectorProps) 
             'flex-1 py-3 px-4 text-base font-semibold rounded-xl transition-all duration-200',
             'focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#5cb85c]',
             selectedRole === 'worker'
-              ? 'bg-[#5cb85c] text-white shadow-sm border-2 border-[#333333]'
+              ? 'bg-[#5cb85c] text-white shadow-sm border-2 border-[#5cb85c]'
               : 'bg-transparent text-[#666666] hover:text-[#333333] border-2 border-transparent'
           )}
         >
