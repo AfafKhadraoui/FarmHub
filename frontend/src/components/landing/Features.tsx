@@ -1,51 +1,102 @@
-'use client';
+"use client"
 
-import React from 'react';
-import FeatureCard from './FeatureCard';
+import { useState } from "react"
+import Image from "next/image"
+import FeatureCard from "./FeatureCard"
 
-const features = [
+interface Feature {
+  id: number
+  title: string
+  description: string
+  image: string
+}
+
+export default function Features() {
+  const [activeFeature, setActiveFeature] = useState<number>(0)
+
+  const features: Feature[] = [
   {
     id: 1,
-    title: 'Field Management',
-    description: 'Track your farm plots with complete crop history and rotation planning',
-    image: '/images/img_service_05_webp.png',
-    icon: '/images/img_icon_white_a700_50x50.svg'
+    title: "Field Management",
+    description: "Easily map, organize, and monitor your fields and crops.",
+    image: "/images/20251117_1813_Minimal Field Map_simple_compose_01ka9cvjmzf25atgs72x5qpkv1.png",
   },
   {
     id: 2,
-    title: 'Task Management',
-    description: 'Assign tasks to multiple workers and track completion in real-time',
-    image: '/images/tablet.png',
-    icon: '/images/img_vector_white_a700.svg'
+    title: "Smart Task Management",
+    description: "Create, assign, and track farm tasks with real-time updates.",
+    image: "/images/20251117_1815_Task Assignment Icon_simple_compose_01ka9cxmxxeg896qd9y2q823f4.png",
   },
   {
     id: 3,
-    title: 'Weather Integration',
-    description: 'Get real-time weather forecasts to plan your farming activities better',
-    image: '/images/img_service_07_webp.png',
-    icon: '/images/img_icon_50x50.svg'
-  }
-];
+    title: "Dashboard & Insights",
+    description: "View farm statistics, worker performance, and progress insights.",
+    image: "/images/20251117_1815_Green Dashboard Sketch_simple_compose_01ka9czny0eewb8jrt3pa0pg49.png",
+  },
+  {
+    id: 4,
+    title: "Weather Monitoring",
+    description: "Get real-time forecasts and alerts for better farming decisions.",
+    image: "/images/20251117_1817_Sun and Cloud Sketch_simple_compose_01ka9d3qzrfdes4f5v70tv65yy.png",
+  },
+]
 
-export default function Features() {
   return (
-    <section id="services" className="w-full bg-[#f8f7f0] py-20">
+    <section id="features" className="w-full">
       <div className="w-full max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="text-center mb-16">
-          <h2 className="text-3xl font-['Covered_By_Your_Grace'] text-[#eec044] mb-2">
-            Our Services
-          </h2>
-          <h3 className="text-5xl font-extrabold text-gray-900">
-            What We Offer
-          </h3>
-        </div>
+        <div className="flex flex-col gap-[49px] sm:gap-[74px] md:gap-[98px] justify-start items-center w-full py-[47px] sm:py-[71px] md:py-[94px]">
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-          {features.map((feature) => (
-            <FeatureCard key={feature.id} feature={feature} />
-          ))}
+          {/* Section Header */}
+          <div className="flex flex-col justify-start items-center w-auto">
+            <p className="text-[20px] sm:text-[22px] md:text-[24px] font-normal text-center text-[#eec044] font-covered">
+              Our Features
+            </p>
+            <h2 className="text-[36px] sm:text-[42px] md:text-[48px] font-extrabold text-center text-[#1f1e17] font-sans mt-[26px]">
+              Why Choose Us ?
+            </h2>
+            <p className="text-[20px] sm:text-[23px] md:text-[26px] font-extrabold text-center text-[#4baf47] font-sans mt-[10px]">
+              Everything you need to manage your farm efficiently
+            </p>
+          </div>
+
+          {/* Features Grid */}
+          <div className="relative w-full lg:w-[96%]">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 place-items-stretch w-full">
+              {features.map((feature, index) => (
+                <FeatureCard
+                  key={feature.id}
+                  id={feature.id}
+                  title={feature.title}
+                  description={feature.description}
+                  image={feature.image}
+                  onMouseEnter={() => setActiveFeature(index)}
+                />
+              ))}
+            </div>
+
+            {/* Feature Image Overlays */}
+            <div className="hidden lg:block absolute left-[31%] top-[70px] z-[-1] pointer-events-none">
+              <Image
+                src="/images/img_20251117_1815_task.png"
+                alt="Task Management"
+                width={250}
+                height={376}
+                className="w-[250px] h-auto"
+              />
+            </div>
+
+            <div className="hidden lg:block absolute right-[4%] top-[50px] z-[-1] pointer-events-none">
+              <Image
+                src="/images/img_20251117_1817_sun.png"
+                alt="Weather Monitoring"
+                width={282}
+                height={424}
+                className="w-[282px] h-auto"
+              />
+            </div>
+          </div>
         </div>
       </div>
     </section>
-  );
+  )
 }

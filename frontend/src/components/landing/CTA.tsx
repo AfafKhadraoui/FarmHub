@@ -1,6 +1,7 @@
 'use client';
 
 import React from 'react';
+import Link from "next/link"
 import { Button } from '@/components/ui/button';
 
 export default function CTA() {
@@ -13,9 +14,11 @@ export default function CTA() {
         <p className="text-xl text-white/90 mb-8 max-w-2xl mx-auto">
           Join thousands of farmers who are already using FarmHub to streamline their operations
         </p>
-        <Button className="bg-white text-green-600 hover:bg-gray-100 px-12 py-6 text-lg font-bold">
-          Get Started Free
-        </Button>
+        <Link href="/register">
+          <Button className="bg-white text-green-600 hover:bg-gray-100 px-12 py-6 text-lg font-bold">
+             Get Started Free
+          </Button>
+        </Link>
       </div>
     </section>
   );

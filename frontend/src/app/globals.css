@@ -6,7 +6,7 @@
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
+  --font-sans: var(--font-manrope);
   --font-mono: var(--font-geist-mono);
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
@@ -153,6 +153,12 @@
 
 body {
   @apply bg-white;
+  font-family: var(--font-manrope), sans-serif;
+}
+
+/* Covered By Your Grace Font Utility Class */
+.font-covered {
+  font-family: var(--font-covered), cursive;
 }
 
 /* Custom select dropdown styling */
@@ -160,7 +166,7 @@ select option {
   background-color: white;
   color: #1f1e17;
   padding: 12px 16px;
-  font-family: "Inter", sans-serif;
+  font-family: var(--font-manrope), sans-serif;
   font-size: 14px;
   border: none;
 }

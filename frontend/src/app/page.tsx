@@ -1,8 +1,16 @@
 import { Metadata } from 'next';
+import Navbar from '../components/layout/Navbar';
+import Footer from '../components/layout/Footer';
 import Hero from '../components/landing/Hero';
 import Features from '../components/landing/Features';
 import HowItWorks from '../components/landing/HowItWorks';
 import CTA from '../components/landing/CTA';
+import FAQ from '../components/landing/FAQ';
+import GetToKnowUs from '../components/landing/GetToKnowUs';
+import PlatformBenefits from '../components/landing/PlatformBenefits';
+import WhoUsesFarmHub from '../components/landing/WhoUsesFarmHub';
+import Testimonials from '../components/landing/Testimonials';
+
 
 export const metadata: Metadata = {
   title: 'FarmHub - Smart Farm Management Platform | Connect Workers & Owners',
@@ -16,11 +24,24 @@ export const metadata: Metadata = {
 
 export default function HomePage() {
   return (
-    <main className="min-h-screen bg-white">
-      <Hero />
-      <Features />
-      <HowItWorks />
-      <CTA />
-    </main>
+    <>
+      <Navbar />
+      <main className="min-h-screen bg-white">
+        <Hero />
+        <Features />
+        <GetToKnowUs />
+        <PlatformBenefits />
+        <HowItWorks />
+        <WhoUsesFarmHub />
+        <section id="testimonials">
+          <Testimonials />
+        </section>
+        <section id="faq">
+          <FAQ />
+        </section>
+        <CTA />
+      </main>
+      <Footer />
+    </>
   );
 }
