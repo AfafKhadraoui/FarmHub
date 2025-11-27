@@ -5,16 +5,16 @@ export function middleware(request: NextRequest) {
   const token = request.cookies.get("token");
   const { pathname } = request.nextUrl;
 
-  // Protect /admin/* routes (admin only)
-  // TEMPORARY: Bypass auth for /admin/dashboard during UI testing
+  // Protect /admin/* routes (admin only), but allow /admin/login and /admin/dashboard
   if (
     pathname.startsWith("/admin") &&
-    !pathname.startsWith("/admin/dashboard")
+    !pathname.startsWith("/admin/dashboard") &&
+    !pathname.startsWith("/admin/login")
   ) {
     if (!token) {
       return NextResponse.redirect(new URL("/login", request.url));
     }
-    // TODO: Verify token and check role
+    // TODO: verify token and role
   }
 
   // Protect /workspace/* routes (authenticated users)

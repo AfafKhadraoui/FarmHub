@@ -1,13 +1,21 @@
 // src/hooks/useAuth.ts
 
-import { useEffect } from 'react';
-import { useRouter } from 'next/navigation';
-import { useAuthStore } from '@/store/authStore';
-import { authService } from '@/services/auth.service';
-import { LoginRequest, RegisterAdminRequest, RegisterWorkerRequest } from '@/types/auth.types';
+"use client";
+
+import { useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { useAuthStore } from "@/store/authStore";
+import { authService } from "@/services/auth.service";
+import {
+  LoginRequest,
+  RegisterAdminRequest,
+  RegisterWorkerRequest,
+  User,
+} from "@/types/auth.types";
 
 export function useAuth() {
   const router = useRouter();
+
   const {
     user,
     isAuthenticated,
@@ -23,24 +31,72 @@ export function useAuth() {
     initialize();
   }, [initialize]);
 
+  const mapLoginDataToUser = (data: {
+    userId: number;
+    email: string;
+    name: string;
+    role: User["role"];
+    farmId: number | null;
+    farmName: string | null;
+  }): User => ({
+    id: data.userId,
+    email: data.email,
+    name: data.name,
+    role: data.role,
+    farmId: data.farmId,
+    farmName: data.farmName,
+  });
+
   const login = async (data: LoginRequest) => {
     try {
       setLoading(true);
-      const response = await authService.login(data);
-      setUser(response.user);
-      setToken(response.token);
-      // Optionally also persist to storage if you want
-      localStorage.setItem('token', response.token);
-      localStorage.setItem('user', JSON.stringify(response.user));
-      router.push('/workspace/dashboard');
+
+      const response = await authService.login(data); // expects { success, data, message }
+
+      if (!response.success) {
+        throw new Error(response.message || "Login failed");
+      }
+
+      const loginData = response.data;
+
+      const loggedUser = mapLoginDataToUser({
+        userId: loginData.userId,
+        email: loginData.email,
+        name: loginData.name,
+        role: loginData.role,
+        farmId: loginData.farmId,
+        farmName: loginData.farmName,
+      });
+
+      const token = loginData.token;
+
+      setUser(loggedUser);
+      setToken(token);
+
+      // IMPORTANT: this is what farms page will use
+      localStorage.setItem("accessToken", token);
+      localStorage.setItem("user", JSON.stringify(loggedUser));
+
+      // you can keep this cookie if other parts use it, but farms will use header
+      document.cookie = `token=${token}; Path=/; Max-Age=${
+        7 * 24 * 60 * 60
+      }`;
+
+      if (loggedUser.role === "platform_admin") {
+        await router.push("/admin/dashboard");
+      } else {
+        await router.push("/workspace/dashboard");
+      }
+
       return { success: true };
     } catch (error: any) {
       return {
         success: false,
         error:
-          error.response?.data?.error || // use "error" per backend
-          error.response?.data?.message || // fallback if still using old format
-          'Login failed',
+          error.response?.data?.error ||
+          error.response?.data?.message ||
+          error.message ||
+          "Login failed",
         code: error.response?.data?.code,
         details: error.response?.data?.details,
       };
@@ -49,35 +105,55 @@ export function useAuth() {
     }
   };
 
-  // Register should dispatch either admin or worker,
-  // call with correct props in your form's handleSubmit:
-  //   - { name, email, password, ...farmName, farmLocation } for admin
-  //   - { name, email, password, ...farmCode } for worker
   const register = async (
     data: RegisterAdminRequest | RegisterWorkerRequest
   ) => {
     try {
       setLoading(true);
       let response;
-      // Detect type for correct endpoint
-      if ('farmName' in data) {
+
+      if ("farmName" in data) {
         response = await authService.registerAdmin(data);
       } else {
         response = await authService.registerWorker(data);
       }
-      setUser(response.user);
-      setToken(response.token);
-      localStorage.setItem('token', response.token);
-      localStorage.setItem('user', JSON.stringify(response.user));
-      router.push('/workspace/dashboard');
+
+      if (!response.success) {
+        throw new Error(response.message || "Registration failed");
+      }
+
+      const regData = response.data;
+
+      const newUser = mapLoginDataToUser({
+        userId: regData.userId,
+        email: regData.email,
+        name: regData.name,
+        role: regData.role,
+        farmId: regData.farmId,
+        farmName: regData.farmName ?? null,
+      });
+
+      const token = regData.token;
+
+      setUser(newUser);
+      setToken(token);
+
+      localStorage.setItem("accessToken", token);
+      localStorage.setItem("user", JSON.stringify(newUser));
+      document.cookie = `token=${token}; Path=/; Max-Age=${
+        7 * 24 * 60 * 60
+      }`;
+
+      await router.push("/workspace/dashboard");
       return { success: true };
     } catch (error: any) {
       return {
         success: false,
         error:
-          error.response?.data?.error || // display backend validation, see docs!
+          error.response?.data?.error ||
           error.response?.data?.message ||
-          'Registration failed',
+          error.message ||
+          "Registration failed",
         code: error.response?.data?.code,
         details: error.response?.data?.details,
       };
@@ -88,10 +164,13 @@ export function useAuth() {
 
   const logout = async () => {
     try {
-      await authService.logout();
+      authService.logout();
     } finally {
       storeLogout();
-      router.push('/login');
+      localStorage.removeItem("accessToken");
+      localStorage.removeItem("user");
+      document.cookie = "token=; Path=/; Max-Age=0";
+      await router.push("/login");
     }
   };
 

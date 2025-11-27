@@ -8,16 +8,17 @@ import {
   Eye,
   Search,
 } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import CustomSelect from "./CustomSelect";
 import FarmDetailsPage from "./FarmDetailsPage";
 
-interface Farm {
+interface FarmListItem {
   id: number;
   name: string;
-  owner: string;
-  email: string;
+  owner: string | null;
+  email: string | null;
   location: string;
+  createdAt: string;
   created: string;
   fields: number;
   tasks: number;
@@ -25,303 +26,377 @@ interface Farm {
   status: "active" | "inactive";
 }
 
-interface FarmsPageProps {
-  farms?: Farm[];
+interface FarmsResponse {
+  data: {
+    id: number;
+    name: string;
+    owner: string | null;
+    email: string | null;
+    location: string;
+    workers: number;
+    fields: number;
+    tasks: number;
+    createdAt: string;
+    status: string;
+  }[];
+  pagination: {
+    total: number;
+    page: number;
+    limit: number;
+    totalPages: number;
+  };
 }
 
-const defaultFarmsData: Farm[] = [
-  {
-    id: 1,
-    name: "Green Valley Farm",
-    owner: "Ahmed Khalil",
-    email: "ahmed@email.com",
-    location: "Algiers, Algeria",
-    created: "Jan 15, 2025",
-    fields: 12,
-    tasks: 45,
-    workers: 8,
-    status: "active",
-  },
-  {
-    id: 2,
-    name: "Sunrise Farms",
-    owner: "Sara Mansouri",
-    email: "sara@email.com",
-    location: "Oran, Algeria",
-    created: "Jan 18, 2025",
-    fields: 8,
-    tasks: 32,
-    workers: 5,
-    status: "active",
-  },
-  {
-    id: 3,
-    name: "Golden Harvest",
-    owner: "Ali Benali",
-    email: "ali@email.com",
-    location: "Blida, Algeria",
-    created: "Jan 20, 2025",
-    fields: 15,
-    tasks: 67,
-    workers: 12,
-    status: "active",
-  },
-  {
-    id: 4,
-    name: "Fresh Fields",
-    owner: "Fatima Zerrouk",
-    email: "fatima@email.com",
-    location: "Tizi Ouzou, Algeria",
-    created: "Jan 19, 2025",
-    fields: 6,
-    tasks: 28,
-    workers: 4,
-    status: "inactive",
-  },
-  {
-    id: 5,
-    name: "Organic Paradise",
-    owner: "Mohamed Amrani",
-    email: "mohamed@email.com",
-    location: "Constantine, Algeria",
-    created: "Jan 17, 2025",
-    fields: 10,
-    tasks: 52,
-    workers: 7,
-    status: "active",
-  },
-  {
-    id: 6,
-    name: "Nature's Bounty",
-    owner: "Karim Zidane",
-    email: "karim@email.com",
-    location: "Annaba, Algeria",
-    created: "Jan 16, 2025",
-    fields: 9,
-    tasks: 41,
-    workers: 6,
-    status: "active",
-  },
-];
-
-export default function FarmsPage({
-  farms = defaultFarmsData,
-}: FarmsPageProps) {
+export default function FarmsPage() {
+  const [farms, setFarms] = useState<FarmListItem[]>([]);
+  const [pagination, setPagination] = useState({
+    total: 0,
+    page: 1,
+    limit: 10,
+    totalPages: 0,
+  });
   const [searchTerm, setSearchTerm] = useState("");
-  const [filterStatus, setFilterStatus] = useState("all");
-  const [selectedFarm, setSelectedFarm] = useState<Farm | null>(null);
+  const [filterStatus, setFilterStatus] = useState<"all" | "active" | "inactive">(
+    "all"
+  );
+  const [selectedFarmId, setSelectedFarmId] = useState<number | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const fetchFarms = async (page = 1, searchQuery = "") => {
+    try {
+      setLoading(true);
+      setError(null);
+
+      const params = new URLSearchParams({
+        page: page.toString(),
+        limit: "10",
+        ...(searchQuery && { search: searchQuery }),
+      });
+
+      const token =
+        typeof window !== "undefined"
+          ? localStorage.getItem("accessToken")
+          : null;
+
+      const res = await fetch(
+        `http://localhost:5000/admin/farms?${params.toString()}`,
+        {
+          headers: {
+            "Content-Type": "application/json",
+            ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          },
+        }
+      );
+
+      if (!res.ok) {
+        throw new Error(`Failed to load farms: ${res.status}`);
+      }
+
+      const json: FarmsResponse = await res.json();
+
+      const mappedFarms: FarmListItem[] = json.data.map((f) => ({
+        id: f.id,
+        name: f.name,
+        owner: f.owner,
+        email: f.email,
+        location: f.location,
+        createdAt: f.createdAt,
+        created: new Date(f.createdAt).toLocaleDateString("en-GB"),
+        fields: f.fields,
+        tasks: f.tasks,
+        workers: f.workers,
+        status: f.status === "active" ? "active" : "inactive",
+      }));
+
+      setFarms(mappedFarms);
+      setPagination(json.pagination);
+    } catch (err: any) {
+      console.error(err);
+      setError(err.message || "Failed to load farms");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchFarms(1, "");
+  }, []);
+
+  const handleSearchSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    fetchFarms(1, searchTerm);
+  };
+
+  const handlePageChange = (page: number) => {
+    fetchFarms(page, searchTerm);
+  };
 
   const filteredFarms = farms.filter((farm) => {
-    const matchesSearch =
-      farm.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      farm.owner.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesStatus =
       filterStatus === "all" || farm.status === filterStatus;
-    return matchesSearch && matchesStatus;
+    return matchesStatus;
   });
 
-  // Show farm details page if a farm is selected
-  if (selectedFarm) {
+  if (selectedFarmId !== null) {
     return (
       <FarmDetailsPage
-        farm={selectedFarm}
-        onBack={() => setSelectedFarm(null)}
+        farmId={selectedFarmId}
+        onBack={() => setSelectedFarmId(null)}
       />
     );
   }
 
   return (
-    <div>
+    <div className="space-y-6">
       {/* Header with Filters */}
-      <div className="mb-6 flex flex-col md:flex-row gap-4 items-start md:items-center justify-between">
+      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div>
-          <h2
-            className="text-[var(--admin-text-dark)] text-2xl mb-1"
-            style={{ fontFamily: "Manrope, sans-serif", fontWeight: 700 }}
+          <h1
+            className="text-2xl font-bold text-[var(--admin-text-dark)]"
+            style={{ fontFamily: "Manrope, sans-serif" }}
           >
             All Farms
-          </h2>
+          </h1>
           <p
-            className="text-[var(--admin-text-muted)]"
-            style={{ fontFamily: "Inter, sans-serif", fontSize: "14px" }}
+            className="text-sm text-[var(--admin-text-muted)]"
+            style={{ fontFamily: "Inter, sans-serif" }}
           >
-            Total {farms.length} farms registered
+            Total {pagination.total} farms registered
           </p>
         </div>
 
-        <div className="flex gap-3 w-full md:w-auto">
+        <div className="flex flex-col md:flex-row gap-3">
           {/* Search */}
-          <div className="relative flex-1 md:w-[300px]">
-            <Search
-              size={18}
-              className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--admin-text-muted)]"
-            />
+          <form
+            onSubmit={handleSearchSubmit}
+            className="relative flex-1 min-w-[220px]"
+          >
+            <Search className="absolute left-3 top-2.5 h-4 w-4 text-[var(--admin-text-muted)]" />
             <input
               type="text"
-              placeholder="Search farms..."
+              placeholder="Search farms by name or owner..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="w-full h-[44px] pl-10 pr-4 rounded-lg border border-[var(--admin-border)] text-[var(--admin-text-dark)] placeholder-[var(--admin-text-muted)] bg-white focus:border-[var(--admin-primary)] outline-none transition-all"
               style={{ fontFamily: "Inter, sans-serif", fontSize: "14px" }}
             />
-          </div>
+          </form>
 
           {/* Filter */}
           <CustomSelect
             value={filterStatus}
-            onChange={setFilterStatus}
+            onChange={(v) =>
+              setFilterStatus(v as "all" | "active" | "inactive")
+            }
             options={[
-              { value: "all", label: "All Status" },
-              { value: "active", label: "Active" },
-              { value: "inactive", label: "Inactive" },
+              { label: "All status", value: "all" },
+              { label: "Active", value: "active" },
+              { label: "Inactive", value: "inactive" },
             ]}
-            placeholder="All Status"
           />
         </div>
       </div>
 
+      {/* Loading / Error / Empty */}
+      {loading && !farms.length && (
+        <p
+          className="text-sm text-[var(--admin-text-muted)]"
+          style={{ fontFamily: "Inter, sans-serif" }}
+        >
+          Loading farms...
+        </p>
+      )}
+
+      {error && (
+        <p
+          className="text-sm text-red-600"
+          style={{ fontFamily: "Inter, sans-serif" }}
+        >
+          {error}
+        </p>
+      )}
+
+      {!loading && !error && filteredFarms.length === 0 && (
+        <p
+          className="text-sm text-[var(--admin-text-muted)]"
+          style={{ fontFamily: "Inter, sans-serif" }}
+        >
+          No farms found matching your criteria.
+        </p>
+      )}
+
       {/* Farms Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
         {filteredFarms.map((farm) => (
           <div
             key={farm.id}
-            className="bg-white border border-[var(--admin-border)] rounded-2xl p-6 hover:border-[var(--admin-primary)] hover:shadow-lg transition-all group"
-            style={{ boxShadow: "0px 2px 8px rgba(0,0,0,0.04)" }}
+            className="group relative bg-white rounded-xl border border-[var(--admin-border)] p-4 flex flex-col gap-4 hover:border-[var(--admin-primary)] transition-all cursor-pointer"
+            onClick={() => setSelectedFarmId(farm.id)}
           >
-            {/* Farm Name */}
-            <h3
-              className="text-[var(--admin-text-dark)] text-xl mb-4"
-              style={{ fontFamily: "Manrope, sans-serif", fontWeight: 700 }}
-            >
-              {farm.name}
-            </h3>
-
-            <div className="h-px bg-[var(--admin-border)] mb-4" />
-
-            {/* Farm Details */}
-            <div className="space-y-3 mb-4">
-              <div
-                className="flex items-center gap-2 text-[var(--admin-text-muted)]"
-                style={{ fontFamily: "Inter, sans-serif", fontSize: "14px" }}
-              >
-                <Users size={16} className="text-[var(--admin-primary)]" />
-                <span className="text-[var(--admin-text-dark)] font-semibold">
-                  Owner:
-                </span>{" "}
-                {farm.owner}
+            {/* Top row: name + status */}
+            <div className="flex items-start justify-between">
+              <div>
+                <h2
+                  className="text-lg font-semibold text-[var(--admin-text-dark)]"
+                  style={{ fontFamily: "Manrope, sans-serif" }}
+                >
+                  {farm.name}
+                </h2>
+                <p
+                  className="text-xs text-[var(--admin-text-muted)] mt-1"
+                  style={{ fontFamily: "Inter, sans-serif" }}
+                >
+                  Created: {farm.created}
+                </p>
               </div>
-              <div
-                className="flex items-center gap-2 text-[var(--admin-text-muted)]"
-                style={{ fontFamily: "Inter, sans-serif", fontSize: "14px" }}
+
+              <span
+                className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-medium ${
+                  farm.status === "active"
+                    ? "bg-green-50 text-green-700 border border-green-200"
+                    : "bg-gray-50 text-gray-600 border border-gray-200"
+                }`}
+                style={{ fontFamily: "Inter, sans-serif" }}
               >
-                <MapPin size={16} className="text-[var(--admin-primary)]" />
-                {farm.location}
+                <span className="text-[10px]">●</span>
+                {farm.status === "active" ? "Active" : "Inactive"}
+              </span>
+            </div>
+
+            {/* Owner + location */}
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+              <div className="flex items-center gap-2 text-sm">
+                <Users className="w-4 h-4 text-[var(--admin-text-muted)]" />
+                <span
+                  className="text-[var(--admin-text-dark)]"
+                  style={{ fontFamily: "Inter, sans-serif" }}
+                >
+                  Owner:{" "}
+                  <span className="font-medium">
+                    {farm.owner ?? "Unassigned"}
+                  </span>
+                </span>
               </div>
-              <div
-                className="flex items-center gap-2 text-[var(--admin-text-muted)]"
-                style={{ fontFamily: "Inter, sans-serif", fontSize: "14px" }}
-              >
-                <Calendar size={16} className="text-[var(--admin-primary)]" />
-                {farm.created}
+
+              <div className="flex items-center gap-2 text-sm">
+                <MapPin className="w-4 h-4 text-[var(--admin-text-muted)]" />
+                <span
+                  className="text-[var(--admin-text-dark)]"
+                  style={{ fontFamily: "Inter, sans-serif" }}
+                >
+                  {farm.location}
+                </span>
               </div>
             </div>
 
             {/* Stats */}
-            <div className="bg-gradient-to-br from-[var(--admin-primary)]/5 to-[var(--admin-secondary)]/5 rounded-xl p-4 mb-4">
-              <div className="grid grid-cols-3 gap-2 text-center">
+            <div className="grid grid-cols-3 gap-3 pt-2 border-t border-[var(--admin-border)]">
+              <div className="flex items-center gap-2">
+                <CheckSquare className="w-4 h-4 text-[var(--admin-primary)]" />
                 <div>
-                  <div
-                    className="text-[var(--admin-text-dark)] text-xl"
-                    style={{
-                      fontFamily: "Manrope, sans-serif",
-                      fontWeight: 700,
-                    }}
-                  >
-                    {farm.fields}
-                  </div>
-                  <div
-                    className="text-[var(--admin-text-muted)] text-xs"
+                  <p
+                    className="text-xs text-[var(--admin-text-muted)]"
                     style={{ fontFamily: "Inter, sans-serif" }}
                   >
                     Fields
-                  </div>
-                </div>
-                <div>
-                  <div
-                    className="text-[var(--admin-text-dark)] text-xl"
-                    style={{
-                      fontFamily: "Manrope, sans-serif",
-                      fontWeight: 700,
-                    }}
+                  </p>
+                  <p
+                    className="text-sm font-semibold text-[var(--admin-text-dark)]"
+                    style={{ fontFamily: "Manrope, sans-serif" }}
                   >
-                    {farm.tasks}
-                  </div>
-                  <div
-                    className="text-[var(--admin-text-muted)] text-xs"
+                    {farm.fields}
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <Calendar className="w-4 h-4 text-[var(--admin-primary)]" />
+                <div>
+                  <p
+                    className="text-xs text-[var(--admin-text-muted)]"
                     style={{ fontFamily: "Inter, sans-serif" }}
                   >
                     Tasks
-                  </div>
-                </div>
-                <div>
-                  <div
-                    className="text-[var(--admin-text-dark)] text-xl"
-                    style={{
-                      fontFamily: "Manrope, sans-serif",
-                      fontWeight: 700,
-                    }}
+                  </p>
+                  <p
+                    className="text-sm font-semibold text-[var(--admin-text-dark)]"
+                    style={{ fontFamily: "Manrope, sans-serif" }}
                   >
-                    {farm.workers}
-                  </div>
-                  <div
-                    className="text-[var(--admin-text-muted)] text-xs"
+                    {farm.tasks}
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <Users className="w-4 h-4 text-[var(--admin-primary)]" />
+                <div>
+                  <p
+                    className="text-xs text-[var(--admin-text-muted)]"
                     style={{ fontFamily: "Inter, sans-serif" }}
                   >
                     Workers
-                  </div>
+                  </p>
+                  <p
+                    className="text-sm font-semibold text-[var(--admin-text-dark)]"
+                    style={{ fontFamily: "Manrope, sans-serif" }}
+                  >
+                    {farm.workers}
+                  </p>
                 </div>
               </div>
             </div>
 
-            {/* Status & Action */}
-            <div className="flex items-center justify-between">
-              <span
-                className={`px-3 py-1 rounded-full text-xs ${
-                  farm.status === "active"
-                    ? "bg-[var(--admin-primary)]/10 text-[var(--admin-primary)]"
-                    : "bg-gray-200 text-[var(--admin-text-muted)]"
-                }`}
-                style={{ fontFamily: "Inter, sans-serif", fontWeight: 600 }}
-              >
-                {farm.status === "active" ? "● Active" : "● Inactive"}
-              </span>
-
-              <button
-                onClick={() => setSelectedFarm(farm)}
-                className="flex items-center gap-1 text-[var(--admin-primary)] hover:text-[var(--admin-primary-dark)] transition-colors opacity-0 group-hover:opacity-100"
-                style={{
-                  fontFamily: "Inter, sans-serif",
-                  fontWeight: 600,
-                  fontSize: "14px",
-                }}
-              >
-                <Eye size={16} />
-                View Details
-              </button>
-            </div>
+            {/* View details */}
+            <button
+              type="button"
+              className="absolute right-4 bottom-4 flex items-center gap-1 text-[var(--admin-primary)] hover:text-[var(--admin-primary-dark)] transition-colors opacity-0 group-hover:opacity-100"
+              style={{
+                fontFamily: "Inter, sans-serif",
+                fontWeight: 600,
+                fontSize: "14px",
+              }}
+            >
+              <Eye className="w-4 h-4" />
+              View Details
+            </button>
           </div>
         ))}
       </div>
 
-      {/* Empty State */}
-      {filteredFarms.length === 0 && (
-        <div className="text-center py-20">
+      {/* Pagination */}
+      {pagination.totalPages > 1 && (
+        <div className="flex items-center justify-between pt-4">
           <p
-            className="text-[var(--admin-text-muted)]"
-            style={{ fontFamily: "Inter, sans-serif", fontSize: "16px" }}
+            className="text-sm text-[var(--admin-text-muted)]"
+            style={{ fontFamily: "Inter, sans-serif" }}
           >
-            No farms found matching your criteria.
+            Showing {farms.length} of {pagination.total} farms
           </p>
+          <div className="flex gap-2">
+            <button
+              onClick={() => handlePageChange(pagination.page - 1)}
+              disabled={pagination.page === 1 || loading}
+              className="px-4 py-2 border border-[var(--admin-border)] rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 transition"
+            >
+              Previous
+            </button>
+            <span
+              className="px-4 py-2 text-sm text-[var(--admin-text-dark)]"
+              style={{ fontFamily: "Inter, sans-serif" }}
+            >
+              Page {pagination.page} of {pagination.totalPages}
+            </span>
+            <button
+              onClick={() => handlePageChange(pagination.page + 1)}
+              disabled={
+                pagination.page === pagination.totalPages || loading
+              }
+              className="px-4 py-2 border border-[var(--admin-border)] rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 transition"
+            >
+              Next
+            </button>
+          </div>
         </div>
       )}
     </div>

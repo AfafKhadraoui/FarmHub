@@ -6,14 +6,13 @@ import {
   CheckSquare,
   Calendar,
   Mail,
-  Phone,
   ArrowLeft,
   Edit,
   Trash2,
   TrendingUp,
   Clock,
-  Activity,
 } from "lucide-react";
+import { useEffect, useState } from "react";
 
 interface Farm {
   id: number;
@@ -33,22 +32,32 @@ interface Farm {
 }
 
 interface FarmDetailsPageProps {
-  farm: Farm;
+  farmId: number;
   onBack: () => void;
 }
 
-// Extended farm data with additional details
-const getFarmDetails = (farm: Farm): Farm => ({
-  ...farm,
-  phone: "+213 555 123 456",
-  description:
-    "A sustainable farming operation focused on organic produce and modern agricultural practices.",
-  area: "45 hectares",
-  crops: ["Wheat", "Tomatoes", "Olives", "Dates"],
-});
+// Dummy loader for now – later you can replace with real fetch(/admin/farms/:id)
+function loadFarmById(farmId: number): Farm {
+  return {
+    id: farmId,
+    name: "Green Valley Farm",
+    owner: "Ahmed Khalil",
+    email: "owner@example.com",
+    location: "Algiers, Algeria",
+    created: "01/01/2025",
+    fields: 10,
+    tasks: 25,
+    workers: 5,
+    status: "active",
+    phone: "+213 555 123 456",
+    description:
+      "A sustainable farming operation focused on organic produce and modern agricultural practices.",
+    area: "45 hectares",
+    crops: ["Wheat", "Tomatoes", "Olives", "Dates"],
+  };
+}
 
-// Sample worker data
-// Workers don't have specific roles, they are assigned to tasks
+// Sample workers (static, same as your original)
 const workersList = [
   {
     id: 1,
@@ -156,11 +165,23 @@ const fieldsList = [
   },
 ];
 
-export default function FarmDetailsPage({
-  farm,
-  onBack,
-}: FarmDetailsPageProps) {
-  const farmDetails = getFarmDetails(farm);
+export default function FarmDetailsPage({ farmId, onBack }: FarmDetailsPageProps) {
+  const [farm, setFarm] = useState<Farm | null>(null);
+
+  useEffect(() => {
+    const details = loadFarmById(farmId);
+    setFarm(details);
+  }, [farmId]);
+
+  if (!farm) {
+    return (
+      <div className="text-sm text-[var(--admin-text-muted)]">
+        Loading farm details...
+      </div>
+    );
+  }
+
+  const farmDetails = farm;
 
   return (
     <div>

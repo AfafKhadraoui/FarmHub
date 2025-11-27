@@ -42,25 +42,27 @@ export const useAuthStore = create<AuthState>((set) => ({
     });
   },
 
-  initialize: () => {
-    try {
-      const token = localStorage.getItem('token');
-      const userStr = localStorage.getItem('user');
+initialize: () => {
+  try {
+    const token = localStorage.getItem('token');
+    const userStr = localStorage.getItem('user');
 
-      if (token && userStr) {
-        const user = JSON.parse(userStr) as User;
-        set({
-          user,
-          token,
-          isAuthenticated: true,
-          isLoading: false,
-        });
-      } else {
-        set({ isLoading: false });
-      }
-    } catch (error) {
-      console.error('Failed to initialize auth:', error);
+    // Fix: Add check for null/undefined string
+    if (token && userStr && userStr !== 'undefined' && userStr !== '') {
+      const user = JSON.parse(userStr) as User;
+      set({
+        user,
+        token,
+        isAuthenticated: true,
+        isLoading: false,
+      });
+    } else {
       set({ isLoading: false });
     }
-  },
+  } catch (error) {
+    console.error('Failed to initialize auth:', error);
+    set({ isLoading: false });
+  }
+},
+
 }));
