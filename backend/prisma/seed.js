@@ -23,7 +23,7 @@ async function main() {
   await prisma.farm.deleteMany();
 
   // 1) Platform admin
-  const adminPasswordHash = await bcrypt.hash("admin123", 10);
+  const adminPasswordHash = await bcrypt.hash("Admin123", 10);
 
   const platformAdmin = await prisma.user.create({
     data: {
@@ -229,22 +229,99 @@ async function main() {
     });
   }
 
-  // 6) Notifications for platform admin
-  notifications = await prisma.notification.createMany({
+  // 6) Notifications
+  const baseTime = Date.now();
+  const notifications = await prisma.notification.createMany({
     data: [
       {
-        id: "notif-1",
+        id: `notif_${baseTime}_1`,
         userId: platformAdmin.id,
         type: "farm",
         title: "New Farm Created",
-        message: `A new farm '${greenValley.name}' has been registered by ${greenAdmin.email}`,
+        message: "Green Valley Farm has been registered by john@example.com",
+        isRead: false,
+        timestamp: new Date(Date.now() - 5 * 60 * 1000),
       },
       {
-        id: "notif-2",
+        id: `notif_${baseTime}_2`,
         userId: platformAdmin.id,
         type: "user",
-        title: "User Milestone",
-        message: "Platform reached 10 registered users!",
+        title: "User Milestone Reached",
+        message: "Platform reached 1,000 registered users! Congratulations!",
+        isRead: false,
+        timestamp: new Date(Date.now() - 60 * 60 * 1000),
+      },
+      {
+        id: `notif_${baseTime}_3`,
+        userId: platformAdmin.id,
+        type: "farm",
+        title: "Farm Updated",
+        message: "Sunset Valley Farm updated their field information and added 2 new workers.",
+        isRead: true,
+        timestamp: new Date(Date.now() - 3 * 60 * 60 * 1000),
+      },
+      {
+        id: `notif_${baseTime}_4`,
+        userId: platformAdmin.id,
+        type: "alert",
+        title: "Action Required",
+        message: "5 new farm applications are pending approval in the review queue.",
+        isRead: false,
+        timestamp: new Date(Date.now() - 5 * 60 * 60 * 1000),
+      },
+      {
+        id: `notif_${baseTime}_5`,
+        userId: platformAdmin.id,
+        type: "system",
+        title: "System Update",
+        message: "Platform maintenance scheduled for this weekend. Downtime: 2 hours.",
+        isRead: true,
+        timestamp: new Date(Date.now() - 24 * 60 * 60 * 1000),
+      },
+      {
+        id: `notif_${baseTime}_6`,
+        userId: platformAdmin.id,
+        type: "farm",
+        title: "Task Completion Alert",
+        message: "Riverside Farm completed all scheduled tasks for this week ahead of schedule.",
+        isRead: true,
+        timestamp: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000),
+      },
+      {
+        id: `notif_${baseTime}_7`,
+        userId: platformAdmin.id,
+        type: "user",
+        title: "New Worker Registered",
+        message: "A new worker 'Sarah Johnson' joined Maple Grove Farm.",
+        isRead: false,
+        timestamp: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000),
+      },
+      {
+        id: `notif_${baseTime}_8`,
+        userId: platformAdmin.id,
+        type: "alert",
+        title: "Low Activity Warning",
+        message: "Oak Ridge Farm hasn't logged any activities in the past 7 days.",
+        isRead: true,
+        timestamp: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000),
+      },
+      {
+        id: `notif_${baseTime}_9`,
+        userId: platformAdmin.id,
+        type: "system",
+        title: "Database Backup Completed",
+        message: "Scheduled database backup completed successfully. All data is secure.",
+        isRead: false,
+        timestamp: new Date(Date.now() - 6 * 24 * 60 * 60 * 1000),
+      },
+      {
+        id: `notif_${baseTime}_10`,
+        userId: platformAdmin.id,
+        type: "farm",
+        title: "New Equipment Request",
+        message: "Highland Farm requested approval for new irrigation equipment purchase.",
+        isRead: false,
+        timestamp: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000),
       },
     ],
   });
