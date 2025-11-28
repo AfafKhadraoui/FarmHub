@@ -1,5 +1,3 @@
-"use client";
-
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { adminProfileService } from '../../../services/profile.services';
 import {
@@ -12,13 +10,17 @@ import {
   X,
   LogOut,
   Phone,
+  Camera,
+  Upload,
 } from "lucide-react";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useRouter } from 'next/navigation';
 
 export default function MyProfilePage() {
   const [isEditing, setIsEditing] = useState(false);
   const [showLogoutModal, setShowLogoutModal] = useState(false);
+  const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const queryClient = useQueryClient();
   const router = useRouter();
 
@@ -43,6 +45,7 @@ export default function MyProfilePage() {
         phone: profile.phone || '',
         bio: profile.bio || '',
       });
+      setAvatarPreview(profile.avatarUrl);
     }
   }, [profile]);
 
@@ -59,6 +62,19 @@ export default function MyProfilePage() {
     },
   });
 
+  // Avatar upload mutation
+  const avatarMutation = useMutation({
+    mutationFn: (file: File) => adminProfileService.uploadAvatar(file),
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['admin-profile'] });
+      setAvatarPreview(data.avatarUrl);
+      alert('Avatar uploaded successfully!');
+    },
+    onError: (error: any) => {
+      alert('Failed to upload avatar: ' + (error.response?.data?.error || error.message));
+    },
+  });
+
   const handleSave = () => {
     updateMutation.mutate(editData);
   };
@@ -70,6 +86,33 @@ export default function MyProfilePage() {
       bio: profile?.bio || '',
     });
     setIsEditing(false);
+  };
+
+  const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      // Validate file size (max 5MB)
+      if (file.size > 5 * 1024 * 1024) {
+        alert('File size must be less than 5MB');
+        return;
+      }
+
+      // Validate file type
+      if (!file.type.startsWith('image/')) {
+        alert('Please select an image file');
+        return;
+      }
+
+      // Create preview
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setAvatarPreview(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+
+      // Upload to server
+      avatarMutation.mutate(file);
+    }
   };
 
   const handleLogout = () => {
@@ -103,7 +146,8 @@ export default function MyProfilePage() {
     );
   }
 
-  return (
+
+   return (
     <div className="space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between mt-6">
@@ -168,11 +212,44 @@ export default function MyProfilePage() {
       {/* Profile Card */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
         {/* Gradient Banner */}
-        <div className="relative bg-linear-to-r from-[#4baf47] to-[#ff6b00] h-[120px]">
+        <div className="relative bg-gradient-to-r from-[#4baf47] to-[#ff6b00] h-[120px]">
           {/* Avatar */}
-          <div className="absolute bottom-[-60px] left-10 w-[120px] h-[120px] rounded-full bg-white border-4 border-white shadow-[0px_4px_16px_rgba(0,0,0,0.2)]">
-            <div className="w-full h-full rounded-full bg-linear-to-br from-[#4baf47] to-[#ff6b00] flex items-center justify-center">
-              <User size={48} className="text-white" strokeWidth={2.5} />
+          <div className="absolute bottom-[-60px] left-10">
+            <div className="relative group">
+              <div className="w-[120px] h-[120px] rounded-full bg-white border-4 border-white shadow-[0px_4px_16px_rgba(0,0,0,0.2)]">
+                {avatarPreview ? (
+                  <img
+                    src={avatarPreview}
+                    alt={profile?.name}
+                    className="w-full h-full rounded-full object-cover"
+                  />
+                ) : (
+                  <div className="w-full h-full rounded-full bg-gradient-to-br from-[#4baf47] to-[#ff6b00] flex items-center justify-center">
+                    <User size={48} className="text-white" strokeWidth={2.5} />
+                  </div>
+                )}
+              </div>
+              
+              {/* Upload Button Overlay */}
+              <button
+                onClick={() => fileInputRef.current?.click()}
+                disabled={avatarMutation.isPending}
+                className="absolute inset-0 rounded-full bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center cursor-pointer disabled:cursor-not-allowed"
+              >
+                {avatarMutation.isPending ? (
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white" />
+                ) : (
+                  <Camera size={32} className="text-white" strokeWidth={2} />
+                )}
+              </button>
+              
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                onChange={handleAvatarChange}
+                className="hidden"
+              />
             </div>
           </div>
         </div>
@@ -199,6 +276,7 @@ export default function MyProfilePage() {
               {profile?.email}
             </p>
           </div>
+
 
           {/* Profile Information */}
           <div className="space-y-6">
