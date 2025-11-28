@@ -61,7 +61,7 @@ async function main() {
 
   const greenAdmin = await prisma.user.create({
     data: {
-      email: "ahmed@greenvalley.com",
+      email: "Ahmed@greenvalley.com",
       password: farmAdminPassword,
       name: "Ahmed Hassan",
       phone: "+201234567890",
@@ -289,3 +289,4 @@ main()
     await prisma.$disconnect();
     process.exit(1);
   });
+
