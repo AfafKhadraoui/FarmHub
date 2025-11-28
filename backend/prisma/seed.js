@@ -1,4 +1,5 @@
 // prisma/seed.js
+
 const {
   PrismaClient,
   UserRole,
@@ -17,8 +18,9 @@ async function main() {
   await prisma.taskAssignment.deleteMany();
   await prisma.task.deleteMany();
   await prisma.field.deleteMany();
-  await prisma.notification.deleteMany();
-  await prisma.activity.deleteMany();
+  // Remove notifications & activities if those models don't exist
+  // await prisma.notification.deleteMany();
+  // await prisma.activity.deleteMany();
   await prisma.user.deleteMany();
   await prisma.farm.deleteMany();
 
@@ -34,6 +36,7 @@ async function main() {
       role: UserRole.platform_admin,
     },
   });
+
   console.log("Seeded admin:", platformAdmin);
 
   // 2) Farms
@@ -81,7 +84,7 @@ async function main() {
     },
   });
 
-  const workersGreen = await prisma.user.createMany({
+  await prisma.user.createMany({
     data: [
       {
         email: "worker1@greenvalley.com",
@@ -102,7 +105,7 @@ async function main() {
     ],
   });
 
-  const workersRiver = await prisma.user.createMany({
+  await prisma.user.createMany({
     data: [
       {
         email: "worker1@riverside.com",
@@ -119,6 +122,7 @@ async function main() {
   const allWorkersGreen = await prisma.user.findMany({
     where: { farmId: greenValley.id, role: UserRole.worker },
   });
+
   const allWorkersRiver = await prisma.user.findMany({
     where: { farmId: riverside.id, role: UserRole.worker },
   });
@@ -205,6 +209,7 @@ async function main() {
         workerId: allWorkersGreen[0].id,
       },
     });
+
     await prisma.taskAssignment.create({
       data: {
         taskId: harvestTask.id,
@@ -212,6 +217,7 @@ async function main() {
       },
     });
   }
+
   if (allWorkersGreen[1]) {
     await prisma.taskAssignment.create({
       data: {
@@ -220,6 +226,7 @@ async function main() {
       },
     });
   }
+
   if (allWorkersRiver[0]) {
     await prisma.taskAssignment.create({
       data: {
@@ -229,54 +236,6 @@ async function main() {
     });
   }
 
-  // 6) Notifications for platform admin
-  notifications = await prisma.notification.createMany({
-    data: [
-      {
-        id: "notif-1",
-        userId: platformAdmin.id,
-        type: "farm",
-        title: "New Farm Created",
-        message: `A new farm '${greenValley.name}' has been registered by ${greenAdmin.email}`,
-      },
-      {
-        id: "notif-2",
-        userId: platformAdmin.id,
-        type: "user",
-        title: "User Milestone",
-        message: "Platform reached 10 registered users!",
-      },
-    ],
-  });
-  console.log("Seeded notifications for admin:", notifications);
-
-  // 7) Activities (global feed)
-  tasks = await prisma.activity.createMany({
-    data: [
-      {
-        id: "act-1",
-        type: "farm_created",
-        title: "New Farm Created",
-        message: `${greenValley.name} was created by ${greenAdmin.name}`,
-        metadata: {
-          farmId: greenValley.id,
-          userId: greenAdmin.id,
-        },
-      },
-      {
-        id: "act-2",
-        type: "user_registered",
-        title: "New Worker Joined",
-        message: `${allWorkersGreen[0]?.name} joined ${greenValley.name}`,
-        metadata: {
-          farmId: greenValley.id,
-          userId: allWorkersGreen[0]?.id,
-        },
-      },
-    ],
-  });
-
-  console.log("Seeded activities for admin:", tasks);
   console.log("Seeding completed.");
 }
 
@@ -289,4 +248,3 @@ main()
     await prisma.$disconnect();
     process.exit(1);
   });
-
