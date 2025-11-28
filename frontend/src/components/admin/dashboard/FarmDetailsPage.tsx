@@ -7,7 +7,6 @@ import {
   Calendar,
   Mail,
   ArrowLeft,
-  Edit,
   Trash2,
   TrendingUp,
   Clock,
@@ -42,7 +41,10 @@ interface FarmDetailsPageProps {
   onBack: () => void;
 }
 
-export default function FarmDetailsPage({ farmId, onBack }: FarmDetailsPageProps) {
+export default function FarmDetailsPage({
+  farmId,
+  onBack,
+}: FarmDetailsPageProps) {
   const [farm, setFarm] = useState<FarmDetails | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -85,6 +87,37 @@ export default function FarmDetailsPage({ farmId, onBack }: FarmDetailsPageProps
     fetchFarm();
   }, [farmId]);
 
+  const handleDelete = async () => {
+    if (!confirm("Are you sure you want to delete this farm?")) return;
+
+    try {
+      const token =
+        typeof window !== "undefined"
+          ? localStorage.getItem("accessToken")
+          : null;
+
+      const res = await fetch(
+        `http://localhost:5000/admin/farms/${farmId}`,
+        {
+          method: "DELETE",
+          headers: {
+            "Content-Type": "application/json",
+            ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          },
+        }
+      );
+
+      if (!res.ok && res.status !== 204) {
+        throw new Error(`Failed to delete farm: ${res.status}`);
+      }
+
+      onBack(); // back to list; FarmsPage will re-fetch
+    } catch (err) {
+      console.error(err);
+      alert("Failed to delete farm");
+    }
+  };
+
   if (loading) {
     return (
       <p className="text-sm text-[var(--admin-text-muted)]">
@@ -109,12 +142,9 @@ export default function FarmDetailsPage({ farmId, onBack }: FarmDetailsPageProps
     );
   }
 
-  // From here, use real `farm` data instead of static:
-  // farm.name, farm.location, farm.owner, farm.fields, farm.stats, etc.
-  // Example header (replace your old dummy header with this real data):
-
   return (
     <div>
+      {/* Back & Delete */}
       <div className="mb-6 flex items-center justify-between">
         <button
           onClick={onBack}
@@ -129,32 +159,21 @@ export default function FarmDetailsPage({ farmId, onBack }: FarmDetailsPageProps
           Back to Farms
         </button>
 
-        <div className="flex gap-3">
-          <button
-            className="flex items-center gap-2 px-4 py-2 rounded-lg border border-[var(--admin-border)] text-[var(--admin-text-dark)] hover:bg-gray-50 transition-all"
-            style={{
-              fontFamily: "Inter, sans-serif",
-              fontWeight: 600,
-              fontSize: "14px",
-            }}
-          >
-            <Edit size={16} />
-            Edit Farm
-          </button>
-          <button
-            className="flex items-center gap-2 px-4 py-2 rounded-lg border border-red-200 text-red-600 hover:bg-red-50 transition-all"
-            style={{
-              fontFamily: "Inter, sans-serif",
-              fontWeight: 600,
-              fontSize: "14px",
-            }}
-          >
-            <Trash2 size={16} />
-            Delete
-          </button>
-        </div>
+        <button
+          onClick={handleDelete}
+          className="flex items-center gap-2 px-4 py-2 rounded-lg border border-red-200 text-red-600 hover:bg-red-50 transition-all"
+          style={{
+            fontFamily: "Inter, sans-serif",
+            fontWeight: 600,
+            fontSize: "14px",
+          }}
+        >
+          <Trash2 size={16} />
+          Delete
+        </button>
       </div>
 
+      {/* Header Card */}
       <div
         className="bg-white border border-[var(--admin-border)] rounded-2xl p-8 mb-6"
         style={{ boxShadow: "0px 2px 8px rgba(0,0,0,0.04)" }}
@@ -174,7 +193,6 @@ export default function FarmDetailsPage({ farmId, onBack }: FarmDetailsPageProps
               {farm.location}
             </p>
           </div>
-          {/* You can derive a status from activeTasks, etc. */}
           <span
             className="px-3 py-1 rounded-full text-xs bg-[var(--admin-primary)]/10 text-[var(--admin-primary)]"
             style={{ fontFamily: "Inter, sans-serif", fontWeight: 600 }}
@@ -183,7 +201,7 @@ export default function FarmDetailsPage({ farmId, onBack }: FarmDetailsPageProps
           </span>
         </div>
 
-        {/* Example info row using real owner + joinCode */}
+        {/* Owner / Email / Created / Join code */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-lg bg-[var(--admin-primary)]/10 flex items-center justify-center">
@@ -267,8 +285,224 @@ export default function FarmDetailsPage({ farmId, onBack }: FarmDetailsPageProps
         </div>
       </div>
 
-      {/* You can now wire your existing stats, fields list, workers list, etc.
-          using farm.fields, farm.workers, and farm.stats instead of static arrays. */}
+      {/* Stats cards */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-6">
+        <div
+          className="bg-white border border-[var(--admin-border)] rounded-2xl p-6"
+          style={{ boxShadow: "0px 2px 8px rgba(0,0,0,0.04)" }}
+        >
+          <div className="flex items-center justify-between mb-3">
+            <div
+              className="text-[var(--admin-text-muted)] text-sm"
+              style={{ fontFamily: "Inter, sans-serif" }}
+            >
+              Total Fields
+            </div>
+            <MapPin size={18} className="text-[var(--admin-primary)]" />
+          </div>
+          <div
+            className="text-[var(--admin-text-dark)] text-3xl font-bold mb-1"
+            style={{ fontFamily: "Manrope, sans-serif" }}
+          >
+            {farm.stats.totalFields}
+          </div>
+        </div>
+
+        <div
+          className="bg-white border border-[var(--admin-border)] rounded-2xl p-6"
+          style={{ boxShadow: "0px 2px 8px rgba(0,0,0,0.04)" }}
+        >
+          <div className="flex items-center justify-between mb-3">
+            <div
+              className="text-[var(--admin-text-muted)] text-sm"
+              style={{ fontFamily: "Inter, sans-serif" }}
+            >
+              Active Tasks
+            </div>
+            <CheckSquare size={18} className="text-[var(--admin-primary)]" />
+          </div>
+          <div
+            className="text-[var(--admin-text-dark)] text-3xl font-bold mb-1"
+            style={{ fontFamily: "Manrope, sans-serif" }}
+          >
+            {farm.stats.activeTasks}
+          </div>
+        </div>
+
+        <div
+          className="bg-white border border-[var(--admin-border)] rounded-2xl p-6"
+          style={{ boxShadow: "0px 2px 8px rgba(0,0,0,0.04)" }}
+        >
+          <div className="flex items-center justify-between mb-3">
+            <div
+              className="text-[var(--admin-text-muted)] text-sm"
+              style={{ fontFamily: "Inter, sans-serif" }}
+            >
+              Total Workers
+            </div>
+            <Users size={18} className="text-[var(--admin-primary)]" />
+          </div>
+          <div
+            className="text-[var(--admin-text-dark)] text-3xl font-bold mb-1"
+            style={{ fontFamily: "Manrope, sans-serif" }}
+          >
+            {farm.stats.totalWorkers}
+          </div>
+        </div>
+
+        <div
+          className="bg-white border border-[var(--admin-border)] rounded-2xl p-6"
+          style={{ boxShadow: "0px 2px 8px rgba(0,0,0,0.04)" }}
+        >
+          <div className="flex items-center justify-between mb-3">
+            <div
+              className="text-[var(--admin-text-muted)] text-sm"
+              style={{ fontFamily: "Inter, sans-serif" }}
+            >
+              Completed Tasks
+            </div>
+            <TrendingUp size={18} className="text-[var(--admin-primary)]" />
+          </div>
+          <div
+            className="text-[var(--admin-text-dark)] text-3xl font-bold mb-1"
+            style={{ fontFamily: "Manrope, sans-serif" }}
+          >
+            {farm.stats.completedTasks}
+          </div>
+        </div>
+      </div>
+
+      {/* Fields + workers */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="lg:col-span-2 space-y-6">
+          {/* Fields */}
+          <div
+            className="bg-white border border-[var(--admin-border)] rounded-2xl p-6"
+            style={{ boxShadow: "0px 2px 8px rgba(0,0,0,0.04)" }}
+          >
+            <h3
+              className="text-[var(--admin-text-dark)] text-xl mb-4"
+              style={{ fontFamily: "Manrope, sans-serif", fontWeight: 700 }}
+            >
+              Fields Overview
+            </h3>
+
+            <div className="space-y-4">
+              {farm.fields.map((field) => (
+                <div
+                  key={field.id}
+                  className="border border-[var(--admin-border)] rounded-xl p-4 hover:border-[var(--admin-primary)] transition-all"
+                >
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-lg bg-[var(--admin-primary)]/10 flex items-center justify-center">
+                        <MapPin
+                          size={18}
+                          className="text-[var(--admin-primary)]"
+                        />
+                      </div>
+                      <div>
+                        <div
+                          className="text-[var(--admin-text-dark)] font-semibold"
+                          style={{ fontFamily: "Inter, sans-serif" }}
+                        >
+                          {field.name}
+                        </div>
+                        <div
+                          className="text-[var(--admin-text-muted)] text-sm"
+                          style={{ fontFamily: "Inter, sans-serif" }}
+                        >
+                          {field.size} ha • {field.cropType}
+                        </div>
+                      </div>
+                    </div>
+                    <span
+                      className="px-3 py-1 rounded-full text-xs bg-blue-50 text-blue-600"
+                      style={{
+                        fontFamily: "Inter, sans-serif",
+                        fontWeight: 600,
+                      }}
+                    >
+                      {field.status}
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Workers */}
+          <div
+            className="bg-white border border-[var(--admin-border)] rounded-2xl p-6"
+            style={{ boxShadow: "0px 2px 8px rgba(0,0,0,0.04)" }}
+          >
+            <h3
+              className="text-[var(--admin-text-dark)] text-xl mb-4"
+              style={{ fontFamily: "Manrope, sans-serif", fontWeight: 700 }}
+            >
+              Team Members
+            </h3>
+
+            <div className="space-y-3">
+              {farm.workers.map((worker) => (
+                <div
+                  key={worker.id}
+                  className="flex items-center justify-between p-3 rounded-xl border border-[var(--admin-border)] hover:border-[var(--admin-primary)] transition-all"
+                >
+                  <div className="flex items-center gap-3">
+                    <div
+                      className="w-10 h-10 rounded-full bg-gradient-to-br from-[var(--admin-primary)] to-[var(--admin-secondary)] flex items-center justify-center text-white font-semibold"
+                      style={{ fontFamily: "Inter, sans-serif" }}
+                    >
+                      {worker.name
+                        .split(" ")
+                        .map((n) => n[0])
+                        .join("")
+                        .slice(0, 2)
+                        .toUpperCase()}
+                    </div>
+                    <div className="flex-1">
+                      <div
+                        className="text-[var(--admin-text-dark)] font-semibold"
+                        style={{ fontFamily: "Inter, sans-serif" }}
+                      >
+                        {worker.name}
+                      </div>
+                      <div
+                        className="text-[var(--admin-text-muted)] text-sm"
+                        style={{ fontFamily: "Inter, sans-serif" }}
+                      >
+                        {worker.email}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* Right column placeholder: recent activity, info, etc. (optional) */}
+        <div className="space-y-6">
+          <div
+            className="bg-white border border-[var(--admin-border)] rounded-2xl p-6"
+            style={{ boxShadow: "0px 2px 8px rgba(0,0,0,0.04)" }}
+          >
+            <h3
+              className="text-[var(--admin-text-dark)] text-xl mb-2"
+              style={{ fontFamily: "Manrope, sans-serif", fontWeight: 700 }}
+            >
+              Activity
+            </h3>
+            <p
+              className="text-sm text-[var(--admin-text-muted)]"
+              style={{ fontFamily: "Inter, sans-serif" }}
+            >
+              You can hook this to a farm-specific activity feed later.
+            </p>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }

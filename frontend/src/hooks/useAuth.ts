@@ -61,8 +61,8 @@ export function useAuth() {
 
       const loggedUser = mapLoginDataToUser({
         userId: loginData.userId,
-        email: loginData.email,
-        name: loginData.name,
+        email: loginData.email || data.email, // fallback to login request email
+        name: loginData.name || "User", // fallback name
         role: loginData.role,
         farmId: loginData.farmId,
         farmName: loginData.farmName,
@@ -78,9 +78,7 @@ export function useAuth() {
       localStorage.setItem("user", JSON.stringify(loggedUser));
 
       // you can keep this cookie if other parts use it, but farms will use header
-      document.cookie = `token=${token}; Path=/; Max-Age=${
-        7 * 24 * 60 * 60
-      }`;
+      document.cookie = `token=${token}; Path=/; Max-Age=${7 * 24 * 60 * 60}`;
 
       if (loggedUser.role === "platform_admin") {
         await router.push("/admin/dashboard");
@@ -140,9 +138,7 @@ export function useAuth() {
 
       localStorage.setItem("accessToken", token);
       localStorage.setItem("user", JSON.stringify(newUser));
-      document.cookie = `token=${token}; Path=/; Max-Age=${
-        7 * 24 * 60 * 60
-      }`;
+      document.cookie = `token=${token}; Path=/; Max-Age=${7 * 24 * 60 * 60}`;
 
       await router.push("/workspace/dashboard");
       return { success: true };

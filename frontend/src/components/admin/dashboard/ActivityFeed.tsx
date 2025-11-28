@@ -1,57 +1,32 @@
 "use client";
 
-import { CheckCircle, UserPlus, Award, MapPin, LucideIcon } from "lucide-react";
-
-interface Activity {
-  id: number;
-  icon: LucideIcon;
-  color: string;
-  title: string;
-  subtitle: string;
-  time: string;
-}
+import { Activity as ActivityIcon } from "lucide-react";
+import { Activity } from "@/services/adminService";
 
 interface ActivityFeedProps {
-  activities?: Activity[];
+  activities: Activity[];
+  loading?: boolean;
+  error?: string | null;
 }
 
-const defaultActivities: Activity[] = [
-  {
-    id: 1,
-    icon: CheckCircle,
-    color: "var(--admin-primary)",
-    title: 'New farm "Eco Farm" created',
-    subtitle: "by karim@email.com",
-    time: "2 minutes ago",
-  },
-  {
-    id: 2,
-    icon: UserPlus,
-    color: "var(--admin-blue)",
-    title: "New user registered as worker",
-    subtitle: 'joined "Green Valley Farm"',
-    time: "15 minutes ago",
-  },
-  {
-    id: 3,
-    icon: Award,
-    color: "var(--admin-secondary)",
-    title: "Task milestone reached",
-    subtitle: "50,000 tasks completed today!",
-    time: "1 hour ago",
-  },
-  {
-    id: 4,
-    icon: MapPin,
-    color: "var(--admin-primary)",
-    title: "New field added",
-    subtitle: '"North Field" by Ahmed K.',
-    time: "3 hours ago",
-  },
-];
+function getTimeAgo(dateString: string): string {
+  const date = new Date(dateString);
+  const now = new Date();
+  const diffMs = now.getTime() - date.getTime();
+  const diffMins = Math.floor(diffMs / 60000);
+  const diffHours = Math.floor(diffMins / 60);
+  const diffDays = Math.floor(diffHours / 24);
+
+  if (diffMins < 1) return "Just now";
+  if (diffMins < 60) return `${diffMins}m ago`;
+  if (diffHours < 24) return `${diffHours}h ago`;
+  return `${diffDays}d ago`;
+}
 
 export default function ActivityFeed({
-  activities = defaultActivities,
+  activities,
+  loading,
+  error,
 }: ActivityFeedProps) {
   return (
     <div
@@ -67,24 +42,45 @@ export default function ActivityFeed({
 
       <div className="h-px bg-[var(--admin-border)] mb-6" />
 
-      <div className="space-y-4">
-        {activities.map((activity) => {
-          const Icon = activity.icon;
-
-          return (
+      {/* Loading State */}
+      {loading ? (
+        <div className="space-y-4">
+          {[1, 2, 3, 4].map((i) => (
+            <div key={i} className="flex gap-3 animate-pulse">
+              <div className="w-10 h-10 bg-gray-200 rounded-lg"></div>
+              <div className="flex-1 space-y-2">
+                <div className="h-5 bg-gray-200 rounded w-3/4"></div>
+                <div className="h-4 bg-gray-200 rounded w-1/2"></div>
+                <div className="h-3 bg-gray-200 rounded w-1/4"></div>
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : error ? (
+        <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+          <p className="text-red-600 text-sm">{error}</p>
+        </div>
+      ) : activities.length === 0 ? (
+        <div className="text-center py-8 text-gray-500">No recent activity</div>
+      ) : (
+        <div className="space-y-4">
+          {activities.map((activity) => (
             <div
               key={activity.id}
               className="p-4 rounded-lg border-l-[3px] bg-[var(--admin-bg-gray)] hover:bg-gray-100 transition-colors"
               style={{
-                borderLeftColor: activity.color,
+                borderLeftColor: "var(--admin-primary)",
               }}
             >
               <div className="flex items-start gap-3">
                 <div
                   className="mt-1 p-2 rounded-lg"
-                  style={{ backgroundColor: `${activity.color}20` }}
+                  style={{ backgroundColor: "rgba(34, 197, 94, 0.1)" }}
                 >
-                  <Icon size={20} style={{ color: activity.color }} />
+                  <ActivityIcon
+                    size={20}
+                    className="text-[var(--admin-primary)]"
+                  />
                 </div>
 
                 <div className="flex-1">
@@ -105,20 +101,20 @@ export default function ActivityFeed({
                       fontSize: "14px",
                     }}
                   >
-                    {activity.subtitle}
+                    {activity.message}
                   </div>
                   <div
                     className="text-[var(--admin-text-muted)] text-xs"
                     style={{ fontFamily: "Inter, sans-serif" }}
                   >
-                    {activity.time}
+                    {getTimeAgo(activity.timestamp)}
                   </div>
                 </div>
               </div>
             </div>
-          );
-        })}
-      </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

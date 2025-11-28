@@ -172,7 +172,7 @@ router.get(
   handleValidationErrors,
   async (req, res) => {
     try {
-      const farmId = req.params.id;
+      const farmId = Number(req.params.id);
 
       const farm = await prisma.farm.findUnique({
         where: { id: farmId },
@@ -201,8 +201,12 @@ router.get(
 
       const owner = farm.users.find((u) => u.role === UserRole.admin) || null;
       const workers = farm.users.filter((u) => u.role === UserRole.worker);
-      const activeTasks = farm.tasks.filter((t) => t.status !== TaskStatus.completed).length;
-      const completedTasks = farm.tasks.filter((t) => t.status === TaskStatus.completed).length;
+      const activeTasks = farm.tasks.filter(
+        (t) => t.status !== TaskStatus.completed
+      ).length;
+      const completedTasks = farm.tasks.filter(
+        (t) => t.status === TaskStatus.completed
+      ).length;
 
       res.json({
         id: farm.id,
@@ -210,7 +214,9 @@ router.get(
         location: farm.location,
         joinCode: farm.joinCode,
         createdAt: farm.createdAt,
-        owner: owner ? { id: owner.id, name: owner.name, email: owner.email } : null,
+        owner: owner
+          ? { id: owner.id, name: owner.name, email: owner.email }
+          : null,
         workers: workers.map((w) => ({
           id: w.id,
           name: w.name,
@@ -230,6 +236,40 @@ router.get(
           completedTasks,
         },
       });
+    } catch (err) {
+      console.error(err);
+      return sendError(res, 500, 'INTERNAL_ERROR', 'Internal Server Error');
+    }
+  }
+);
+
+// DELETE /admin/farms/:id
+router.delete(
+  '/farms/:id',
+  authenticate,
+  requirePlatformAdmin,
+  [param('id').isInt().toInt()],
+  handleValidationErrors,
+  async (req, res) => {
+    try {
+      const farmId = Number(req.params.id);
+
+      // Delete child records first if FKs require it
+      await prisma.taskAssignment.deleteMany({
+        where: { task: { farmId } },
+      });
+      await prisma.task.deleteMany({ where: { farmId } });
+      await prisma.field.deleteMany({ where: { farmId } });
+
+      // Optionally detach users from this farm
+      await prisma.user.updateMany({
+        where: { farmId },
+        data: { farmId: null },
+      });
+
+      await prisma.farm.delete({ where: { id: farmId } });
+
+      return res.status(204).send();
     } catch (err) {
       console.error(err);
       return sendError(res, 500, 'INTERNAL_ERROR', 'Internal Server Error');

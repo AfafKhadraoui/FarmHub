@@ -1,4 +1,5 @@
 // prisma/seed.js
+
 const {
   PrismaClient,
   UserRole,
@@ -34,6 +35,7 @@ async function main() {
       role: UserRole.platform_admin,
     },
   });
+
   console.log("Seeded admin:", platformAdmin);
 
   // 2) Farms
@@ -81,7 +83,7 @@ async function main() {
     },
   });
 
-  const workersGreen = await prisma.user.createMany({
+  await prisma.user.createMany({
     data: [
       {
         email: "worker1@greenvalley.com",
@@ -102,7 +104,7 @@ async function main() {
     ],
   });
 
-  const workersRiver = await prisma.user.createMany({
+  await prisma.user.createMany({
     data: [
       {
         email: "worker1@riverside.com",
@@ -119,6 +121,7 @@ async function main() {
   const allWorkersGreen = await prisma.user.findMany({
     where: { farmId: greenValley.id, role: UserRole.worker },
   });
+
   const allWorkersRiver = await prisma.user.findMany({
     where: { farmId: riverside.id, role: UserRole.worker },
   });
@@ -205,6 +208,7 @@ async function main() {
         workerId: allWorkersGreen[0].id,
       },
     });
+
     await prisma.taskAssignment.create({
       data: {
         taskId: harvestTask.id,
@@ -212,6 +216,7 @@ async function main() {
       },
     });
   }
+
   if (allWorkersGreen[1]) {
     await prisma.taskAssignment.create({
       data: {
@@ -220,6 +225,7 @@ async function main() {
       },
     });
   }
+
   if (allWorkersRiver[0]) {
     await prisma.taskAssignment.create({
       data: {
@@ -366,4 +372,3 @@ main()
     await prisma.$disconnect();
     process.exit(1);
   });
-

@@ -5,16 +5,19 @@ export function middleware(request: NextRequest) {
   const token = request.cookies.get("token");
   const { pathname } = request.nextUrl;
 
-  // Protect /admin/* routes (admin only), but allow /admin/login and /admin/dashboard
+  // Allow /admin/login and /admin/dashboard/* to pass through
   if (
-    pathname.startsWith("/admin") &&
-    !pathname.startsWith("/admin/dashboard") &&
-    !pathname.startsWith("/admin/login")
+    pathname.startsWith("/admin/login") ||
+    pathname.startsWith("/admin/dashboard")
   ) {
+    return NextResponse.next();
+  }
+
+  // Protect other /admin/* routes (require token)
+  if (pathname.startsWith("/admin")) {
     if (!token) {
-      return NextResponse.redirect(new URL("/login", request.url));
+      return NextResponse.redirect(new URL("/admin/login", request.url));
     }
-    // TODO: verify token and role
   }
 
   // Protect /workspace/* routes (authenticated users)
@@ -24,8 +27,8 @@ export function middleware(request: NextRequest) {
     }
   }
 
-  // Redirect authenticated users from auth pages
-  if (pathname.startsWith("/login") || pathname.startsWith("/register")) {
+  // Redirect authenticated users from regular login/register pages to workspace
+  if (pathname === "/login" || pathname.startsWith("/register")) {
     if (token) {
       return NextResponse.redirect(
         new URL("/workspace/dashboard", request.url)
