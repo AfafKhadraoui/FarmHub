@@ -1,34 +1,45 @@
 import api from '@/lib/api';
 
-export interface User {
+export interface AdminProfile {
   id: number;
-  email: string;
   name: string;
+  email: string;
+  role: string;
   phone: string | null;
-  role: 'admin' | 'worker' | 'platform_admin';
-  farm: {
-    id: number;
-    name: string;
-    location: string;
-  } | null;
+  bio: string | null;
+  avatarUrl: string | null;
   createdAt: string;
 }
 
-export interface ProfileUpdateData {
+export interface AdminProfileUpdateData {
   name?: string;
   phone?: string;
+  bio?: string;
 }
 
-export const profileService = {
-  // Get profile - matches backend GET /profile
-  getProfile: async (): Promise<User> => {
-  const response = await api.get('/profile');
-  return response.data.data; // access the 'data' field returned by backend
-},
+export const adminProfileService = {
+  // Get admin profile
+  getProfile: async (): Promise<AdminProfile> => {
+    const response = await api.get('/admin/profile');
+    return response.data;
+  },
 
-  // Update profile - matches backend PATCH /profile
-  updateProfile: async (data: ProfileUpdateData): Promise<User> => {
-  const response = await api.patch('/profile', data);
-  return response.data.data; // same here
-},
+  // Update admin profile
+  updateProfile: async (data: AdminProfileUpdateData): Promise<AdminProfile> => {
+    const response = await api.patch('/admin/profile', data);
+    return response.data;
+  },
+
+  // Upload avatar (optional - if you implement it later)
+  uploadAvatar: async (file: File): Promise<{ avatarUrl: string }> => {
+    const formData = new FormData();
+    formData.append('avatar', file);
+    
+    const response = await api.post('/admin/profile/avatar', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+    return response.data;
+  },
 };
