@@ -83,7 +83,7 @@ export function useAuth() {
       if (loggedUser.role === "platform_admin") {
         await router.push("/admin/dashboard");
       } else {
-        await router.push("/workspace/dashboard");
+        await router.push("/dashboard");
       }
 
       return { success: true };
@@ -140,7 +140,7 @@ export function useAuth() {
       localStorage.setItem("user", JSON.stringify(newUser));
       document.cookie = `token=${token}; Path=/; Max-Age=${7 * 24 * 60 * 60}`;
 
-      await router.push("/workspace/dashboard");
+      await router.push("/dashboard");
       return { success: true };
     } catch (error: any) {
       return {

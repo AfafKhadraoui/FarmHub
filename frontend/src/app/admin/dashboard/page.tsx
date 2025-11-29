@@ -11,6 +11,7 @@ import { useRouter } from "next/navigation";
 import { useDashboardMetrics } from "@/hooks/useDashboardMetrics";
 import { useRecentFarms } from "@/hooks/useRecentFarms";
 import { useActivities } from "@/hooks/useActivities";
+import { useFarmGrowth } from "@/hooks/useFarmGrowth";
 
 export default function AdminDashboardPage() {
   const router = useRouter();
@@ -25,6 +26,11 @@ export default function AdminDashboardPage() {
     loading: activitiesLoading,
     error: activitiesError,
   } = useActivities();
+  const {
+    data: farmGrowthData,
+    loading: growthLoading,
+    error: growthError,
+  } = useFarmGrowth();
 
   return (
     <>
@@ -92,7 +98,6 @@ export default function AdminDashboardPage() {
                   </span>
                 </div>
               </div>
-
               {/* Key Metrics */}
               {loading ? (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
@@ -162,12 +167,14 @@ export default function AdminDashboardPage() {
                   />
                 </div>
               )}
-
               {/* Farm Growth Chart */}
               <div className="mb-8">
-                <FarmGrowthChart />
-              </div>
-
+                <FarmGrowthChart
+                  data={farmGrowthData}
+                  loading={growthLoading}
+                  error={growthError}
+                />
+              </div>{" "}
               {/* Recent Farms Table and Activity Feed */}
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 <RecentFarmsTable
