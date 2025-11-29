@@ -3,6 +3,7 @@ import { Manrope, Covered_By_Your_Grace } from 'next/font/google';
 import './globals.css';
 import Navbar from '../components/layout/Navbar';
 import Footer from '../components/layout/Footer';
+import {Providers} from './providers';
 
 const manrope = Manrope({ 
   subsets: ['latin'],
@@ -31,7 +32,11 @@ export default function RootLayout({
         <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0" />
       </head>
       <body className={`${manrope.variable} ${coveredByYourGrace.variable} font-sans`}>
-        {children}
+
+        <Providers>
+          {children}
+        </Providers>
+
       </body>
     </html>
   );
