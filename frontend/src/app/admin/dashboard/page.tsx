@@ -8,9 +8,29 @@ import RecentFarmsTable from "@/components/admin/dashboard/RecentFarmsTable";
 import ActivityFeed from "@/components/admin/dashboard/ActivityFeed";
 import { Store, Users, CheckSquare, MapPin } from "lucide-react";
 import { useRouter } from "next/navigation";
+import { useDashboardMetrics } from "@/hooks/useDashboardMetrics";
+import { useRecentFarms } from "@/hooks/useRecentFarms";
+import { useActivities } from "@/hooks/useActivities";
+import { useFarmGrowth } from "@/hooks/useFarmGrowth";
 
 export default function AdminDashboardPage() {
   const router = useRouter();
+  const { data: metrics, loading, error } = useDashboardMetrics();
+  const {
+    data: recentFarms,
+    loading: farmsLoading,
+    error: farmsError,
+  } = useRecentFarms();
+  const {
+    data: activities,
+    loading: activitiesLoading,
+    error: activitiesError,
+  } = useActivities();
+  const {
+    data: farmGrowthData,
+    loading: growthLoading,
+    error: growthError,
+  } = useFarmGrowth();
 
   return (
     <>
@@ -78,66 +98,96 @@ export default function AdminDashboardPage() {
                   </span>
                 </div>
               </div>
-
               {/* Key Metrics */}
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-                <MetricCard
-                  icon={Store}
-                  value="523"
-                  label="Farms"
-                  change="+12 today"
-                  isPositive={true}
-                  gradientColors={[
-                    "var(--admin-secondary)",
-                    "var(--admin-secondary-dark)",
-                  ]}
-                />
-                <MetricCard
-                  icon={Users}
-                  value="12,847"
-                  label="Users"
-                  change="+89 today"
-                  isPositive={true}
-                  gradientColors={[
-                    "var(--admin-primary)",
-                    "var(--admin-primary-dark)",
-                  ]}
-                />
-                <MetricCard
-                  icon={CheckSquare}
-                  value="45,621"
-                  label="Tasks Today"
-                  change="+1,234 today"
-                  isPositive={true}
-                  gradientColors={[
-                    "var(--admin-blue)",
-                    "var(--admin-blue-dark)",
-                  ]}
-                />
-                <MetricCard
-                  icon={MapPin}
-                  value="6,789"
-                  label="Fields Total"
-                  change="+45 today"
-                  isPositive={true}
-                  gradientColors={[
-                    "var(--admin-purple)",
-                    "var(--admin-purple-dark)",
-                  ]}
-                />
-              </div>
-
+              {loading ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+                  {[1, 2, 3, 4].map((i) => (
+                    <div
+                      key={i}
+                      className="bg-white rounded-xl border border-gray-200 p-6 animate-pulse"
+                    >
+                      <div className="h-12 bg-gray-200 rounded mb-4"></div>
+                      <div className="h-8 bg-gray-200 rounded mb-2"></div>
+                      <div className="h-4 bg-gray-200 rounded w-2/3"></div>
+                    </div>
+                  ))}
+                </div>
+              ) : error ? (
+                <div className="bg-red-50 border border-red-200 rounded-xl p-6 mb-8">
+                  <p className="text-red-600 font-medium">
+                    Failed to load metrics
+                  </p>
+                  <p className="text-red-500 text-sm mt-1">{error}</p>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+                  <MetricCard
+                    icon={Store}
+                    value={metrics?.totalFarms.toLocaleString() || "0"}
+                    label="Farms"
+                    change={`+${metrics?.farmsToday || 0} today`}
+                    isPositive={true}
+                    gradientColors={[
+                      "var(--admin-secondary)",
+                      "var(--admin-secondary-dark)",
+                    ]}
+                  />
+                  <MetricCard
+                    icon={Users}
+                    value={metrics?.totalUsers.toLocaleString() || "0"}
+                    label="Users"
+                    change={`+${metrics?.usersToday || 0} today`}
+                    isPositive={true}
+                    gradientColors={[
+                      "var(--admin-primary)",
+                      "var(--admin-primary-dark)",
+                    ]}
+                  />
+                  <MetricCard
+                    icon={CheckSquare}
+                    value={metrics?.totalTasks.toLocaleString() || "0"}
+                    label="Tasks Total"
+                    change={`+${metrics?.tasksToday || 0} today`}
+                    isPositive={true}
+                    gradientColors={[
+                      "var(--admin-blue)",
+                      "var(--admin-blue-dark)",
+                    ]}
+                  />
+                  <MetricCard
+                    icon={MapPin}
+                    value={metrics?.totalFields.toLocaleString() || "0"}
+                    label="Fields Total"
+                    change={`+${metrics?.fieldsToday || 0} today`}
+                    isPositive={true}
+                    gradientColors={[
+                      "var(--admin-purple)",
+                      "var(--admin-purple-dark)",
+                    ]}
+                  />
+                </div>
+              )}
               {/* Farm Growth Chart */}
               <div className="mb-8">
-                <FarmGrowthChart />
-              </div>
-
+                <FarmGrowthChart
+                  data={farmGrowthData}
+                  loading={growthLoading}
+                  error={growthError}
+                />
+              </div>{" "}
               {/* Recent Farms Table and Activity Feed */}
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 <RecentFarmsTable
+                  farms={recentFarms}
+                  loading={farmsLoading}
+                  error={farmsError}
                   onViewAll={() => router.push("/admin/dashboard/farms")}
                 />
-                <ActivityFeed />
+                <ActivityFeed
+                  activities={activities}
+                  loading={activitiesLoading}
+                  error={activitiesError}
+                />
               </div>
             </>
           </div>

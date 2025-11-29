@@ -3,13 +3,14 @@
 import Sidebar from "@/components/admin/dashboard/Sidebar";
 import TopBar from "@/components/admin/dashboard/TopBar";
 import MyProfilePage from "@/components/admin/dashboard/MyProfilePage";
+import { Providers } from "@/app/providers";
 import { useRouter } from "next/navigation";
 
 export default function ProfileRoute() {
   const router = useRouter();
 
   return (
-    <>
+    <Providers>
       <link rel="preconnect" href="https://fonts.googleapis.com" />
       <link
         rel="preconnect"
@@ -40,6 +41,6 @@ export default function ProfileRoute() {
           </div>
         </div>
       </div>
-    </>
+    </Providers>
   );
 }

@@ -1,3 +1,7 @@
 export function AdminDashboard() {
-  return <div>Admin Dashboard</div>;
+  return (
+    <div>
+      <h1 className="text-2xl font-bold text-gray-900">Admin Dashboard</h1>
+    </div>
+  );
 }

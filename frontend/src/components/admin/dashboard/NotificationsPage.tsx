@@ -2,89 +2,26 @@
 
 import { Bell, Check, Trash2, Settings } from "lucide-react";
 import { useState } from "react";
-
-interface Notification {
-  id: string;
-  type: "farm" | "user" | "system" | "alert";
-  title: string;
-  message: string;
-  timestamp: Date;
-  isRead: boolean;
-}
+import { useNotifications } from "@/hooks/useNotifications";
 
 export default function NotificationsPage() {
-  const [notifications, setNotifications] = useState<Notification[]>([
-    {
-      id: "1",
-      type: "farm",
-      title: "New Farm Created",
-      message:
-        "A new farm 'Sunset Valley' has been registered by ahmed@email.com",
-      timestamp: new Date(Date.now() - 1000 * 60 * 5),
-      isRead: false,
-    },
-    {
-      id: "2",
-      type: "user",
-      title: "User Milestone Reached",
-      message:
-        "Platform reached 1,000 registered users! Congratulations on this achievement.",
-      timestamp: new Date(Date.now() - 1000 * 60 * 60),
-      isRead: false,
-    },
-    {
-      id: "3",
-      type: "farm",
-      title: "Farm Updated",
-      message:
-        "Green Valley Farm updated their field information and added 2 new workers.",
-      timestamp: new Date(Date.now() - 1000 * 60 * 60 * 3),
-      isRead: true,
-    },
-    {
-      id: "4",
-      type: "user",
-      title: "New Admin Action Required",
-      message:
-        "5 new farm applications are pending approval in the review queue.",
-      timestamp: new Date(Date.now() - 1000 * 60 * 60 * 5),
-      isRead: true,
-    },
-    {
-      id: "5",
-      type: "farm",
-      title: "Task Completion Alert",
-      message:
-        "Riverside Farm completed all scheduled tasks for this week ahead of schedule.",
-      timestamp: new Date(Date.now() - 1000 * 60 * 60 * 24),
-      isRead: true,
-    },
-  ]);
-
   const [filter, setFilter] = useState<"all" | "unread">("all");
 
-  const filteredNotifications = notifications.filter((n) =>
-    filter === "unread" ? !n.isRead : true
-  );
+  const {
+    notifications,
+    loading,
+    error,
+    unreadCount,
+    markAsRead,
+    markAllAsRead,
+    deleteNotification,
+  } = useNotifications(filter === "unread");
 
-  const unreadCount = notifications.filter((n) => !n.isRead).length;
+  const filteredNotifications = notifications;
 
-  const markAsRead = (id: string) => {
-    setNotifications(
-      notifications.map((n) => (n.id === id ? { ...n, isRead: true } : n))
-    );
-  };
-
-  const markAllAsRead = () => {
-    setNotifications(notifications.map((n) => ({ ...n, isRead: true })));
-  };
-
-  const deleteNotification = (id: string) => {
-    setNotifications(notifications.filter((n) => n.id !== id));
-  };
-
-  const getRelativeTime = (date: Date): string => {
-    const seconds = Math.floor((Date.now() - date.getTime()) / 1000);
+  const getRelativeTime = (date: Date | string): string => {
+    const dateObj = typeof date === "string" ? new Date(date) : date;
+    const seconds = Math.floor((Date.now() - dateObj.getTime()) / 1000);
     if (seconds < 60) return "Just now";
     const minutes = Math.floor(seconds / 60);
     if (minutes < 60) return `${minutes}m ago`;
@@ -225,7 +162,35 @@ export default function NotificationsPage() {
 
       {/* Notifications List */}
       <div className="space-y-3">
-        {filteredNotifications.length === 0 ? (
+        {loading ? (
+          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-12 text-center">
+            <div className="animate-spin w-12 h-12 border-4 border-[#4baf47] border-t-transparent rounded-full mx-auto mb-4" />
+            <p
+              className="text-gray-600"
+              style={{ fontFamily: "Inter, sans-serif" }}
+            >
+              Loading notifications...
+            </p>
+          </div>
+        ) : error ? (
+          <div className="bg-white rounded-xl shadow-sm border border-red-200 p-12 text-center">
+            <div className="w-16 h-16 rounded-full bg-red-100 flex items-center justify-center mx-auto mb-4">
+              <Bell size={32} className="text-red-500" />
+            </div>
+            <p
+              className="text-red-900 font-semibold text-lg mb-2"
+              style={{ fontFamily: "Inter, sans-serif" }}
+            >
+              Error loading notifications
+            </p>
+            <p
+              className="text-red-600"
+              style={{ fontFamily: "Inter, sans-serif" }}
+            >
+              {error}
+            </p>
+          </div>
+        ) : filteredNotifications.length === 0 ? (
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-12 text-center">
             <div className="w-16 h-16 rounded-full bg-gray-100 flex items-center justify-center mx-auto mb-4">
               <Bell size={32} className="text-gray-400" />
