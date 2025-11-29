@@ -16,19 +16,39 @@ async function login(data: LoginRequest): Promise<LoginResponse> {
 }
 
 // Register Admin (Farm Owner) - Creates farm and admin account
-async function registerAdmin(data: RegisterAdminRequest): Promise<RegisterResponse> {
-  // API v2.0 expects POST to /api/auth/register with role and correct fields
-  const response = await api.post('/api/auth/register', {
-    role: "admin",
+async function registerAdmin(
+  data: RegisterAdminRequest
+): Promise<RegisterResponse> {
+  const res = await api.post('/api/auth/register', {
+    role: 'admin',
     name: data.name,
     email: data.email,
     password: data.password,
     phone: data.phone,
     farmName: data.farmName,
-    location: data.farmLocation, // matches backend "location"
+    location: data.farmLocation,
   });
-  return response.data;
+
+  const d = res.data; // backend response
+
+  return {
+    success: true,
+    message: 'Registration successful',
+    data: {
+      userId: d.userId,
+      email: d.email,
+      name: d.name,
+      role: d.role,
+      farmId: d.farmId,
+      farmName: d.farmName ?? null,
+      token: d.token,
+      refreshToken: d.refreshToken ?? '',
+      expiresIn: d.expiresIn ?? 0,
+      joinCode: d.joinCode ?? null,   // <--- map backend joinCode
+    },
+  };
 }
+
 
 // Register Worker - Joins existing farm using farm code
 async function registerWorker(data: RegisterWorkerRequest): Promise<RegisterResponse> {
