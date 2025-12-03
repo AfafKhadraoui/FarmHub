@@ -350,8 +350,6 @@ async RefreshToken(req, res) {
     });
   }
 }
-
-
 };
 
 module.exports = { authController };
