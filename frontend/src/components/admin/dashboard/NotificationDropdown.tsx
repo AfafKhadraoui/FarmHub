@@ -9,10 +9,8 @@ interface Notification {
   type: "farm" | "user" | "system" | "alert";
   title: string;
   message: string;
-  timestamp: Date;
+  timestamp: Date | string;
   isRead: boolean;
-  link?: string;
-  icon: string;
 }
 
 interface NotificationDropdownProps {
@@ -20,6 +18,7 @@ interface NotificationDropdownProps {
   onClose: () => void;
   onNavigate: (page: string) => void;
 }
+// ... (keeping imports and helpers)
 
 const getIconComponent = (iconName: string) => {
   const icons: { [key: string]: any } = {
@@ -41,9 +40,10 @@ const getIconColor = (type: string) => {
   return colors[type as keyof typeof colors] || colors.farm;
 };
 
-const getRelativeTime = (date: Date) => {
+const getRelativeTime = (date: Date | string) => {
+  const dateObj = new Date(date);
   const now = new Date();
-  const diffMs = now.getTime() - date.getTime();
+  const diffMs = now.getTime() - dateObj.getTime();
   const diffMins = Math.floor(diffMs / 60000);
   const diffHours = Math.floor(diffMs / 3600000);
   const diffDays = Math.floor(diffMs / 86400000);
@@ -104,10 +104,6 @@ export default function NotificationDropdown({
   const handleNotificationClick = async (notification: Notification) => {
     if (!notification.isRead) {
       await markAsRead(notification.id);
-    }
-    if (notification.link) {
-      // Navigate to link
-      console.log("Navigate to:", notification.link);
     }
     onClose();
   };
