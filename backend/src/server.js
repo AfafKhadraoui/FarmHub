@@ -37,6 +37,9 @@ app.use("/admin", require("./routes/admin"));
 app.use("/admin", require("./routes/activities"));
 
 // Profile routes for current user
+
+
+// Profile routes for current user
 app.use("/profile", require("./routes/profile"));
 
 // Health check
