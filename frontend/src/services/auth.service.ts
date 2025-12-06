@@ -15,6 +15,12 @@ async function login(data: LoginRequest): Promise<LoginResponse> {
   return response.data;
 }
 
+// Fetch current user profile from backend
+async function fetchProfile(): Promise<any> {
+  const response = await api.get('/api/auth/profile');
+  return response.data.data;
+}
+
 // Register Admin (Farm Owner) - Creates farm and admin account
 async function registerAdmin(
   data: RegisterAdminRequest
@@ -67,15 +73,13 @@ async function registerWorker(data: RegisterWorkerRequest): Promise<RegisterResp
 // Logout (client-side only - clear localStorage)
 function logout(): void {
   localStorage.removeItem('token');
-  localStorage.removeItem('user');
   // Optional: Call backend logout endpoint if you implement one
   // await api.post('/api/auth/logout');
 }
 
-// Get current user from localStorage
+// Get current user from localStorage - DEPRECATED/REMOVED
 function getCurrentUser() {
-  const userStr = localStorage.getItem('user');
-  return userStr ? JSON.parse(userStr) : null;
+  return null; // We no longer read user from localStorage
 }
 
 // Get current token from localStorage
@@ -86,19 +90,19 @@ function getToken(): string | null {
 // Save authentication data to localStorage
 function saveAuthData(token: string, user: any): void {
   localStorage.setItem('token', token);
-  localStorage.setItem('user', JSON.stringify(user));
+  // We NO LONGER save user details to localStorage for security
 }
 
 // Check if user is authenticated
 function isAuthenticated(): boolean {
   const token = localStorage.getItem('token');
-  const user = localStorage.getItem('user');
-  return !!(token && user);
+  return !!token;
 }
 
 // Export all functions as authService object
 export const authService = {
   login,
+  fetchProfile,
   registerAdmin,
   registerWorker,
   logout,

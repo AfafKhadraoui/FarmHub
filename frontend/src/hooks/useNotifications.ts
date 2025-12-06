@@ -19,8 +19,14 @@ export function useNotifications(unreadOnly: boolean = false) {
       setNotifications(notificationsWithDates);
       setError(null);
     } catch (err: any) {
-      setError(err.message || "Failed to fetch notifications");
-      console.error("Error fetching notifications:", err);
+      // If 403 (Forbidden), it means user is not admin. Return empty list instead of error.
+      if (err.response && err.response.status === 403) {
+        setNotifications([]);
+        setError(null);
+      } else {
+        setError(err.message || "Failed to fetch notifications");
+        console.error("Error fetching notifications:", err);
+      }
     } finally {
       setLoading(false);
     }

@@ -41,6 +41,8 @@ const authController = {
           message: "Farmer registered successfully",
           data: {
             userId: result.user.id,
+            name: result.user.name,
+            email: result.user.email,
             farmId: result.farm.id,
             joinCode: result.farm.joinCode,
             token: result.token,
@@ -76,6 +78,8 @@ const authController = {
           message: "Worker registered successfully",
           data: {
             userId: result.user.id,
+            name: result.user.name,
+            email: result.user.email,
             farmId: result.farm.id,
             farmName: result.farm.name,
             token: result.token,
@@ -133,6 +137,8 @@ const authController = {
         message: "Platform admin registered successfully",
         data: {
           userId: result.user.id,
+          name: result.user.name,
+          email: result.user.email,
           role: result.user.role,
           token: result.token,
           refreshToken: result.refreshToken,
@@ -177,6 +183,8 @@ const authController = {
         message: "Login successful",
         data: {
           userId: result.user.id,
+          name: result.user.name,
+          email: result.user.email,
           role: result.user.role,
           farmId: result.user.farmId,
           farmName: result.user.farm?.name,
@@ -331,25 +339,25 @@ const authController = {
     }
   },
 
-// refresh token 
-async RefreshToken(req, res) {
-  try {
-    const user = req.user; // user extracted from access token
-    const result = authService.refreshToken(user);
+  // refresh token 
+  async RefreshToken(req, res) {
+    try {
+      const user = req.user; // user extracted from access token
+      const result = authService.refreshToken(user);
 
-    return res.status(200).json({
-      success: true,
-      message: "Token refreshed successfully",
-      data: result
-    });
-  } catch (error) {
-    return res.status(400).json({
-      success: false,
-      error: error.message,
-      code: 'BAD_REQUEST'
-    });
+      return res.status(200).json({
+        success: true,
+        message: "Token refreshed successfully",
+        data: result
+      });
+    } catch (error) {
+      return res.status(400).json({
+        success: false,
+        error: error.message,
+        code: 'BAD_REQUEST'
+      });
+    }
   }
-}
 
 
 };

@@ -75,7 +75,8 @@ export function useAuth() {
 
       // IMPORTANT: this is what farms page will use
       localStorage.setItem("accessToken", token);
-      localStorage.setItem("user", JSON.stringify(loggedUser));
+      localStorage.setItem("token", token); // Fix: authStore expects 'token'
+      // localStorage.setItem("user", JSON.stringify(loggedUser)); // REMOVED for security
 
       // you can keep this cookie if other parts use it, but farms will use header
       document.cookie = `token=${token}; Path=/; Max-Age=${7 * 24 * 60 * 60}`;
@@ -137,7 +138,8 @@ export function useAuth() {
       setToken(token);
 
       localStorage.setItem("accessToken", token);
-      localStorage.setItem("user", JSON.stringify(newUser));
+      localStorage.setItem("token", token); // Fix: authStore expects 'token'
+      // localStorage.setItem("user", JSON.stringify(newUser)); // REMOVED for security
       document.cookie = `token=${token}; Path=/; Max-Age=${7 * 24 * 60 * 60}`;
 
       await router.push("/dashboard");
@@ -163,8 +165,10 @@ export function useAuth() {
       authService.logout();
     } finally {
       storeLogout();
+      storeLogout();
       localStorage.removeItem("accessToken");
-      localStorage.removeItem("user");
+      localStorage.removeItem("token"); // Fix: remove 'token' as well
+      // localStorage.removeItem("user"); // REMOVED
       document.cookie = "token=; Path=/; Max-Age=0";
       await router.push("/login");
     }
