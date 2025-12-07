@@ -85,3 +85,8 @@ Authorization: Bearer {{token}}
 ### GET /fields/details/:id
 GET {{baseUrl}}/fields/details/6
 Authorization: Bearer {{token}}
+###
+### GET /fields/filter?status=value
+GET {{baseUrl}}/fields/filter?status=planted
+Authorization: Bearer {{token}}
+###
