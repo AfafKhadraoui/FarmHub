@@ -19,8 +19,14 @@ export function useNotifications(unreadOnly: boolean = false) {
       setNotifications(notificationsWithDates);
       setError(null);
     } catch (err: any) {
-      setError(err.message || "Failed to fetch notifications");
-      console.error("Error fetching notifications:", err);
+      // If 403 (Forbidden), it means user is not admin. Return empty list instead of error.
+      if (err.response && err.response.status === 403) {
+        setNotifications([]);
+        setError(null);
+      } else {
+        setError(err.message || "Failed to fetch notifications");
+        console.error("Error fetching notifications:", err);
+      }
     } finally {
       setLoading(false);
     }
@@ -28,7 +34,18 @@ export function useNotifications(unreadOnly: boolean = false) {
 
   useEffect(() => {
     fetchNotifications();
+
+    // Listen for global notification updates
+    const handleUpdate = () => {
+      fetchNotifications();
+    };
+    window.addEventListener("notification-update", handleUpdate);
+    return () => window.removeEventListener("notification-update", handleUpdate);
   }, [fetchNotifications]);
+
+  const dispatchUpdate = () => {
+    window.dispatchEvent(new Event("notification-update"));
+  };
 
   const markAsRead = async (id: string) => {
     try {
@@ -36,6 +53,7 @@ export function useNotifications(unreadOnly: boolean = false) {
       setNotifications((prev) =>
         prev.map((n) => (n.id === id ? { ...n, isRead: true } : n))
       );
+      dispatchUpdate();
     } catch (err: any) {
       console.error("Error marking notification as read:", err);
       throw err;
@@ -46,6 +64,7 @@ export function useNotifications(unreadOnly: boolean = false) {
     try {
       const result = await adminService.markAllNotificationsAsRead();
       setNotifications((prev) => prev.map((n) => ({ ...n, isRead: true })));
+      dispatchUpdate();
       return result.count;
     } catch (err: any) {
       console.error("Error marking all notifications as read:", err);
@@ -57,6 +76,7 @@ export function useNotifications(unreadOnly: boolean = false) {
     try {
       await adminService.deleteNotification(id);
       setNotifications((prev) => prev.filter((n) => n.id !== id));
+      dispatchUpdate();
     } catch (err: any) {
       console.error("Error deleting notification:", err);
       throw err;

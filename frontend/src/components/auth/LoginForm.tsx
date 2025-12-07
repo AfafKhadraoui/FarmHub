@@ -107,7 +107,7 @@ export function LoginForm() {
                   onClick={() => setShowPassword(!showPassword)}
                   className="absolute right-4 top-1/2 -translate-y-1/2 text-[#999999] hover:text-[#333333]"
                 >
-                  {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                  {showPassword ? <Eye className="w-5 h-5" /> : <EyeOff className="w-5 h-5" /> }
                 </button>
               </div>
             </div>
@@ -123,12 +123,6 @@ export function LoginForm() {
                 />
                 <span className="text-sm text-[#666666]">Remember me</span>
               </label>
-              <Link
-                href="/forgot-password"
-                className="text-sm text-[#5cb85c] hover:text-[#4ca74c] font-medium"
-              >
-                Forgot Password?
-              </Link>
             </div>
 
             {/* Submit Button */}
@@ -162,6 +156,14 @@ export function LoginForm() {
                 Sign up
               </Link>
             </p>
+              <p className="text-sm text-[#666666]">
+              <Link
+                href="/"
+                className="text-[#5cb85c] font-semibold hover:text-[#4ca74c]"
+              >
+                 Back to Home
+              </Link>
+              </p>
           </div>
         </div>
       </div>

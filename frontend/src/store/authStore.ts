@@ -2,13 +2,13 @@
 
 import { create } from 'zustand';
 import { User } from '@/types/auth.types';
+import { authService } from '@/services/auth.service';
 
 interface AuthState {
   user: User | null;
   token: string | null;
   isAuthenticated: boolean;
   isLoading: boolean;
-
   setUser: (user: User | null) => void;
   setToken: (token: string | null) => void;
   setLoading: (loading: boolean) => void;
@@ -18,8 +18,8 @@ interface AuthState {
 
 export const useAuthStore = create<AuthState>((set) => ({
   user: null,
-  token: null,
   isAuthenticated: false,
+  token: null,
   isLoading: true,
 
   setUser: (user) =>
@@ -27,42 +27,40 @@ export const useAuthStore = create<AuthState>((set) => ({
       user,
       isAuthenticated: !!user,
     }),
-
   setToken: (token) => set({ token }),
-
   setLoading: (loading) => set({ isLoading: loading }),
 
   logout: () => {
-    localStorage.removeItem('token');
-    localStorage.removeItem('user');
     set({
       user: null,
-      token: null,
       isAuthenticated: false,
     });
   },
 
-initialize: () => {
-  try {
-    const token = localStorage.getItem('token');
-    const userStr = localStorage.getItem('user');
+  initialize: async () => {
+    try {
+      const userProfile = await authService.fetchProfile();
 
-    // Fix: Add check for null/undefined string
-    if (token && userStr && userStr !== 'undefined' && userStr !== '') {
-      const user = JSON.parse(userStr) as User;
+      const user: User = {
+        id: userProfile.id,
+        email: userProfile.email,
+        name: userProfile.name,
+        role: userProfile.role,
+        farmId: userProfile.farmId,
+        farmName: userProfile.farm?.name,
+      };
+
       set({
         user,
-        token,
         isAuthenticated: true,
         isLoading: false,
       });
-    } else {
-      set({ isLoading: false });
+    } catch (err) {
+      set({
+        user: null,
+        isAuthenticated: false,
+        isLoading: false,
+      });
     }
-  } catch (error) {
-    console.error('Failed to initialize auth:', error);
-    set({ isLoading: false });
-  }
-},
-
+  },
 }));

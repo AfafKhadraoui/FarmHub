@@ -23,17 +23,13 @@ export default function PlatformAdminLoginPage() {
       return;
     }
 
-    // After login, check the role
-    const userStr = localStorage.getItem('user');
-    const user = userStr ? JSON.parse(userStr) : null;
-    if (!user || user.role !== 'platform_admin') {
-      setError('Access denied: platform admin only');
-      // Optionally log them out
-      localStorage.removeItem('token');
-      localStorage.removeItem('user');
-      document.cookie = 'token=; Path=/; Max-Age=0';
-      return;
-    }
+    // No need to check localStorage 'user' here as it's no longer stored.
+    // useAuth.login handles redirection based on role.
+    
+    // If you strictly want to enforce platform_admin only here, 
+    // you would need to check the response from login() if it returned the user object,
+    // or rely on useAuth's redirection.
+    // Since useAuth redirects non-admins to /dashboard, they won't stay here anyway.
 
     // No need to redirect, useAuth.login already does it
     // Optionally show "success" state, or leave blank for now

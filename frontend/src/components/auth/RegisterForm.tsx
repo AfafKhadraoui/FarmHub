@@ -109,7 +109,7 @@ export function RegisterForm() {
     try {
       let response;
       if (role === "admin") {
-        response = await authService.registerAdmin({
+        const response = await authService.registerAdmin({
           name: formData.name,
           email: formData.email,
           password: formData.password,
@@ -117,15 +117,11 @@ export function RegisterForm() {
           farmName: formData.farmName,
           farmLocation: formData.farmLocation,
         });
-        setFarmCode(
-          response.data?.joinCode ||
-            response.data?.farmCode ||
-            response.data?.code ||
-            null
-        );
+
+        setFarmCode(response.data.joinCode ?? null);
         setSuccess(true);
         setIsLoading(false);
-        return; // Show join code
+        return; // show join code, admin will log in separately
       } else {
         response = await authService.registerWorker({
           name: formData.name,
@@ -134,13 +130,26 @@ export function RegisterForm() {
           phone: formData.phone || undefined,
           farmCode: formData.farmCode,
         });
-        authService.saveAuthData?.(response.data.token, response.data.userId);
+
+        // Make sure backend returns user including role,
+        // and save both token + user to your auth store
+        authService.saveAuthData?.(response.data.token, {
+          id: response.data.userId,
+          email: response.data.email,
+          name: response.data.name,
+          role: response.data.role,
+          farmId: response.data.farmId,
+          farmName: response.data.farmName,
+        });
+
 
         setSuccess(true);
         setIsLoading(false);
+
+        // Shared dashboard route; dashboard reads user.role
         setTimeout(() => {
           window.location.href = "/dashboard";
-        }, 1500); // Show success msg for 1.5 sec then dashboard
+        }, 1500);
         return;
       }
     } catch (error: any) {
@@ -182,45 +191,97 @@ export function RegisterForm() {
 
           {/* Success message for worker */}
           {success && role === "worker" && (
-            <Alert variant="success" className="mb-6">
+            <Alert
+              variant="success"
+              className="mb-6 border-green-500/60 bg-green-50 text-green-900"
+            >
               <AlertDescription>
                 <div className="flex flex-col items-center gap-3">
-                  <span className="font-semibold text-lg text-[#333]">
+                  <span className="font-semibold text-lg">
                     Account Created Successfully!
                   </span>
-                  <span className="text-sm text-[#666]">
-                    Redirecting to dashboard...
+                  <span className="text-sm">
+                    Your account is ready. Choose where to go next.
                   </span>
+                  <div className="flex flex-col sm:flex-row gap-2 mt-2 w-full">
+                    <Button
+                      className="flex-1 bg-green-600 hover:bg-green-700 text-white"
+                      onClick={() => {
+                        window.location.href = "/dashboard";
+                      }}
+                    >
+                      Go to Dashboard
+                    </Button>
+                    <Link
+                      href="/"
+                      className="flex-1 text-center text-green-700 underline text-sm"
+                    >
+                      Back to Home
+                    </Link>
+                  </div>
                 </div>
               </AlertDescription>
             </Alert>
           )}
 
+
           {/* Success message and farm code for admin */}
           {farmCode && role === "admin" && (
-            <Alert variant="success" className="mb-6">
+            <Alert
+              variant="success"
+              className="mb-6 border-green-500/60 bg-green-50 text-green-900"
+            >
               <AlertDescription>
                 <div className="flex flex-col items-center gap-3">
-                  <span className="font-semibold text-lg text-[#333]">
+                  <span className="font-semibold text-lg">
                     Account Created Successfully!
                   </span>
-                  <span className="font-semibold text-lg text-[#333]">
+
+                  <span className="font-semibold text-lg">
                     Your Farm Join Code:
                   </span>
-                  <span className="font-mono text-2xl bg-gray-100 rounded p-2">
-                    {farmCode}
+
+                  <div className="flex items-center gap-2 bg-white rounded-lg px-4 py-2 border border-green-200">
+                    <span className="font-mono text-2xl tracking-wide">
+                      {farmCode}
+                    </span>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      className="border-green-500 text-green-700 hover:bg-green-100"
+                      onClick={async () => {
+                        await navigator.clipboard.writeText(farmCode || "");
+                      }}
+                    >
+                      Copy
+                    </Button>
+                  </div>
+
+                  <span className="text-sm text-green-800/80">
+                    Share this code with your workers so they can join your farm.
                   </span>
-                  <span className="text-sm text-[#666]">
-                    Share this code with your workers so they can join your
-                    farm.
-                  </span>
-                  <Button className="mt-3" onClick={handleContinue}>
-                    Continue to Dashboard
-                  </Button>
+
+                  <div className="flex flex-col gap-2 w-full mt-2">
+                    <Button
+                      className="w-full bg-green-600 hover:bg-green-700 text-white"
+                      onClick={handleContinue}
+                    >
+                      Go to Dashboard
+                    </Button>
+                    <Link
+                      href="/"
+                      className="w-full text-center text-green-700 underline text-sm"
+                    >
+                      Back to Home
+                    </Link>
+                  </div>
                 </div>
               </AlertDescription>
             </Alert>
           )}
+
+
 
           {/* Error alert */}
           {error && (
@@ -329,9 +390,9 @@ export function RegisterForm() {
                     className="absolute right-4 top-1/2 -translate-y-1/2 text-[#999999] hover:text-[#333333]"
                   >
                     {showPassword ? (
-                      <EyeOff className="w-5 h-5" />
-                    ) : (
                       <Eye className="w-5 h-5" />
+                    ) : (
+                      <EyeOff className="w-5 h-5" />
                     )}
                   </button>
                 </div>
@@ -366,13 +427,15 @@ export function RegisterForm() {
                   />
                   <button
                     type="button"
-                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                    onClick={() =>
+                      setShowConfirmPassword(!showConfirmPassword)
+                    }
                     className="absolute right-4 top-1/2 -translate-y-1/2 text-[#999999] hover:text-[#333333]"
                   >
-                    {showConfirmPassword ? (
-                      <EyeOff className="w-5 h-5" />
-                    ) : (
+                    {showPassword ? (
                       <Eye className="w-5 h-5" />
+                    ) : (
+                      <EyeOff className="w-5 h-5" />
                     )}
                   </button>
                 </div>
@@ -496,6 +559,14 @@ export function RegisterForm() {
                   className="text-[#5cb85c] font-semibold hover:text-[#4ca74c]"
                 >
                   Log in
+                </Link>
+              </p>
+              <p className="text-sm text-[#666666]">
+                <Link
+                  href="/"
+                  className="text-[#5cb85c] font-semibold hover:text-[#4ca74c]"
+                >
+                  Back to Home
                 </Link>
               </p>
             </div>

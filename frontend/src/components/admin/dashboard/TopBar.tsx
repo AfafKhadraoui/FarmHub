@@ -2,6 +2,7 @@
 
 import { Bell, Search, User } from "lucide-react";
 import { useState } from "react";
+import { useNotifications } from "@/hooks/useNotifications";
 import NotificationDropdown from "./NotificationDropdown";
 import ProfileDropdown from "./ProfileDropdown";
 
@@ -14,8 +15,8 @@ export default function TopBar({ pageTitle, onNavigate }: TopBarProps) {
   const [isNotificationOpen, setIsNotificationOpen] = useState(false);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
 
-  // Sample unread count (in real app, get from notifications state)
-  const unreadCount = 2;
+  // Get real unread count
+  const { unreadCount, refetch } = useNotifications(true);
 
   const handleNotificationClick = () => {
     setIsNotificationOpen(!isNotificationOpen);
