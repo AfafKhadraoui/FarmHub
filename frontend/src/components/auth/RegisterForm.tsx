@@ -108,8 +108,8 @@ export function RegisterForm() {
     setIsLoading(true);
     try {
       let response;
-      if (role === "admin") {
-        response = await authService.registerAdmin({
+      if (role === 'admin') {
+        const response = await authService.registerAdmin({
           name: formData.name,
           email: formData.email,
           password: formData.password,
@@ -117,16 +117,12 @@ export function RegisterForm() {
           farmName: formData.farmName,
           farmLocation: formData.farmLocation,
         });
-        setFarmCode(
-          response.data?.joinCode ||
-            response.data?.farmCode ||
-            response.data?.code ||
-            null
-        );
+
+        setFarmCode(response.data.joinCode ?? null);
         setSuccess(true);
         setIsLoading(false);
-        return; // Show join code
-      } else {
+        return; // show join code
+      }else {
         response = await authService.registerWorker({
           name: formData.name,
           email: formData.email,
@@ -329,9 +325,9 @@ export function RegisterForm() {
                     className="absolute right-4 top-1/2 -translate-y-1/2 text-[#999999] hover:text-[#333333]"
                   >
                     {showPassword ? (
-                      <EyeOff className="w-5 h-5" />
-                    ) : (
                       <Eye className="w-5 h-5" />
+                    ) : (
+                      <EyeOff className="w-5 h-5" />
                     )}
                   </button>
                 </div>
@@ -369,10 +365,10 @@ export function RegisterForm() {
                     onClick={() => setShowConfirmPassword(!showConfirmPassword)}
                     className="absolute right-4 top-1/2 -translate-y-1/2 text-[#999999] hover:text-[#333333]"
                   >
-                    {showConfirmPassword ? (
-                      <EyeOff className="w-5 h-5" />
-                    ) : (
+                    {showPassword ? (
                       <Eye className="w-5 h-5" />
+                    ) : (
+                      <EyeOff className="w-5 h-5" />
                     )}
                   </button>
                 </div>

@@ -38,7 +38,7 @@ export interface RegisterAdminRequest {
   name: string;
   email: string;
   password: string;
-  phone: string;
+  phone?: string;
   farmName: string;
   farmLocation: string;
 }
@@ -47,7 +47,7 @@ export interface RegisterWorkerRequest {
   name: string;
   email: string;
   password: string;
-  phone: string;
+  phone?: string;
   farmCode: string;
 }
 
@@ -64,5 +64,7 @@ export interface RegisterResponse {
     token: string;
     refreshToken: string;
     expiresIn: number;
+    joinCode?: string | null;  // <--- add this
   };
 }
+

@@ -3,6 +3,7 @@
 import { Sidebar } from "@/components/workspace/Sidebar";
 import { TopBar } from "@/components/workspace/TopBar";
 import { useAuth } from "@/hooks/useAuth";
+import ProtectedRoute from "@/components/auth/ProtectedRoute";
 
 export default function WorkspaceLayout({
   children,
@@ -13,7 +14,7 @@ export default function WorkspaceLayout({
   const userRole = user?.role === "admin" ? "admin" : "worker";
 
   return (
-    <>
+    <ProtectedRoute>
       <style jsx global>{`
         @import url("https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&family=Inter:wght@400;500;600;700&display=swap");
 
@@ -55,8 +56,7 @@ export default function WorkspaceLayout({
           background: #9ca3af;
         }
 
-        /* Firefox scrollbar */
-        * {
+        *::-webkit-scrollbar-thumb {
           scrollbar-width: thin;
           scrollbar-color: #d1d5db transparent;
         }
@@ -82,6 +82,6 @@ export default function WorkspaceLayout({
           <div className="flex-1 bg-white overflow-y-auto p-8">{children}</div>
         </div>
       </div>
-    </>
+    </ProtectedRoute>
   );
 }
