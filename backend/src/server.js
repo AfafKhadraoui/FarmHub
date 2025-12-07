@@ -3,7 +3,7 @@ const express = require("express");
 const cors = require("cors");
 const dotenv = require("dotenv");
 const cookieParser = require("cookie-parser");
-
+const fieldRoutes = require("./routes/fieldRoutes");
 dotenv.config();
 const app = express();
 
@@ -38,7 +38,8 @@ app.use("/admin", require("./routes/activities"));
 
 // Profile routes for current user
 app.use("/profile", require("./routes/profile"));
-
+//field routes 
+app.use("/fields", authenticateToken, fieldRoutes);
 // Health check
 app.get("/health", (req, res) => res.json({ status: "ok" }));
 app.get("/", (req, res) => {

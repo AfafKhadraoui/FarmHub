@@ -73,6 +73,7 @@ model User {
   farmId    Int?
   createdAt DateTime @default(now()) @db.Timestamp(0)
   updatedAt DateTime @updatedAt @db.Timestamp(0)
+  notificationSettings Json? @default("{\"email\": true, \"push\": true, \"sms\": false}")
 
   // Relations
   userFarm        Farm?            @relation(fields: [farmId], references: [id], onDelete: Cascade)

@@ -9,6 +9,7 @@ const {
 } = require("../middleware/dashboardMiddleware");
 const { sendError } = require("../utils/error");
 const { handleValidationErrors } = require("../middleware/validation");
+
 router.get(
   "/notifications",
   authenticate,
