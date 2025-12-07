@@ -237,12 +237,12 @@ export function RegisterForm() {
                     Account Created Successfully!
                   </span>
 
-                  <span className="text-sm">
+                  <span className="font-semibold text-lg">
                     Your Farm Join Code:
                   </span>
 
                   <div className="flex items-center gap-2 bg-white rounded-lg px-4 py-2 border border-green-200">
-                    <span className="font-mono text-xl tracking-wide">
+                    <span className="font-mono text-2xl tracking-wide">
                       {farmCode}
                     </span>
                     <Button
@@ -251,21 +251,14 @@ export function RegisterForm() {
                       variant="outline"
                       className="border-green-500 text-green-700 hover:bg-green-100"
                       onClick={async () => {
-                        const dashboardUrl = `${window.location.origin}/dashboard`;
-                        const homeUrl = `${window.location.origin}/`;
-                        const text =
-                          `Join my farm on FarmHub!\n` +
-                          `Join code: ${farmCode}\n` +
-                          `Dashboard: ${dashboardUrl}\n` +
-                          `Home: ${homeUrl}`;
-                        await navigator.clipboard.writeText(text);
+                        await navigator.clipboard.writeText(farmCode || "");
                       }}
                     >
                       Copy
                     </Button>
                   </div>
 
-                  <span className="text-xs text-green-800/80">
+                  <span className="text-sm text-green-800/80">
                     Share this code with your workers so they can join your farm.
                   </span>
 
@@ -287,6 +280,7 @@ export function RegisterForm() {
               </AlertDescription>
             </Alert>
           )}
+
 
 
           {/* Error alert */}
