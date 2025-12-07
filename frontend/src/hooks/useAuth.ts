@@ -143,7 +143,11 @@ export function useAuth() {
       document.cookie = `token=${token}; Path=/; Max-Age=${7 * 24 * 60 * 60}`;
 
       await router.push("/dashboard");
-      return { success: true };
+      return { 
+        success: true,
+        joinCode: regData.joinCode || null,
+        user: newUser
+      };
     } catch (error: any) {
       return {
         success: false,

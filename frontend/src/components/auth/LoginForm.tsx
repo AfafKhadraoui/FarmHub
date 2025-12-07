@@ -156,6 +156,14 @@ export function LoginForm() {
                 Sign up
               </Link>
             </p>
+              <p className="text-sm text-[#666666]">
+              <Link
+                href="/"
+                className="text-[#5cb85c] font-semibold hover:text-[#4ca74c]"
+              >
+                 Back to Home
+              </Link>
+              </p>
           </div>
         </div>
       </div>
