@@ -66,13 +66,6 @@ const authService = {
         farmId: null,
       },
     });
-    // after farm is created and user is linked
-    await logActivity({
-      userId: updatedUser.id,
-      type: "farmer_registered",
-      message: `Farmer "${updatedUser.name}" registered and created farm "${farm.name}".`,
-      farmId: farm.id,
-    });
 
     const joinCode = generateFarmCode();
     const farm = await prisma.farm.create({
@@ -84,6 +77,14 @@ const authService = {
       data: { farmId: farm.id },
     });
 
+    await logActivity({
+      userId: updatedUser.id,
+      type: "farmer_registered",
+      message: `Farmer "${updatedUser.name}" registered and created farm "${farm.name}".`,
+      farmId: farm.id,
+    });
+
+    // 5. Generate Tokens & Return
     const { accessToken, refreshToken } = generateTokens(updatedUser);
 
     const { password: _, ...userWithoutPassword } = updatedUser;

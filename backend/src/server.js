@@ -5,6 +5,7 @@ const dotenv = require("dotenv");
 const cookieParser = require("cookie-parser");
 const fieldRoutes = require("./routes/fieldRoutes");
 const notifRoutes = require("./routes/user_notifications");
+const weatherRoutes=require("./routes/weather")
 dotenv.config();
 const app = express();
 
@@ -46,6 +47,27 @@ app.use("/profile", require("./routes/profile"));
 app.use("/fields", authenticateToken, fieldRoutes);
 //notifications routes this is for worker and farmer
 app.use("/userNotifications", authenticateToken, notifRoutes);
+//weather routes for both worker and farmer
+app.use("/weather", authenticateToken, weatherRoutes)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 // Health check
 app.get("/health", (req, res) => res.json({ status: "ok" }));
 app.get("/", (req, res) => {
