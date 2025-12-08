@@ -4,6 +4,7 @@ const cors = require("cors");
 const dotenv = require("dotenv");
 const cookieParser = require("cookie-parser");
 const fieldRoutes = require("./routes/fieldRoutes");
+const notifRoutes = require("./routes/user_notifications");
 dotenv.config();
 const app = express();
 
@@ -26,7 +27,10 @@ app.use(express.json());
 app.use(cookieParser());
 
 // Auth routes
-const { authenticateToken, authorizeRoles } = require("./middleware/authMiddleware");
+const {
+  authenticateToken,
+  authorizeRoles,
+} = require("./middleware/authMiddleware");
 const authRoutes = require("./routes/authRoutes");
 app.use("/api/auth", authRoutes);
 
@@ -37,12 +41,11 @@ app.use("/admin", require("./routes/admin"));
 app.use("/admin", require("./routes/activities"));
 
 // Profile routes for current user
-
-
-// Profile routes for current user
 app.use("/profile", require("./routes/profile"));
-//field routes 
+//field routes
 app.use("/fields", authenticateToken, fieldRoutes);
+//notifications routes this is for worker and farmer
+app.use("/userNotifications", authenticateToken, notifRoutes);
 // Health check
 app.get("/health", (req, res) => res.json({ status: "ok" }));
 app.get("/", (req, res) => {

@@ -2,7 +2,6 @@ const { PrismaClient } = require("@prisma/client");
 const { error } = require("console");
 const prisma = new PrismaClient();
 
-// Helper function to calculate progress (Keeps code clean)
 const calculateProgress = (field) => {
   const totalTasks = field.tasks ? field.tasks.length : 0;
   const doneTasks = field.tasks
@@ -29,7 +28,7 @@ exports.listFields = async (req, res) => {
       take: limit,
       orderBy: { updatedAt: "desc" },
       include: {
-        tasks: true, // Required for calculation
+        tasks: true,
       },
     });
 
@@ -37,10 +36,10 @@ exports.listFields = async (req, res) => {
       where: { farmId: farmId, active: activeFilter },
     });
 
-    // Logic: Map over fields and add progress
+   // map over fields and add progress
     const fieldsWithProgress = fields.map((field) => {
       const progress = calculateProgress(field);
-      const { tasks, ...fieldData } = field; // Remove heavy tasks array
+      const { tasks, ...fieldData } = field;
       return { ...fieldData, progress };
     });
 
@@ -72,7 +71,6 @@ exports.createField = async (req, res) => {
       },
     });
 
-    // A new field has 0 tasks, so progress is always 0
     res.json({ ...newField, progress: 0 });
   } catch (error) {
     res.status(500).json({ error: "Failed to create field" });
@@ -129,11 +127,10 @@ exports.updateField = async (req, res) => {
       });
     }
 
-    // Simple update - Fetch tasks to ensure progress is returned correctly
     const updatedField = await prisma.field.update({
       where: { id: parseInt(id) },
       data: { name, size, status },
-      include: { tasks: true }, // Include tasks to recalculate progress
+      include: { tasks: true },
     });
 
     const progress = calculateProgress(updatedField);
@@ -191,7 +188,7 @@ exports.searchField = async (req, res) => {
         },
         active: true,
       },
-      include: { tasks: true }, // ADDED: Include tasks
+      include: { tasks: true },
     });
 
     const fieldsCount = fields.length;
@@ -199,7 +196,6 @@ exports.searchField = async (req, res) => {
       return res.status(404).json({ message: "no fields found" });
     }
 
-    // ADDED: Progress Logic
     const fieldsWithProgress = fields.map((field) => {
       const progress = calculateProgress(field);
       const { tasks, ...fieldData } = field;
@@ -227,7 +223,7 @@ exports.filterField = async (req, res) => {
         status: status,
         active: true, // Ensure we only filter active fields
       },
-      include: { tasks: true }, // ADDED: Include tasks
+      include: { tasks: true },
     });
 
     const fieldsCount = filteredFields.length;
@@ -235,7 +231,6 @@ exports.filterField = async (req, res) => {
       return res.status(404).json({ message: "no fields found" });
     }
 
-    // ADDED: Progress Logic
     const fieldsWithProgress = filteredFields.map((field) => {
       const progress = calculateProgress(field);
       const { tasks, ...fieldData } = field;
@@ -256,7 +251,7 @@ exports.filterField = async (req, res) => {
 exports.getFieldDetails = async (req, res) => {
   try {
     const { fieldId } = req.params;
-    const { farmId } = req.user; // Fixed typo: farmid -> farmId
+    const { farmId } = req.user;
 
     const fieldData = await prisma.field.findFirst({
       where: {
@@ -305,7 +300,6 @@ exports.getFieldDetails = async (req, res) => {
       return taskDetails;
     });
 
-    // Existing Progress Logic
     const totalTasks = cleanedTasks.length;
     const doneTasks = cleanedTasks.filter(
       (t) => t.status === "completed"
