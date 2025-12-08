@@ -41,16 +41,16 @@ async function registerAdmin(
     success: true,
     message: 'Registration successful',
     data: {
-      userId: d.userId,
-      email: d.email,
-      name: d.name,
-      role: d.role,
-      farmId: d.farmId,
-      farmName: d.farmName ?? null,
-      token: d.token,
-      refreshToken: d.refreshToken ?? '',
-      expiresIn: d.expiresIn ?? 0,
-      joinCode: d.joinCode ?? null,   // <--- map backend joinCode
+      userId: d.userId || d.data?.userId,
+      email: d.email || d.data?.email,
+      name: d.name || d.data?.name,
+      role: d.role || d.data?.role || 'admin',
+      farmId: d.farmId || d.data?.farmId,
+      farmName: (d.farmName || d.data?.farmName) ?? null,
+      token: d.token || d.data?.token,
+      refreshToken: (d.refreshToken || d.data?.refreshToken) ?? '',
+      expiresIn: (d.expiresIn || d.data?.expiresIn) ?? 3600,
+      joinCode: (d.joinCode || d.data?.joinCode) ?? null, 
     },
   };
 }
@@ -73,7 +73,6 @@ async function registerWorker(data: RegisterWorkerRequest): Promise<RegisterResp
 // Logout (client-side only - clear localStorage)
 function logout(): void {
   localStorage.removeItem('token');
-  // Optional: Call backend logout endpoint if you implement one
   // await api.post('/api/auth/logout');
 }
 
