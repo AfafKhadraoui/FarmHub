@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from "react";
+import Link from 'next/link';
 import { useRouter } from "next/navigation";
 import { User, Settings, Lock, Bell, HelpCircle, LogOut } from "lucide-react";
 import { Modal } from "./modals/Modal";
@@ -116,8 +117,14 @@ export function ProfileDropdown({
             <span className="text-[13px] font-semibold">Account Settings</span>
           </button>
 
-          <button className="w-full h-11 px-5 flex items-center gap-3 text-[#374151] hover:bg-[#F9FAFB] transition-colors">
-            <Lock size={20} className="text-[#6B7280]" />
+          <button
+            onClick={() => {
+              router.push("/security");
+              onClose();
+            }}
+            className="w-full h-11 px-5 flex items-center gap-3 text-[#374151] hover:bg-[#F9FAFB] transition-colors"
+          >
+            <HelpCircle size={20} className="text-[#6B7280]" />
             <span className="text-[13px] font-semibold">Security</span>
           </button>
 
