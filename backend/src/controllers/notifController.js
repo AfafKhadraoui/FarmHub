@@ -1,45 +1,50 @@
 const { PrismaClient } = require("@prisma/client");
 const prisma = new PrismaClient();
-// to list all the notifications (when user clicks on bell icon or opens notification panel) you don't need to pass limit query here
-//to list only notifications for bell icon pass limit query like ?limit=4
+
 exports.listNotifications = async (req, res) => {
   try {
     const userId = req.user.id;
-    const limit = req.query.limit ? parseInt(req.query.limit) : undefined; //for bell icon
-    const showUnreadOnly = req.query.unread === "true";
-    const notifications = await prisma.notification.findMany({
-      where: { userId: userId },
-      take: limit,
-      orderBy: { timestamp: "desc" },
-    });
-    const unreadNotifications = await prisma.notification.findMany({
-      where: {
-        userId: userId,
-        isRead: false,
-      },
-      take: limit,
-      orderBy: { timestamp: "desc" },
-    });
-    const allCount = await prisma.notification.count({
-      where: { userId: userId },
-    });
+    const page = req.query.page ? parseInt(req.query.page) : 1;
+    const limit = req.query.limit ? parseInt(req.query.limit) : 10;
+    const skip = (page - 1) * limit;
+
+    const whereClause = { userId: userId };
+    if (req.query.unread === "true" || req.query.isRead === "false") {
+      whereClause.isRead = false;
+    }
+
+    const [totalItems, items] = await prisma.$transaction([
+      prisma.notification.count({ where: whereClause }),
+      prisma.notification.findMany({
+        where: whereClause,
+        take: limit,
+        skip: skip,
+        orderBy: { timestamp: "desc" },
+      }),
+    ]);
+
+    const totalPages = Math.ceil(totalItems / limit);
+
     const unreadCount = await prisma.notification.count({
       where: { userId: userId, isRead: false },
     });
-    if (showUnreadOnly) {
-      res.json({ notifications: unreadNotifications, unreadCount, allCount });
-    } else {
-      res.json({
-        notifications,
-        unreadCount,
-        allCount,
-      });
-    }
+
+    res.json({
+      items,
+      pagination: {
+        page,
+        limit,
+        totalItems,
+        totalPages,
+      },
+      unreadCount,
+    });
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: "Failed to fetch notifications" });
   }
 };
+
 exports.markAsRead = async (req, res) => {
   try {
     const userId = req.user.id;
@@ -83,11 +88,11 @@ exports.deleteNotification = async (req, res) => {
   try {
     const userId = req.user.id;
     const { id } = req.params;
-    console.log("Deleting notification with ID:", id);
+
     const result = await prisma.notification.deleteMany({
       where: {
-        id: id, 
-        userId: userId, 
+        id: id,
+        userId: userId,
       },
     });
     if (result.count === 0) {
@@ -100,10 +105,10 @@ exports.deleteNotification = async (req, res) => {
     res.status(500).json({ error: "failed to delete the notification" });
   }
 };
+
 exports.deleteAllNotification = async (req, res) => {
   try {
     const userId = req.user.id;
-    const { notificationId } = req.params;
     await prisma.notification.deleteMany({
       where: {
         userId: userId,
@@ -114,17 +119,17 @@ exports.deleteAllNotification = async (req, res) => {
     res.status(500).json({ error: "failed to delete the notification" });
   }
 };
-//this is just for testing purpose to create notification manually
+
 exports.createTestNotification = async (req, res) => {
   try {
-    const userId = req.user.id; // Creates notification for the logged-in user
+    const userId = req.user.id;
     const { title, message, type } = req.body;
 
     const notification = await prisma.notification.create({
       data: {
         id: `notif_${Date.now()}_${Math.floor(Math.random() * 1000)}`,
         userId: userId,
-        type: type || "info", 
+        type: type || "info",
         title: title || "Test Notification",
         message:
           message || "This is a manually created notification for testing.",

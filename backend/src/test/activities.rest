@@ -1,0 +1,25 @@
+@baseUrl = http://localhost:5000
+###admin created by seed
+# @name login
+POST {{baseUrl}}/api/auth/login
+Content-Type: application/json
+
+{
+  "email": "admin@farmhub.com",
+  "password": "Admin123"
+}
+###
+###login as platform admin created by loubna
+# @name login
+POST {{baseUrl}}/api/auth/login
+Content-Type: application/json
+
+{
+  "email": "superadmin@farmhub.com",
+  "password": "Admin1234"
+}
+###
+@token = {{login.response.body.data.token}}
+###this will fetche the activities
+GET {{baseUrl}}/admin/activities
+Authorization: Bearer {{token}}

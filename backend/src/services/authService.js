@@ -3,16 +3,26 @@ const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 
 //to store real login activity
-async function logActivity({ userId, type, message, farmId = null }) {
+async function logActivity({ userId, type, title, message, farmId = null }) {
   try {
     await prisma.activity.create({
-      data: { userId, type, message, farmId },
+      data: {
+        userId,
+        id: `act_${Date.now()}_${Math.floor(Math.random() * 1000)}`,
+        type,
+        title,
+        message,
+        farmId,
+      },
     });
   } catch (err) {
     console.error("Failed to log activity:", err);
   }
 }
-
+function generateDefaultAvatar(name) {
+  // Generates an image with initials (e.g. "Ahmed Worker" -> "AW")
+  return `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=random&color=fff&size=128`;
+}
 // generate join code
 function generateFarmCode() {
   const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
@@ -56,12 +66,14 @@ const authService = {
     if (exists) throw new Error("Email already registered");
 
     const hashed = await bcrypt.hash(password, 10);
+    const defaultAvatar = generateDefaultAvatar(name);
     const user = await prisma.user.create({
       data: {
         name,
         email,
         password: hashed,
         phone,
+        avatar: defaultAvatar,
         role: "admin",
         farmId: null,
       },
@@ -80,6 +92,7 @@ const authService = {
     await logActivity({
       userId: updatedUser.id,
       type: "farmer_registered",
+      title: "New Farmer Registered",
       message: `Farmer "${updatedUser.name}" registered and created farm "${farm.name}".`,
       farmId: farm.id,
     });
@@ -108,12 +121,15 @@ const authService = {
     if (exists) throw new Error("Email already registered");
 
     const hashed = await bcrypt.hash(password, 10);
+    const defaultAvatar = generateDefaultAvatar(name);
+
     const user = await prisma.user.create({
       data: {
         name,
         email,
         password: hashed,
         phone,
+        avatar: defaultAvatar,
         role: "worker",
         farmId: farm.id,
       },
@@ -121,6 +137,7 @@ const authService = {
     await logActivity({
       userId: user.id,
       type: "worker_registered",
+      title: "New Worker Joined",
       message: `Worker "${user.name}" joined farm "${farm.name}" using join code.`,
       farmId: farm.id,
     });
@@ -158,6 +175,7 @@ const authService = {
     await logActivity({
       userId: user.id,
       type: "platform_admin_registered",
+      title: "New Platform Admin Registered",
       message: `Platform admin "${user.name}" registered.`,
       farmId: null,
     });
@@ -199,7 +217,7 @@ const authService = {
   async getUserProfile(userId) {
     const user = await prisma.user.findUnique({
       where: { id: userId },
-      include: { userFarm: true }, // <-- FIXED
+      include: { userFarm: true },
     });
     if (!user) throw new Error("User not found");
 
@@ -216,6 +234,7 @@ const authService = {
     await logActivity({
       userId,
       type: "profile_updated",
+      title: "User Profile Updated",
       message: `User "${user.name}" updated profile.`,
       farmId: user.farmId || null,
     });
@@ -228,9 +247,8 @@ const authService = {
   async refreshToken(refreshToken) {
     const payload = verifyRefreshToken(refreshToken);
     if (!payload) throw new Error("Invalid refresh token");
-    const { accessToken, refreshToken: newRefreshToken } = generateTokens(
-      payload.user
-    );
+    const { accessToken, refreshToken: newRefreshToken } =
+      generateTokens(payload);
     return {
       token: accessToken,
       refreshToken: newRefreshToken,
@@ -248,6 +266,7 @@ const authService = {
     await logActivity({
       userId: null,
       type: "farm_join_code_regenerated",
+      title: "Farm Join Code Regenerated",
       message: `Join code regenerated for farm "${farm.name}".`,
       farmId: farmId,
     });

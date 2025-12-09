@@ -6,11 +6,11 @@ Content-Type: application/json
 
 {
   "role": "admin",
-  "name": "ahmedfarmer",
-  "email": "ahmedfarmer@gmail.com",
+  "name": "user3farmer",
+  "email": "user3farmer@gmail.com",
   "password": "Password123!",
   "phone": "+1234567890",
-  "farmName": "ahmedfarmer Farm",
+  "farmName": "user3farmer Farm",
   "location": "chlef"
 }
 
@@ -20,11 +20,11 @@ Content-Type: application/json
 
 {
   "role": "worker",
-  "name": "Ilyasworker",
-  "email": "ilyasworker@gmail.com",
+  "name": "user3worker",
+  "email": "user3worker@gmail.com",
   "password": "Password123!",
   "phone": "+1234567890",
-  "joinCode": "FARM-D2YW58"
+  "joinCode": "FARM-FK9NJC"
 }
 
 ###
@@ -33,7 +33,7 @@ POST {{baseUrl}}/api/auth/login
 Content-Type: application/json
 
 {
-  "email": "ahmedfarmer@gmail.com",
+  "email": "userfarmer@gmail.com",
   "password": "Password123!"
 }
 
@@ -46,7 +46,7 @@ POST {{baseUrl}}/api/auth/login
 Content-Type: application/json
 
 {
-  "email": "ilyasworker@gmail.com",
+  "email": "userworker@gmail.com",
   "password": "Password123!"
 }
 

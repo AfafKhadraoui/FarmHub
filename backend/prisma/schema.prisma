@@ -69,12 +69,13 @@ model User {
   password  String   @db.VarChar(255)
   name      String   @db.VarChar(255)
   phone     String?  @db.VarChar(20)
+  avatar         String?  @db.VarChar(255) // URL to image
+
   role      UserRole
   farmId    Int?
   createdAt DateTime @default(now()) @db.Timestamp(0)
   updatedAt DateTime @updatedAt @db.Timestamp(0)
-  notificationSettings Json? @default("{\"email\": true, \"push\": true, \"sms\": false}")
-
+  notificationSettings Json? @default("{\"taskCompletion\": true, \"taskOverdue\": true, \"newWorkerJoined\": true, \"dailySummaryEmail\": true, \"weeklyPerformanceReport\": true}")
   // Relations
   userFarm        Farm?            @relation(fields: [farmId], references: [id], onDelete: Cascade)
   taskAssignments TaskAssignment[]
@@ -177,20 +178,24 @@ model Notification {
   @@map("notifications")
 }
 
-// Activity model - platform-wide activity feed
 model Activity {
   id        String   @id @db.VarChar(50)
   type      String   @db.VarChar(50)
-  title     String   @db.VarChar(255)
+  title     String   @db.VarChar(255) 
   message   String   @db.Text
   timestamp DateTime @default(now()) @db.Timestamp(0)
   metadata  Json?
+  userId    Int?     // Nullable, because system events might not have a user
+  farmId    Int?     // Nullable, for platform-wide events not tied to a farm
+  user      User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  farm      Farm?    @relation(fields: [farmId], references: [id], onDelete: SetNull)
 
   @@index([timestamp])
   @@index([type])
+  @@index([userId]) // Index for faster filtering by user
+  @@index([farmId]) // Index for faster filtering by farm
   @@map("activities")
 }
-
 // ========================================
 // NOTES FOR DEVELOPERS
 // ========================================

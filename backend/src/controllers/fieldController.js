@@ -36,7 +36,7 @@ exports.listFields = async (req, res) => {
       where: { farmId: farmId, active: activeFilter },
     });
 
-   // map over fields and add progress
+    // map over fields and add progress
     const fieldsWithProgress = fields.map((field) => {
       const progress = calculateProgress(field);
       const { tasks, ...fieldData } = field;
