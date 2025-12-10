@@ -572,7 +572,7 @@ const taskService = {
                     admins.map(admin => ({
                         userId: admin.id,
                         taskId,
-                        type: 'task_completed',
+                        type: 'taskCompletion',
                         title: 'Task Completed',
                         message: `${user.name} completed task: ${taskDetails?.title || 'Task'}`
                     }))

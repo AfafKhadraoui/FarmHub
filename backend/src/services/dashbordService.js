@@ -60,12 +60,12 @@ const dashboardService = {
             fieldsLastMonth
         ] = await prisma.$transaction([
             prisma.field.count({ where: { farmId: user.farmId, active: true } }),
-            prisma.field.count({ 
-                where: { 
-                    farmId: user.farmId, 
+            prisma.field.count({
+                where: {
+                    farmId: user.farmId,
                     active: true,
                     status: { in: [FIELD_STATUS.PLANTED, FIELD_STATUS.GROWING, FIELD_STATUS.HARVESTING] }
-                } 
+                }
             }),
             prisma.field.count({
                 where: {
@@ -447,22 +447,22 @@ const dashboardService = {
     async getTodayOverview(userId) {
         const user = await this.getUserInfoOrFail(userId);
 
-        // Get field statistics
+        // --- 1. GET FIELD STATISTICS (Existing Logic) ---
         const [totalFields, activeFields] = await prisma.$transaction([
-            prisma.field.count({ 
-                where: { 
-                    farmId: user.farmId, 
-                    active: true 
-                } 
+            prisma.field.count({
+                where: {
+                    farmId: user.farmId,
+                    active: true
+                }
             }),
-            prisma.field.count({ 
-                where: { 
-                    farmId: user.farmId, 
+            prisma.field.count({
+                where: {
+                    farmId: user.farmId,
                     active: true,
-                    status: { 
-                        in: [FIELD_STATUS.PLANTED, FIELD_STATUS.GROWING, FIELD_STATUS.HARVESTING] 
+                    status: {
+                        in: ['planted', 'growing', 'harvesting'] // Ensure enums match your schema
                     }
-                } 
+                }
             })
         ]);
 
@@ -480,22 +480,49 @@ const dashboardService = {
 
         const totalArea = fields.reduce((sum, field) => sum + field.size, 0);
         const underCultivationArea = fields
-            .filter(field => [FIELD_STATUS.PLANTED, FIELD_STATUS.GROWING, FIELD_STATUS.HARVESTING].includes(field.status))
+            .filter(field => ['planted', 'growing', 'harvesting'].includes(field.status))
             .reduce((sum, field) => sum + field.size, 0);
 
+
+        // --- 2. GET WEATHER DATA (New Logic) ---
+        let weatherData = null;
+
+        try {
+            // A. Find the farm's location string (e.g., "Algiers")
+            const farm = await prisma.farm.findUnique({
+                where: { id: user.farmId },
+                select: { location: true }
+            });
+
+            if (farm && farm.location) {
+                // B. Get Coordinates from Open-Meteo
+                const coords = await weatherService.getCoordinates(farm.location);
+
+                // C. Get Raw Weather Data
+                const rawData = await weatherService.getWeatherData(coords.latitude, coords.longitude);
+
+                // D. Format specifically for the Farmer Dashboard
+                weatherData = weatherService.formatForFarmerCurrent(rawData);
+            }
+        } catch (error) {
+            console.error("Dashboard Weather Error:", error.message);
+            // We swallow the error here so the Dashboard still loads the Field stats
+            // weatherData remains null
+        }
+
+        // --- 3. RETURN COMBINED DATA ---
         return {
-            weather: {
-                // Weather data should be fetched from external API
-                // This is a placeholder structure
-                temperature: null,
-                condition: null,
-                icon: null,
-                feelsLike: null,
-                humidity: null,
-                windSpeedKmh: null,
-                windDirection: null,
-                uvIndex: null,
-                uvLevel: null
+            weather: weatherData || {
+                // Fallback if API fails or no location set
+                temperature: 0,
+                condition: "Unavailable",
+                icon: "cloudy",
+                feelsLike: 0,
+                humidity: 0,
+                windSpeedKmh: 0,
+                windDirection: "N/A",
+                uvIndex: 0,
+                uvLevel: "low"
             },
             fields: {
                 total: totalFields,
@@ -506,7 +533,7 @@ const dashboardService = {
         };
     },
 
-     // Get worker dashboard overview
+    // Get worker dashboard overview
     async getWorkerDashboard(userId) {
         const user = await this.getUserInfoOrFail(userId);
 
@@ -524,7 +551,7 @@ const dashboardService = {
         // Get today's date range
         const todayStart = new Date();
         todayStart.setHours(0, 0, 0, 0);
-        
+
         const todayEnd = new Date();
         todayEnd.setHours(23, 59, 59, 999);
 
