@@ -98,7 +98,11 @@ DELETE {{baseUrl}}/admin/notifications/notif-2
 Authorization: Bearer {{token}}
 
 ###
-
+###delete all notifications
+### DELETE /admin/notifications/all
+DELETE {{baseUrl}}/admin/notifications/all
+Authorization: Bearer {{token}}  
+###
 ### GET /admin/farms (paginated, no search)
 GET {{baseUrl}}/admin/farms?page=1&limit=10
 Authorization: Bearer {{token}}

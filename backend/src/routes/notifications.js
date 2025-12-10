@@ -100,6 +100,34 @@ router.patch(
   }
 );
 
+// DELETE /admin/notifications/all to delete all notifications
+router.delete(
+  "/notifications/all",
+  authenticate,
+  requirePlatformAdmin,
+  handleValidationErrors,
+  async (req, res) => {
+    try {
+      const deleted = await prisma.notification.deleteMany({
+        where: { userId: req.user.id },
+      });
+
+      if (deleted.count === 0) {
+        return sendError(res, 404, "NOT_FOUND", "Notifications not found");
+      }
+
+      res.json({
+        success: true,
+        message: "All notifications deleted",
+        count: deleted.count,
+      });
+    } catch (err) {
+      console.error(err);
+      return sendError(res, 500, "INTERNAL_ERROR", "Internal Server Error");
+    }
+  }
+);
+
 // DELETE /admin/notifications/:id
 router.delete(
   "/notifications/:id",
