@@ -2,6 +2,22 @@ const { PrismaClient } = require("@prisma/client");
 const { error } = require("console");
 const prisma = new PrismaClient();
 
+const formatEvent = (
+  type,
+  date,
+  title,
+  description,
+  author,
+  metadata = {}
+) => ({
+  type, // 'status', 'task', 'update', 'create'
+  date,
+  title,
+  description,
+  author,
+  metadata,
+});
+
 const calculateProgress = (field) => {
   const totalTasks = field.tasks ? field.tasks.length : 0;
   const doneTasks = field.tasks
@@ -319,4 +335,184 @@ exports.getFieldDetails = async (req, res) => {
     console.error("Error fetching field details:", error);
     return res.status(500).json({ error: "Failed to fetch field details" });
   }
+};
+exports.getWorkerFields = async (req, res) => {
+  const workerId = req.user.id;
+  const { farmId } = req.user;
+  try {
+    const fields = await prisma.field.findMany({
+      where: {
+        farmId,
+        active: true,
+        tasks: {
+          some: {
+            taskAssignments: {
+              some: { workerId },
+            },
+          },
+        },
+      },
+      include: { tasks: true },
+    });
+
+    const fieldsWithProgress = fields.map((field) => {
+      const progress = calculateProgress(field);
+      const { tasks, ...fieldData } = field;
+      return { ...fieldData, progress };
+    });
+
+    res.json(fieldsWithProgress);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: "Failed to fetch worker fields" });
+  }
+};
+
+exports.getWorkerFieldDetails = async (req, res) => {
+  try {
+    const { fieldId } = req.params;
+    const workerId = req.user.id;
+
+    const field = await prisma.field.findFirst({
+      where: {
+        id: parseInt(fieldId),
+        tasks: {
+          some: {
+            taskAssignments: {
+              some: { workerId: workerId },
+            },
+          },
+        },
+      },
+      include: {
+        tasks: {
+          where: {
+            taskAssignments: {
+              some: { workerId: workerId },
+            },
+          },
+          include: {
+            taskAssignments: true,
+          },
+        },
+      },
+    });
+
+    if (!field) {
+      return res
+        .status(404)
+        .json({ error: "Field not found or not assigned to you" });
+    }
+
+    const progress = calculateProgress(field);
+
+    res.json({ ...field, progress });
+  } catch (error) {
+    res.status(500).json({ error: "Failed to fetch field details" });
+  }
+};
+
+// GET /fields/:id/history //the full screen(details)
+exports.getFieldHistory = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { filter } = req.query; // 'all', 'tasks', 'updates','status'
+    const farmId = req.user.farmId;
+
+    const currentField = await prisma.field.findUnique({
+      where: { id: parseInt(id) },
+    });
+
+    if (!currentField || currentField.farmId !== farmId) {
+      return res.status(404).json({ error: "Field not found" });
+    }
+
+    let historyStream = [];
+
+    //Previous Crop Cyclest
+    if (filter === "all" || filter === "status") {
+      const pastVersions = await prisma.field.findMany({
+        where: {
+          farmId: farmId,
+          name: currentField.name,
+          active: false, //only the historical fields
+        },
+        orderBy: { createdAt: "desc" },
+      });
+
+      const versionEvents = pastVersions.map((v) =>
+        formatEvent(
+          "status",
+          v.createdAt, // Or harvestDate
+          `Status changed to ${v.status}`,
+          `Crop cycle: ${v.cropType || "None"}. Size: ${v.size}ha`,
+          "System"
+        )
+      );
+      historyStream = [...historyStream, ...versionEvents];
+    }
+
+    if (filter === "all" || filter === "tasks") {
+      const fieldTasks = await prisma.task.findMany({
+        where: {
+          fieldId: parseInt(id),
+          status: { in: ["completed", "in_progress"] },
+        },
+        include: {
+          taskAssignments: { include: { worker: true } },
+        },
+        orderBy: { updatedAt: "desc" },
+      });
+
+      const taskEvents = fieldTasks.map((t) => {
+        // to get worker names
+        const workers = t.taskAssignments
+          .map((ta) => ta.worker.name)
+          .join(", ");
+        return formatEvent(
+          "task",
+          t.updatedAt,
+          `${t.title} ${t.status}`,
+          t.notes || "No additional notes",
+          workers || "Unassigned",
+          { priority: t.priority }
+        );
+      });
+      historyStream = [...historyStream, ...taskEvents];
+    }
+
+    // Activity Log (General Updates)
+    if (filter === "all" || filter === "updates") {
+      historyStream.push(
+        formatEvent(
+          "create",
+          currentField.createdAt,
+          "Field Created",
+          "Initial setup completed",
+          "Admin"
+        )
+      );
+    }
+
+    // Sort combined stream by Date (Newest first)
+    historyStream.sort((a, b) => new Date(b.date) - new Date(a.date));
+
+    res.json(historyStream);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: "Failed to fetch field history" });
+  }
+};
+
+// GET /fields/:id/history/summary (Widget - Image 1)
+exports.getFieldHistorySummary = async (req, res) => {
+  // Reuse the logic but limit to 3 items
+  req.query.filter = "all";
+  const originalJson = res.json;
+  res.json = (data) => {
+    res.json = originalJson;
+    // Return only top 3
+    return originalJson.call(res, data.slice(0, 3));
+  };
+  return exports.getFieldHistory(req, res);
 };

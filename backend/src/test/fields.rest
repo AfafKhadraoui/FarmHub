@@ -90,3 +90,15 @@ Authorization: Bearer {{token}}
 GET {{baseUrl}}/fields/filter?status=planted
 Authorization: Bearer {{token}}
 ###
+### ==========================================
+### FIELD HISTORY WIDGET (Summary)
+### ==========================================
+GET {{baseUrl}}/fields/1/history/summary
+Authorization: Bearer {{token}}
+
+### ==========================================
+### FIELD FULL HISTORY (With Filters)
+### ==========================================
+# filter options: all, tasks, status
+GET {{baseUrl}}/fields/1/history?filter=all
+Authorization: Bearer {{token}}
