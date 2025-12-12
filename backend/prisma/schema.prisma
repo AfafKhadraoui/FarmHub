@@ -102,7 +102,8 @@ model Field {
   farmId      Int
   createdAt   DateTime    @default(now()) @db.Timestamp(0)
   updatedAt   DateTime    @updatedAt @db.Timestamp(0)
-
+  lastUpdatedBy String?  @db.VarChar(255) // Stores "Ahmed Khalil"
+  statusNotes   String?  @db.Text         // Stores "Field preparation completed..."
   // Relations
   farm  Farm   @relation(fields: [farmId], references: [id], onDelete: Cascade)
   tasks Task[]
