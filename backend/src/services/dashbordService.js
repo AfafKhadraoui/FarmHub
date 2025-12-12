@@ -1,5 +1,5 @@
 const { prisma } = require('../utils/prismaClient');
-const weatherService = require('./weatherService');
+const weatherService = require('./weatherServices');
 
 const TASK_STATUS = {
     PENDING: 'pending',
