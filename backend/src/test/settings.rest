@@ -93,3 +93,14 @@ Content-Type: application/json
   "password": "WrongPassword",
   "confirmation": "DELETE MY FARM"
 }
+###
+### CHANGE PASSWORD
+PUT {{baseUrl}}/api/settings/change-password
+Authorization: Bearer {{token}}
+Content-Type: application/json  
+
+{
+  "currentPassword": "Password123!",
+  "newPassword": "NewPassword123!",
+  "confirmationPassword": "Newassword123!"
+}

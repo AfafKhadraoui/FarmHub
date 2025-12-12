@@ -1,7 +1,6 @@
 const { PrismaClient } = require("@prisma/client");
 const prisma = new PrismaClient();
 const bcrypt = require("bcryptjs");
-
 //  FARM SETTINGS (farmer Only)
 
 exports.getFarmSettings = async (req, res) => {
@@ -235,5 +234,41 @@ exports.updateUserProfile = async (req, res) => {
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: "Failed to update profile" });
+  }
+};
+
+exports.changePassword = async (req, res) => {
+  const userId = req.user.id;
+  const { currentPassword, newPassword, confirmationPassword } = req.body;
+
+  try {
+    if (newPassword !== confirmationPassword) {
+      return res
+        .status(400)
+        .json({ error: "New password and confirmation do not match" });
+    }
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+    });
+    if (!user) {
+      return res.status(404).json({ error: "User not found" });
+    }
+    const validPassword = await bcrypt.compare(currentPassword, user.password);
+    if (!validPassword) {
+      return res.status(401).json({ error: "Incorrect current password" });
+    }
+    const salt = await bcrypt.genSalt(10);
+    const hashedPassword = await bcrypt.hash(newPassword, salt);
+
+    await prisma.user.update({
+      where: { id: userId },
+      data: {
+        password: hashedPassword,
+      },
+    });
+    res.json({ message: "Password changed successfully" });
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ error: "Failed to change password" });
   }
 };

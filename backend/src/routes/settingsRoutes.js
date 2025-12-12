@@ -20,8 +20,7 @@ router.put(
   "/settings/notification-preferences",
   settingsController.updateNotificationPreferences
 );
-
-// --- USER PROFILE ---
+router.put("/settings/change-password", settingsController.changePassword);
 router.get("/profile", settingsController.getUserProfile);
 // Support both PUT (Farmer) and PATCH (Worker requirement)
 router.patch("/profile", settingsController.updateUserProfile);
