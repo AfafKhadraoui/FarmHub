@@ -1,4 +1,5 @@
 const { prisma } = require('../utils/prismaClient');
+const weatherService = require('./weatherService');
 
 const TASK_STATUS = {
     PENDING: 'pending',
@@ -25,6 +26,37 @@ const dashboardService = {
             throw new Error('User is not associated with any farm');
         }
         return user;
+    },
+
+    // Helper to get weather data for a farm
+    async getWeatherForFarm(farmId) {
+        try {
+            const farm = await prisma.farm.findUnique({
+                where: { id: farmId },
+                select: { location: true }
+            });
+
+            if (farm && farm.location) {
+                const coords = await weatherService.getCoordinates(farm.location);
+                const rawData = await weatherService.getWeatherData(coords.latitude, coords.longitude);
+                return weatherService.formatForFarmerCurrent(rawData);
+            }
+        } catch (error) {
+            console.error("Weather fetch error:", error.message);
+        }
+
+        // Return fallback weather data
+        return {
+            temperature: 0,
+            condition: "Unavailable",
+            icon: "cloudy",
+            feelsLike: 0,
+            humidity: 0,
+            windSpeedKmh: 0,
+            windDirection: "N/A",
+            uvIndex: 0,
+            uvLevel: "low"
+        };
     },
 
     // Get dashboard overview statistics
@@ -447,7 +479,7 @@ const dashboardService = {
     async getTodayOverview(userId) {
         const user = await this.getUserInfoOrFail(userId);
 
-        // --- 1. GET FIELD STATISTICS (Existing Logic) ---
+        // --- 1. GET FIELD STATISTICS ---
         const [totalFields, activeFields] = await prisma.$transaction([
             prisma.field.count({
                 where: {
@@ -460,7 +492,7 @@ const dashboardService = {
                     farmId: user.farmId,
                     active: true,
                     status: {
-                        in: ['planted', 'growing', 'harvesting'] // Ensure enums match your schema
+                        in: [FIELD_STATUS.PLANTED, FIELD_STATUS.GROWING, FIELD_STATUS.HARVESTING]
                     }
                 }
             })
@@ -480,50 +512,15 @@ const dashboardService = {
 
         const totalArea = fields.reduce((sum, field) => sum + field.size, 0);
         const underCultivationArea = fields
-            .filter(field => ['planted', 'growing', 'harvesting'].includes(field.status))
+            .filter(field => [FIELD_STATUS.PLANTED, FIELD_STATUS.GROWING, FIELD_STATUS.HARVESTING].includes(field.status))
             .reduce((sum, field) => sum + field.size, 0);
 
-
-        // --- 2. GET WEATHER DATA (New Logic) ---
-        let weatherData = null;
-
-        try {
-            // A. Find the farm's location string (e.g., "Algiers")
-            const farm = await prisma.farm.findUnique({
-                where: { id: user.farmId },
-                select: { location: true }
-            });
-
-            if (farm && farm.location) {
-                // B. Get Coordinates from Open-Meteo
-                const coords = await weatherService.getCoordinates(farm.location);
-
-                // C. Get Raw Weather Data
-                const rawData = await weatherService.getWeatherData(coords.latitude, coords.longitude);
-
-                // D. Format specifically for the Farmer Dashboard
-                weatherData = weatherService.formatForFarmerCurrent(rawData);
-            }
-        } catch (error) {
-            console.error("Dashboard Weather Error:", error.message);
-            // We swallow the error here so the Dashboard still loads the Field stats
-            // weatherData remains null
-        }
+        // --- 2. GET WEATHER DATA ---
+        const weatherData = await this.getWeatherForFarm(user.farmId);
 
         // --- 3. RETURN COMBINED DATA ---
         return {
-            weather: weatherData || {
-                // Fallback if API fails or no location set
-                temperature: 0,
-                condition: "Unavailable",
-                icon: "cloudy",
-                feelsLike: 0,
-                humidity: 0,
-                windSpeedKmh: 0,
-                windDirection: "N/A",
-                uvIndex: 0,
-                uvLevel: "low"
-            },
+            weather: weatherData,
             fields: {
                 total: totalFields,
                 activeFields: activeFields,
@@ -570,21 +567,21 @@ const dashboardService = {
             prisma.task.count({
                 where: {
                     ...baseWhereClause,
-                    status: 'pending'
+                    status: TASK_STATUS.PENDING
                 }
             }),
             // In progress tasks count
             prisma.task.count({
                 where: {
                     ...baseWhereClause,
-                    status: 'in_progress'
+                    status: TASK_STATUS.IN_PROGRESS
                 }
             }),
             // Completed today tasks count
             prisma.task.count({
                 where: {
                     ...baseWhereClause,
-                    status: 'completed',
+                    status: TASK_STATUS.COMPLETED,
                     updatedAt: {
                         gte: todayStart,
                         lte: todayEnd
@@ -600,7 +597,7 @@ const dashboardService = {
                         lte: todayEnd
                     },
                     status: {
-                        in: ['pending', 'in_progress']
+                        in: [TASK_STATUS.PENDING, TASK_STATUS.IN_PROGRESS]
                     }
                 },
                 orderBy: [
@@ -624,7 +621,7 @@ const dashboardService = {
                         lte: tomorrow
                     },
                     status: {
-                        in: ['pending', 'in_progress']
+                        in: [TASK_STATUS.PENDING, TASK_STATUS.IN_PROGRESS]
                     }
                 },
                 take: 5,
@@ -641,6 +638,9 @@ const dashboardService = {
                 }
             })
         ]);
+
+        // Get weather data
+        const weatherData = await this.getWeatherForFarm(user.farmId);
 
         return {
             taskStatistics: {
@@ -674,11 +674,11 @@ const dashboardService = {
                 fieldName: task.field?.name || null
             })),
             weather: {
-                temperature: 22,
-                condition: 'Sunny',
-                humidity: 65,
-                windSpeed: 12,
-                icon: 'sunny'
+                temperature: weatherData.temperature,
+                condition: weatherData.condition,
+                humidity: weatherData.humidity,
+                windSpeed: weatherData.windSpeedKmh,
+                icon: weatherData.icon
             }
         };
     }

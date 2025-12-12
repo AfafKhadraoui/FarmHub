@@ -9,7 +9,7 @@ router.use(authenticateToken);
 
 // Dashboard overview routes
 router.get('/overview', dashboardController.getOverView);
-router.get('/', dashboardController.getOverviewWorker);
+router.get('/overview-worker', dashboardController.getOverviewWorker);
 
 // Farm activity and recent updates
 router.get('/farm-activity', dashboardController.getFarmActivity);

@@ -399,6 +399,9 @@ const taskService = {
             inProgressTasks,
             pendingTasks,
             dueTodayTasks,
+            newTasksToday,
+            in_progressToday,
+            comleted_today,
         ] = await prisma.$transaction([
             prisma.task.count({ where: baseWhere }),
             prisma.task.count({ where: { ...baseWhere, status: TASK_STATUS.COMPLETED } }),
@@ -410,6 +413,9 @@ const taskService = {
                     dueDate: { gte: todayStart, lte: todayEnd },
                 },
             }),
+            prisma.task.count({ where: { ...baseWhere, createdAt: { gte: todayStart, lte: todayEnd } } }),
+            prisma.task.count({ where: { ...baseWhere, status: TASK_STATUS.INPROGRESS, updatedAt: { gte: todayStart, lte: todayEnd } } }),
+            prisma.task.count({ where: { ...baseWhere, status: TASK_STATUS.COMPLETED, updatedAt: { gte: todayStart, lte: todayEnd } } }),
         ]);
 
         return {
@@ -418,6 +424,9 @@ const taskService = {
             inProgressTasks,
             pendingTasks,
             dueTodayTasks,
+            newTasksToday,
+            in_progressToday,
+            comleted_today
         };
     },
 

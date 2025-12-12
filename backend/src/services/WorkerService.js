@@ -249,6 +249,12 @@ const WorkerService = {
     // Get worker statistics
     async getWorkerStatistics(userId) {
         const { farmId } = await this.getFarmIdOrFail(userId);
+        // today date range
+        const todayStart = new Date();
+        todayStart.setHours(0, 0, 0, 0);
+
+        const todayEnd = new Date();
+        todayEnd.setHours(23, 59, 59, 999);
 
         const workers = await prisma.user.findMany({
             where: {
@@ -283,11 +289,20 @@ const WorkerService = {
             ? Math.round((totalCompletedTasks / totalAssignedTasks) * 100)
             : 0;
 
+        // Workers who have tasks updated today (active today)
+        const activeWorkersToday = workers.filter(worker =>
+                worker.taskAssignments.some(assignment =>
+                    assignment.task.updatedAt >= todayStart
+                )
+            ).length;
+
+
         return {
             totalWorkers,
             totalAssignedTasks,
             totalCompletedTasks,
-            averagePerformance
+            averagePerformance,
+            activeWorkersToday
         };
     },
 
