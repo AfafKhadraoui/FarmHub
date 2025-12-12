@@ -1,6 +1,3 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -10,14 +7,137 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-// ========================================
-// ENUMS
-// ========================================
+model Farm {
+  id        Int      @id @default(autoincrement())
+  name      String   @db.VarChar(255)
+  location  String   @db.VarChar(255)
+  joinCode  String   @unique @db.VarChar(20)
+  createdBy String?  @db.VarChar(255)
+  createdAt DateTime @default(now()) @db.Timestamp(0)
+  updatedAt DateTime @updatedAt @db.Timestamp(0)
+  fields    Field[]
+  tasks     Task[]
+  users     User[]
+
+  @@index([joinCode])
+  @@index([createdBy])
+  @@map("farms")
+}
+
+model User {
+  id                   Int              @id @default(autoincrement())
+  email                String           @unique @db.VarChar(255)
+  password             String           @db.VarChar(255)
+  name                 String           @db.VarChar(255)
+  phone                String?          @db.VarChar(20)
+  role                 UserRole
+  farmId               Int?
+  createdAt            DateTime         @default(now()) @db.Timestamp(0)
+  updatedAt            DateTime         @updatedAt @db.Timestamp(0)
+  notificationSettings Json?            @default("{\"taskOverdue\": true, \"taskCompletion\": true, \"newWorkerJoined\": true, \"dailySummaryEmail\": true, \"weeklyPerformanceReport\": true}")
+  avatar               String?          @db.VarChar(255)
+  notifications        Notification[]
+  taskAssignments      TaskAssignment[]
+  userFarm             Farm?            @relation(fields: [farmId], references: [id], onDelete: Cascade)
+
+  @@index([farmId])
+  @@index([email])
+  @@index([role])
+  @@map("users")
+}
+
+model Field {
+  id          Int         @id @default(autoincrement())
+  name        String      @db.VarChar(255)
+  size        Float
+  cropType    String?     @db.VarChar(100)
+  status      FieldStatus @default(idle)
+  plantedDate DateTime?   @db.Date
+  harvestDate DateTime?   @db.Date
+  active      Boolean     @default(true)
+  farmId      Int
+  createdAt   DateTime    @default(now()) @db.Timestamp(0)
+  updatedAt   DateTime    @updatedAt @db.Timestamp(0)
+  farm        Farm        @relation(fields: [farmId], references: [id], onDelete: Cascade)
+  tasks       Task[]
+
+  @@index([farmId])
+  @@index([active])
+  @@index([status])
+  @@index([farmId, active])
+  @@map("fields")
+}
+
+model Task {
+  id              Int              @id @default(autoincrement())
+  title           String           @db.VarChar(255)
+  description     String?
+  status          TaskStatus       @default(pending)
+  priority        Priority         @default(medium)
+  dueDate         DateTime         @db.Timestamp(0)
+  notes           String?
+  farmId          Int
+  fieldId         Int?
+  createdAt       DateTime         @default(now()) @db.Timestamp(0)
+  updatedAt       DateTime         @updatedAt @db.Timestamp(0)
+  taskAssignments TaskAssignment[]
+  farm            Farm             @relation(fields: [farmId], references: [id], onDelete: Cascade)
+  field           Field?           @relation(fields: [fieldId], references: [id])
+
+  @@index([farmId])
+  @@index([fieldId])
+  @@index([status])
+  @@index([dueDate])
+  @@map("tasks")
+}
+
+model TaskAssignment {
+  id         Int      @id @default(autoincrement())
+  taskId     Int
+  workerId   Int
+  assignedAt DateTime @default(now()) @db.Timestamp(0)
+  task       Task     @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  worker     User     @relation(fields: [workerId], references: [id], onDelete: Cascade)
+
+  @@unique([taskId, workerId])
+  @@index([taskId])
+  @@index([workerId])
+  @@map("task_assignments")
+}
+
+model Notification {
+  id        String   @id @db.VarChar(50)
+  userId    Int
+  type      String   @db.VarChar(20)
+  title     String   @db.VarChar(255)
+  message   String
+  timestamp DateTime @default(now()) @db.Timestamp(0)
+  isRead    Boolean  @default(false)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([isRead])
+  @@index([timestamp])
+  @@map("notifications")
+}
+
+model Activity {
+  id        String   @id @db.VarChar(50)
+  type      String   @db.VarChar(50)
+  title     String   @db.VarChar(255)
+  message   String
+  timestamp DateTime @default(now()) @db.Timestamp(0)
+  metadata  Json?
+
+  @@index([timestamp])
+  @@index([type])
+  @@map("activities")
+}
 
 enum UserRole {
-  admin // Farm owner
-  worker // Farm worker
-  platform_admin // Platform developers (see all farms)
+  admin
+  worker
+  platform_admin
 }
 
 enum FieldStatus {
@@ -38,186 +158,3 @@ enum Priority {
   medium
   high
 }
-
-// ========================================
-// MODELS
-// ========================================
-
-// Farm model - represents a farm organization
-model Farm {
-  id        Int      @id @default(autoincrement())
-  name      String   @db.VarChar(255)
-  location  String   @db.VarChar(255)
-  joinCode  String   @unique @db.VarChar(20) // e.g., "FARM-ABC123"
-  createdBy String?  @db.VarChar(255) // Email of platform admin who created this (for tracking)
-  createdAt DateTime @default(now()) @db.Timestamp(0)
-  updatedAt DateTime @updatedAt @db.Timestamp(0)
-
-  // Relations
-  users  User[]
-  fields Field[]
-  tasks  Task[]
-
-  @@index([joinCode])
-  @@index([createdBy])
-  @@map("farms")
-}
-
-model User {
-  id        Int      @id @default(autoincrement())
-  email     String   @unique @db.VarChar(255)
-  password  String   @db.VarChar(255)
-  name      String   @db.VarChar(255)
-  phone     String?  @db.VarChar(20)
-  avatar         String?  @db.VarChar(255) // URL to image
-
-  role      UserRole
-  farmId    Int?
-  createdAt DateTime @default(now()) @db.Timestamp(0)
-  updatedAt DateTime @updatedAt @db.Timestamp(0)
-  notificationSettings Json? @default("{\"taskCompletion\": true, \"taskOverdue\": true, \"newWorkerJoined\": true, \"dailySummaryEmail\": true, \"weeklyPerformanceReport\": true}")
-  // Relations
-  userFarm        Farm?            @relation(fields: [farmId], references: [id], onDelete: Cascade)
-  taskAssignments TaskAssignment[]
-  notifications   Notification[]
-
-  @@index([farmId])
-  @@index([email])
-  @@index([role])
-  @@map("users")
-}
-
-// Field model - represents farm fields/plots WITH HISTORY TRACKING
-// When crop changes, create NEW row (don't update existing)
-// Use 'active' flag to track current vs historical records
-model Field {
-  id          Int         @id @default(autoincrement())
-  name        String      @db.VarChar(255) // e.g., "North Field", "Plot A"
-  size        Float       @db.DoublePrecision // in hectares or acres
-  cropType    String?     @db.VarChar(100)
-  status      FieldStatus @default(idle)
-  plantedDate DateTime?   @db.Date
-  harvestDate DateTime?   @db.Date
-  active      Boolean     @default(true) // TRUE = current, FALSE = historical
-  farmId      Int
-  createdAt   DateTime    @default(now()) @db.Timestamp(0)
-  updatedAt   DateTime    @updatedAt @db.Timestamp(0)
-
-  // Relations
-  farm  Farm   @relation(fields: [farmId], references: [id], onDelete: Cascade)
-  tasks Task[]
-
-  @@index([farmId])
-  @@index([active]) // Important for querying current fields only
-  @@index([status])
-  @@index([farmId, active]) // Composite index for better performance
-  @@map("fields")
-}
-
-// Task model - represents work tasks
-// Multiple workers can be assigned via TaskAssignment table
-model Task {
-  id          Int        @id @default(autoincrement())
-  title       String     @db.VarChar(255)
-  description String?    @db.Text
-  status      TaskStatus @default(pending)
-  priority    Priority   @default(medium)
-  dueDate     DateTime   @db.Timestamp(0)
-  notes       String?    @db.Text // Worker notes/comments
-  farmId      Int
-  fieldId     Int? // Field related to task (NULL = no specific field)
-  createdAt   DateTime   @default(now()) @db.Timestamp(0)
-  updatedAt   DateTime   @updatedAt @db.Timestamp(0)
-
-  // Relations
-  farm            Farm             @relation(fields: [farmId], references: [id], onDelete: Cascade)
-  field           Field?           @relation(fields: [fieldId], references: [id], onDelete: SetNull)
-  taskAssignments TaskAssignment[] // Multiple workers assigned
-
-  @@index([farmId])
-  @@index([fieldId])
-  @@index([status])
-  @@index([dueDate])
-  @@map("tasks")
-}
-
-// TaskAssignment model - junction table for many-to-many relationship
-// Allows multiple workers per task
-model TaskAssignment {
-  id         Int      @id @default(autoincrement())
-  taskId     Int
-  workerId   Int
-  assignedAt DateTime @default(now()) @db.Timestamp(0)
-
-  // Relations
-  task   Task @relation(fields: [taskId], references: [id], onDelete: Cascade)
-  worker User @relation(fields: [workerId], references: [id], onDelete: Cascade)
-
-  @@unique([taskId, workerId]) // Prevent duplicate assignments
-  @@index([taskId])
-  @@index([workerId])
-  @@map("task_assignments")
-}
-
-// Notification model - platform admin notifications
-model Notification {
-  id        String   @id @db.VarChar(50)
-  userId    Int
-  type      String   @db.VarChar(20)
-  title     String   @db.VarChar(255)
-  message   String   @db.Text
-  timestamp DateTime @default(now()) @db.Timestamp(0)
-  isRead    Boolean  @default(false)
-
-  // Relations
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@index([userId])
-  @@index([isRead])
-  @@index([timestamp])
-  @@map("notifications")
-}
-
-model Activity {
-  id        String   @id @db.VarChar(50)
-  type      String   @db.VarChar(50)
-  title     String   @db.VarChar(255) 
-  message   String   @db.Text
-  timestamp DateTime @default(now()) @db.Timestamp(0)
-  metadata  Json?
-  userId    Int?     // Nullable, because system events might not have a user
-  farmId    Int?     // Nullable, for platform-wide events not tied to a farm
-  user      User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
-  farm      Farm?    @relation(fields: [farmId], references: [id], onDelete: SetNull)
-
-  @@index([timestamp])
-  @@index([type])
-  @@index([userId]) // Index for faster filtering by user
-  @@index([farmId]) // Index for faster filtering by farm
-  @@map("activities")
-}
-// ========================================
-// NOTES FOR DEVELOPERS
-// ========================================
-
-// 1. FIELD HISTORY TRACKING:
-//    - When user updates crop, DON'T update the row
-//    - Instead: Set current row active=false, CREATE new row with active=true
-//    - Query active fields: WHERE active = true
-//    - Query field history: WHERE active = false ORDER BY createdAt DESC
-//
-// 2. MULTIPLE WORKERS PER TASK:
-//    - Use TaskAssignment table to assign workers
-//    - One task can have many TaskAssignment records
-//    - Query worker's tasks: JOIN TaskAssignment WHERE workerId = X
-//
-// 3. PLATFORM ADMIN TRACKING:
-//    - Farm.createdBy stores email of platform admin
-//    - Used by developers to track who created which farm
-//    - Regular users don't see this field
-//
-// 4. REMOVED FIELDS:
-//    - ❌ notes from Farm table (not needed)
-//    - ❌ notes from User table (not needed)
-//    - ❌ createdById from Task table (not needed)
-//    - ❌ assignedToId from Task table (replaced by TaskAssignment)

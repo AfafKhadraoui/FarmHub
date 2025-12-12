@@ -72,7 +72,21 @@ Content-Type: application/json
   "name":"Field 2 owned by the farmer ilyas after modification",
   "size":11.5,
   "cropType":"Tomatoes",
-  "status":"planted"
+  "status":"planted",
+  "notes":"Adjusted size and revalidated planting status"
+}
+
+### PUT /fields/:id (new season - crop change triggers versioning)
+PUT {{baseUrl}}/fields/6
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "name":"Field 2 new crop season",
+  "size":11.5,
+  "cropType":"Corn",
+  "status":"planted",
+  "notes":"Starting new crop season; archived previous cycle"
 }
 ### DELETE /fields/:id
 DELETE {{baseUrl}}/fields/8
@@ -99,6 +113,22 @@ Authorization: Bearer {{token}}
 ### ==========================================
 ### FIELD FULL HISTORY (With Filters)
 ### ==========================================
-# filter options: all, tasks, status
+# filter options: all, tasks, maintenance, updates, status
 GET {{baseUrl}}/fields/1/history?filter=all
+Authorization: Bearer {{token}}
+
+### History filter: tasks only
+GET {{baseUrl}}/fields/1/history?filter=tasks
+Authorization: Bearer {{token}}
+
+### History filter: maintenance only
+GET {{baseUrl}}/fields/1/history?filter=maintenance
+Authorization: Bearer {{token}}
+
+### History filter: updates only
+GET {{baseUrl}}/fields/1/history?filter=updates
+Authorization: Bearer {{token}}
+
+### History filter: status only
+GET {{baseUrl}}/fields/1/history?filter=status
 Authorization: Bearer {{token}}

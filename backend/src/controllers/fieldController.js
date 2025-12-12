@@ -93,11 +93,11 @@ exports.createField = async (req, res) => {
   }
 };
 
-// PUT /fields/:id (Versioning logic)
+// PUT /fields/:id (Versioning & Updates)
 exports.updateField = async (req, res) => {
   const { id } = req.params;
-  const { name, size, cropType, status } = req.body;
-  const { farmId } = req.user;
+  const { name, size, cropType, status, notes } = req.body;
+  const { farmId, name: userName } = req.user;
 
   try {
     const currentField = await prisma.field.findUnique({
@@ -112,17 +112,17 @@ exports.updateField = async (req, res) => {
 
     if (isNewSeason) {
       const result = await prisma.$transaction(async (tx) => {
-        // Archive old
         await tx.field.update({
           where: { id: parseInt(id) },
           data: {
             active: false,
             harvestDate: new Date(),
-            status: "harvesting",
+            status: "harvested",
+            lastUpdatedBy: userName,
+            statusNotes: notes || "Crop cycle ended",
           },
         });
 
-        // Create new
         return await tx.field.create({
           data: {
             name: name || currentField.name,
@@ -132,24 +132,37 @@ exports.updateField = async (req, res) => {
             status: status || "planted",
             plantedDate: new Date(),
             active: true,
+            lastUpdatedBy: userName,
+            statusNotes: "New crop season started",
           },
         });
       });
 
-      // New version has 0 tasks -> 0 Progress
       return res.json({
-        message: "Field versioned",
+        message: "Field versioned for new crop",
         field: { ...result, progress: 0 },
       });
     }
 
     const updatedField = await prisma.field.update({
       where: { id: parseInt(id) },
-      data: { name, size, status },
+      data: {
+        name,
+        size,
+        status,
+        lastUpdatedBy: userName,
+        statusNotes: notes,
+      },
       include: { tasks: true },
     });
 
-    const progress = calculateProgress(updatedField);
+    const totalTasks = updatedField.tasks.length;
+    const doneTasks = updatedField.tasks.filter(
+      (t) => t.status === "completed"
+    ).length;
+    const progress =
+      totalTasks === 0 ? 0 : Math.round((doneTasks / totalTasks) * 100);
+
     const { tasks, ...fieldData } = updatedField;
 
     res.json({
@@ -157,7 +170,7 @@ exports.updateField = async (req, res) => {
       field: { ...fieldData, progress },
     });
   } catch (error) {
-    console.error(error);
+    console.error("Update Error:", error);
     res.status(500).json({ error: "Failed to update field" });
   }
 };
@@ -412,11 +425,11 @@ exports.getWorkerFieldDetails = async (req, res) => {
   }
 };
 
-// GET /fields/:id/history //the full screen(details)
+// GET /fields/:id/history (Full Screen)
 exports.getFieldHistory = async (req, res) => {
   try {
     const { id } = req.params;
-    const { filter } = req.query; // 'all', 'tasks', 'updates','status'
+    const { filter } = req.query;
     const farmId = req.user.farmId;
 
     const currentField = await prisma.field.findUnique({
@@ -429,13 +442,12 @@ exports.getFieldHistory = async (req, res) => {
 
     let historyStream = [];
 
-    //Previous Crop Cyclest
     if (filter === "all" || filter === "status") {
       const pastVersions = await prisma.field.findMany({
         where: {
           farmId: farmId,
           name: currentField.name,
-          active: false, //only the historical fields
+          active: false,
         },
         orderBy: { createdAt: "desc" },
       });
@@ -443,16 +455,16 @@ exports.getFieldHistory = async (req, res) => {
       const versionEvents = pastVersions.map((v) =>
         formatEvent(
           "status",
-          v.createdAt, // Or harvestDate
+          v.createdAt,
           `Status changed to ${v.status}`,
-          `Crop cycle: ${v.cropType || "None"}. Size: ${v.size}ha`,
-          "System"
+          v.statusNotes || `Crop cycle: ${v.cropType || "None"}`,
+          v.lastUpdatedBy || "System"
         )
       );
       historyStream = [...historyStream, ...versionEvents];
     }
 
-    if (filter === "all" || filter === "tasks") {
+    if (filter === "all" || filter === "tasks" || filter === "maintenance") {
       const fieldTasks = await prisma.task.findMany({
         where: {
           fieldId: parseInt(id),
@@ -464,25 +476,67 @@ exports.getFieldHistory = async (req, res) => {
         orderBy: { updatedAt: "desc" },
       });
 
-      const taskEvents = fieldTasks.map((t) => {
-        // to get worker names
+      const processedTasks = fieldTasks.reduce((acc, t) => {
+        const lowerTitle = t.title.toLowerCase();
+        const isMaintenance =
+          lowerTitle.includes("maintenance") ||
+          lowerTitle.includes("repair") ||
+          lowerTitle.includes("fix") ||
+          lowerTitle.includes("inspection");
+
+        const eventType = isMaintenance ? "maintenance" : "task";
+
+        if (filter === "maintenance" && !isMaintenance) return acc;
+        if (filter === "tasks" && isMaintenance) return acc;
+
         const workers = t.taskAssignments
           .map((ta) => ta.worker.name)
           .join(", ");
-        return formatEvent(
-          "task",
-          t.updatedAt,
-          `${t.title} ${t.status}`,
-          t.notes || "No additional notes",
-          workers || "Unassigned",
-          { priority: t.priority }
+
+        acc.push(
+          formatEvent(
+            eventType,
+            t.updatedAt,
+            t.title,
+            t.notes || "No additional notes",
+            workers || "Unassigned",
+            { priority: t.priority }
+          )
         );
-      });
-      historyStream = [...historyStream, ...taskEvents];
+        return acc;
+      }, []);
+
+      historyStream = [...historyStream, ...processedTasks];
     }
 
-    // Activity Log (General Updates)
     if (filter === "all" || filter === "updates") {
+      const activities = await prisma.activity.findMany({
+        where: {
+          metadata: {
+            path: ["fieldId"],
+            equals: parseInt(id),
+          },
+        },
+        orderBy: { timestamp: "desc" },
+      });
+
+      const activityEvents = activities.map((act) => {
+        const author =
+          act.metadata && act.metadata.authorName
+            ? act.metadata.authorName
+            : "System";
+        return formatEvent(
+          "update",
+          act.timestamp,
+          act.title,
+          act.message,
+          author,
+          act.metadata
+        );
+      });
+
+      historyStream = [...historyStream, ...activityEvents];
+
       historyStream.push(
         formatEvent(
           "create",
@@ -494,7 +548,6 @@ exports.getFieldHistory = async (req, res) => {
       );
     }
 
-    // Sort combined stream by Date (Newest first)
     historyStream.sort((a, b) => new Date(b.date) - new Date(a.date));
 
     res.json(historyStream);
@@ -503,15 +556,11 @@ exports.getFieldHistory = async (req, res) => {
     res.status(500).json({ error: "Failed to fetch field history" });
   }
 };
-
-// GET /fields/:id/history/summary (Widget - Image 1)
 exports.getFieldHistorySummary = async (req, res) => {
-  // Reuse the logic but limit to 3 items
   req.query.filter = "all";
   const originalJson = res.json;
   res.json = (data) => {
     res.json = originalJson;
-    // Return only top 3
     return originalJson.call(res, data.slice(0, 3));
   };
   return exports.getFieldHistory(req, res);
