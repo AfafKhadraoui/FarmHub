@@ -1,0 +1,72 @@
+@baseUrl = http://localhost:5000
+# @name login
+POST {{baseUrl}}/api/auth/login
+Content-Type: application/json
+
+{
+  "email": "ilyas@gmail.com",
+  "password": "Password123!"
+}
+###
+@token = {{login.response.body.data.token}}
+###
+###create some notifications for testing
+POST {{baseUrl}}/userNotifications/createNotification
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "title": "Test Notification1",
+  "message": "This is a test notification",
+  "type": "info"
+}
+###
+POST {{baseUrl}}/userNotifications/createNotification
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "title": "Test Notification2",
+  "message": "This is a test notification",
+  "type": "info"
+}
+###
+POST {{baseUrl}}/userNotifications/createNotification
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "title": "Test Notification3",
+  "message": "This is a test notification",
+  "type": "info"
+}
+###
+### 1. List All Notifications
+GET {{baseUrl}}/userNotifications
+Authorization: Bearer {{token}}
+
+### 2. List Notifications for Bell Icon (Limit 4)
+GET {{baseUrl}}/userNotifications?limit=4
+Authorization: Bearer {{token}}
+
+### 3. List Only Unread Notifications
+GET {{baseUrl}}/userNotifications?unread=true
+Authorization: Bearer {{token}}
+
+### 4. Mark All Notifications as Read
+PATCH {{baseUrl}}/userNotifications/readAll
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+### 5. Mark Single Notification as Read
+PATCH {{baseUrl}}/userNotifications/notif_1765212486478_743/markAsRead
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+### 6. Delete a Single Notification
+DELETE {{baseUrl}}/userNotifications/notif_1765213026580_317
+Authorization: Bearer {{token}}
+
+### 7. Delete All Notifications
+DELETE {{baseUrl}}/userNotifications/deleteAll
+Authorization: Bearer {{token}}

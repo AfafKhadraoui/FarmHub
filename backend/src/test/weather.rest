@@ -1,0 +1,85 @@
+@baseUrl = http://localhost:5000
+
+###
+POST {{baseUrl}}/api/auth/register
+Content-Type: application/json
+
+{
+  "role": "admin",
+  "name": "user3farmer",
+  "email": "user3farmer@gmail.com",
+  "password": "Password123!",
+  "phone": "+1234567890",
+  "farmName": "user3farmer Farm",
+  "location": "chlef"
+}
+
+###
+POST {{baseUrl}}/api/auth/register
+Content-Type: application/json
+
+{
+  "role": "worker",
+  "name": "user3worker",
+  "email": "user3worker@gmail.com",
+  "password": "Password123!",
+  "phone": "+1234567890",
+  "joinCode": "FARM-FK9NJC"
+}
+
+###
+# @name farmerlogin
+POST {{baseUrl}}/api/auth/login
+Content-Type: application/json
+
+{
+  "email": "userfarmer@gmail.com",
+  "password": "Password123!"
+}
+
+###
+@farmerToken = {{farmerlogin.response.body.data.token}}
+
+###
+# @name workerlogin
+POST {{baseUrl}}/api/auth/login
+Content-Type: application/json
+
+{
+  "email": "userworker@gmail.com",
+  "password": "Password123!"
+}
+
+###
+@workerToken = {{workerlogin.response.body.data.token}}
+
+###
+## Worker: Get Default Weather
+# Returns weather for the main Farm location (from database).
+GET {{baseUrl}}/weather/current
+Authorization: Bearer {{workerToken}}
+
+### Worker: Get GPS Location Weather
+# Returns weather for where the worker is standing (e.g., inside a field).
+# Useful for mobile apps sending GPS coordinates.
+GET {{baseUrl}}/weather/current?latitude=36.75&longitude=3.05
+Authorization: Bearer {{workerToken}}
+### Farmer: Get Current Dashboard
+# Returns detailed current conditions (UV, Wind, Humidity) for the Farm.
+GET {{baseUrl}}/weather/current
+Authorization: Bearer {{farmerToken}}
+
+### Farmer: Get 7-Day Forecast
+# Returns a summary for each day of the coming week.
+GET {{baseUrl}}/weather/forecast/daily
+Authorization: Bearer {{farmerToken}}
+
+### Farmer: Get Hourly Forecast
+# Returns weather data for the next 24 hours (e.g., for planning work shifts).
+GET {{baseUrl}}/weather/forecast/hourly
+Authorization: Bearer {{farmerToken}}
+
+### Farmer: Get Recommendations
+# Returns smart advice (e.g., "Irrigate now", "Avoid spraying") based on data.
+GET {{baseUrl}}/weather/recommendations
+Authorization: Bearer {{farmerToken}}
