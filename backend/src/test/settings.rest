@@ -1,5 +1,31 @@
 @baseUrl = http://localhost:5000
+###
+###testing login to get token
+POST {{baseUrl}}/api/auth/register
+Content-Type: application/json
 
+{
+  "role": "admin",
+  "name": "user3",
+  "email": "user3farmer@gmail.com",
+  "password": "Password123!",
+  "phone": "+1234567890",
+  "farmName": "User3 Farm",
+  "location": "123 Farm Lane"
+}
+###
+POST {{baseUrl}}/api/auth/register
+Content-Type: application/json
+
+{
+  "role": "worker",
+  "name": "user3",
+  "email": "user3worker@gmail.com",
+  "password": "Password123!",
+  "phone": "+1234567890",
+  "joinCode": "FARM-FX3D63"
+}
+###
 # ==========================================
 # SCENARIO A: FARMER (ADMIN)
 # ==========================================
@@ -102,5 +128,5 @@ Content-Type: application/json
 {
   "currentPassword": "Password123!",
   "newPassword": "NewPassword123!",
-  "confirmationPassword": "Newassword123!"
+  "confirmationPassword": "NewPassword123!"
 }

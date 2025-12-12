@@ -64,7 +64,7 @@ Authorization: Bearer {{token}}
 //   growing
 //   harvesting
 // }
-PUT {{baseUrl}}/fields/6
+PUT {{baseUrl}}/fields/5
 Authorization: Bearer {{token}}
 Content-Type: application/json
 
@@ -107,28 +107,28 @@ Authorization: Bearer {{token}}
 ### ==========================================
 ### FIELD HISTORY WIDGET (Summary)
 ### ==========================================
-GET {{baseUrl}}/fields/1/history/summary
+GET {{baseUrl}}/fields/5/history/summary
 Authorization: Bearer {{token}}
 
 ### ==========================================
 ### FIELD FULL HISTORY (With Filters)
 ### ==========================================
 # filter options: all, tasks, maintenance, updates, status
-GET {{baseUrl}}/fields/1/history?filter=all
+GET {{baseUrl}}/fields/5/history?filter=all
 Authorization: Bearer {{token}}
 
 ### History filter: tasks only
-GET {{baseUrl}}/fields/1/history?filter=tasks
+GET {{baseUrl}}/fields/5/history?filter=tasks
 Authorization: Bearer {{token}}
 
 ### History filter: maintenance only
-GET {{baseUrl}}/fields/1/history?filter=maintenance
+GET {{baseUrl}}/fields/5/history?filter=maintenance
 Authorization: Bearer {{token}}
 
 ### History filter: updates only
-GET {{baseUrl}}/fields/1/history?filter=updates
+GET {{baseUrl}}/fields/5/history?filter=updates
 Authorization: Bearer {{token}}
 
 ### History filter: status only
-GET {{baseUrl}}/fields/1/history?filter=status
+GET {{baseUrl}}/fields/5/history?filter=status
 Authorization: Bearer {{token}}

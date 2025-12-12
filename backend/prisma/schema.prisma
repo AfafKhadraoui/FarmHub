@@ -39,7 +39,7 @@ model User {
   notifications        Notification[]
   taskAssignments      TaskAssignment[]
   userFarm             Farm?            @relation(fields: [farmId], references: [id], onDelete: Cascade)
-
+  activities Activity[]
   @@index([farmId])
   @@index([email])
   @@index([role])
@@ -58,6 +58,9 @@ model Field {
   farmId      Int
   createdAt   DateTime    @default(now()) @db.Timestamp(0)
   updatedAt   DateTime    @updatedAt @db.Timestamp(0)
+  lastUpdatedBy String?
+  statusNotes String?
+
   farm        Farm        @relation(fields: [farmId], references: [id], onDelete: Cascade)
   tasks       Task[]
 
@@ -128,7 +131,8 @@ model Activity {
   message   String
   timestamp DateTime @default(now()) @db.Timestamp(0)
   metadata  Json?
-
+  userId    Int?     
+  user      User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
   @@index([timestamp])
   @@index([type])
   @@map("activities")

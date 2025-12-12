@@ -97,8 +97,14 @@ exports.createField = async (req, res) => {
 exports.updateField = async (req, res) => {
   const { id } = req.params;
   const { name, size, cropType, status, notes } = req.body;
-  const { farmId, name: userName } = req.user;
-
+  const { farmId } = req.user;
+  userName = await prisma.user.findUnique({
+    where: { id: req.user.id },
+    select: { name: true },
+  });
+  userName = userName.name;
+  console.log("username:", userName);
+  console.log("farmid:", farmId);
   try {
     const currentField = await prisma.field.findUnique({
       where: { id: parseInt(id) },

@@ -33,7 +33,7 @@ POST {{baseUrl}}/api/auth/login
 Content-Type: application/json
 
 {
-  "email": "userfarmer@gmail.com",
+  "email": "user3farmer@gmail.com",
   "password": "Password123!"
 }
 
@@ -46,7 +46,7 @@ POST {{baseUrl}}/api/auth/login
 Content-Type: application/json
 
 {
-  "email": "userworker@gmail.com",
+  "email": "user3worker@gmail.com",
   "password": "Password123!"
 }
 
