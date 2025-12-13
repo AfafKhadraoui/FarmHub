@@ -3,6 +3,9 @@
 import { User, Settings, Shield, Bell, HelpCircle, LogOut } from "lucide-react";
 import { useRef, useEffect, useState } from "react";
 import { createPortal } from "react-dom";
+import { useQuery } from '@tanstack/react-query';
+import { adminProfileService } from '@/services/profile.services';
+import { useRouter } from 'next/navigation';
 
 interface ProfileDropdownProps {
   isOpen: boolean;
@@ -24,6 +27,14 @@ export default function ProfileDropdown({
   const dropdownRef = useRef<HTMLDivElement>(null);
   const [showLogoutModal, setShowLogoutModal] = useState(false);
   const [isMounted, setIsMounted] = useState(false);
+  const router = useRouter();
+
+  // Fetch profile data
+  const { data: profile, isLoading } = useQuery({
+    queryKey: ['admin-profile'],
+    queryFn: adminProfileService.getProfile,
+    enabled: isOpen, // Only fetch when dropdown is open
+  });
 
   useEffect(() => {
     setIsMounted(true);
@@ -60,10 +71,10 @@ export default function ProfileDropdown({
   }, [isOpen, onClose]);
 
   const handleLogout = () => {
-    console.log("Logging out...");
-    // Add logout logic here
+    localStorage.removeItem('token');
     setShowLogoutModal(false);
     onClose();
+    router.push('/admin/login');
   };
 
   const menuItems: MenuItem[] = [
@@ -93,6 +104,14 @@ export default function ProfileDropdown({
     },
   ];
 
+  // Get role display name
+  const getRoleDisplay = (role?: string) => {
+    if (role === 'platform_admin') return 'Platform Admin';
+    if (role === 'admin') return 'Farm Owner';
+    if (role === 'worker') return 'Worker';
+    return role || 'User';
+  };
+
   return (
     <>
       {isOpen && (
@@ -105,31 +124,49 @@ export default function ProfileDropdown({
         >
           {/* Profile Section */}
           <div className="px-5 py-5 border-b border-gray-200">
-            <div className="flex items-center gap-3">
-              <div className="w-12 h-12 rounded-full bg-gradient-to-br from-[var(--admin-primary)] to-[var(--admin-secondary)] flex items-center justify-center flex-shrink-0">
-                <User size={24} className="text-white" strokeWidth={2.5} />
+            {isLoading ? (
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-12 rounded-full bg-gray-200 animate-pulse" />
+                <div className="flex-1 space-y-2">
+                  <div className="h-4 bg-gray-200 rounded animate-pulse" />
+                  <div className="h-3 bg-gray-200 rounded animate-pulse w-2/3" />
+                </div>
               </div>
-              <div className="flex-1 min-w-0">
-                <p
-                  className="text-gray-900 font-semibold text-base truncate"
-                  style={{ fontFamily: "Inter, sans-serif" }}
-                >
-                  Dev Team
-                </p>
-                <p
-                  className="text-gray-600 text-sm truncate"
-                  style={{ fontFamily: "Inter, sans-serif" }}
-                >
-                  Platform Admin
-                </p>
-                <p
-                  className="text-gray-400 text-xs truncate"
-                  style={{ fontFamily: "Inter, sans-serif" }}
-                >
-                  dev@farmhub.com
-                </p>
+            ) : (
+              <div className="flex items-center gap-3">
+                {profile?.avatarUrl ? (
+                  <img
+                    src={profile.avatarUrl}
+                    alt={profile.name}
+                    className="w-12 h-12 rounded-full object-cover flex-shrink-0"
+                  />
+                ) : (
+                  <div className="w-12 h-12 rounded-full bg-gradient-to-br from-[var(--admin-primary)] to-[var(--admin-secondary)] flex items-center justify-center flex-shrink-0">
+                    <User size={24} className="text-white" strokeWidth={2.5} />
+                  </div>
+                )}
+                <div className="flex-1 min-w-0">
+                  <p
+                    className="text-gray-900 font-semibold text-base truncate"
+                    style={{ fontFamily: "Inter, sans-serif" }}
+                  >
+                    {profile?.name || 'Loading...'}
+                  </p>
+                  <p
+                    className="text-gray-600 text-sm truncate"
+                    style={{ fontFamily: "Inter, sans-serif" }}
+                  >
+                    {getRoleDisplay(profile?.role)}
+                  </p>
+                  <p
+                    className="text-gray-400 text-xs truncate"
+                    style={{ fontFamily: "Inter, sans-serif" }}
+                  >
+                    {profile?.email || ''}
+                  </p>
+                </div>
               </div>
-            </div>
+            )}
           </div>
 
           {/* Menu Items */}
@@ -163,6 +200,7 @@ export default function ProfileDropdown({
           </div>
         </div>
       )}
+      
       {/* Logout Confirmation Modal - Rendered as Portal */}
       {isMounted &&
         showLogoutModal &&

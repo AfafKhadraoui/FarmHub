@@ -12,6 +12,8 @@ import {
 
 interface FarmGrowthChartProps {
   data?: Array<{ month: string; farms: number }>;
+  loading?: boolean;
+  error?: string | null;
 }
 
 const defaultData = [
@@ -27,7 +29,10 @@ const defaultData = [
 
 export default function FarmGrowthChart({
   data = defaultData,
+  loading = false,
+  error = null,
 }: FarmGrowthChartProps) {
+  const chartData = data && data.length > 0 ? data : defaultData;
   return (
     <div
       className="bg-white border border-[var(--admin-border)] rounded-2xl p-6"
@@ -43,7 +48,7 @@ export default function FarmGrowthChart({
       <div className="h-px bg-[var(--admin-border)] mb-6" />
 
       <ResponsiveContainer width="100%" height={300}>
-        <LineChart data={data}>
+        <LineChart data={chartData}>
           <defs>
             <linearGradient id="colorFarms" x1="0" y1="0" x2="0" y2="1">
               <stop

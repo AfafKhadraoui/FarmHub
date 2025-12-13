@@ -28,19 +28,23 @@ export interface FarmGrowthData {
 }
 
 export interface RecentFarm {
+  id: number;
   name: string;
-  owner: string;
+  owner: string | null;
+  ownerEmail: string | null;
   location: string;
-  created: string; // relative time like "2h ago"
+  workers: number;
+  fields: number;
+  createdAt: string;
 }
 
 export interface Activity {
   id: number;
-  type: "farm_created" | "user_registered" | "milestone" | "field_added";
+  type: string;
   title: string;
-  subtitle: string;
-  time: string; // relative time
-  color: string;
+  message: string;
+  timestamp: string;
+  metadata: Record<string, any>;
 }
 
 export interface Farm {
@@ -437,6 +441,74 @@ export const adminService = {
       throw error;
     }
   },
+
+  // ============================================================================
+  // NOTIFICATIONS
+  // ============================================================================
+
+  /**
+   * Get all notifications for admin
+   * GET /api/admin/notifications
+   *
+   * @param unreadOnly - Filter to show only unread notifications
+   */
+  getNotifications: async (
+    unreadOnly: boolean = false
+  ): Promise<Notification[]> => {
+    try {
+      const response = await api.get<Notification[]>("/admin/notifications", {
+        params: { unreadOnly },
+      });
+      return response.data;
+    } catch (error) {
+      console.error("Failed to fetch notifications:", error);
+      throw error;
+    }
+  },
+
+  /**
+   * Mark notification as read
+   * PATCH /api/admin/notifications/:id/read
+   */
+  markNotificationAsRead: async (notificationId: string): Promise<void> => {
+    try {
+      await api.patch(`/admin/notifications/${notificationId}/read`);
+    } catch (error) {
+      console.error("Failed to mark notification as read:", error);
+      throw error;
+    }
+  },
+
+  /**
+   * Mark all notifications as read
+   * PATCH /api/admin/notifications/read-all
+   */
+  markAllNotificationsAsRead: async (): Promise<{ count: number }> => {
+    try {
+      const response = await api.patch<{
+        success: boolean;
+        message: string;
+        count: number;
+      }>("/admin/notifications/read-all");
+      return { count: response.data.count };
+    } catch (error) {
+      console.error("Failed to mark all notifications as read:", error);
+      throw error;
+    }
+  },
+
+  /**
+   * Delete notification
+   * DELETE /api/admin/notifications/:id
+   */
+  deleteNotification: async (notificationId: string): Promise<void> => {
+    try {
+      await api.delete(`/admin/notifications/${notificationId}`);
+    } catch (error) {
+      console.error("Failed to delete notification:", error);
+      throw error;
+    }
+  },
 };
 
 // ============================================================================
@@ -475,3 +547,16 @@ export const handleExportUsers = async (params?: {
     alert("Failed to export users. Please try again.");
   }
 };
+
+// ============================================================================
+// NOTIFICATION TYPES
+// ============================================================================
+
+export interface Notification {
+  id: string;
+  type: "farm" | "user" | "system" | "alert";
+  title: string;
+  message: string;
+  timestamp: string;
+  isRead: boolean;
+}

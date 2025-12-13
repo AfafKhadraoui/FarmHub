@@ -1,17 +1,16 @@
 "use client";
 
 import { Store, Award, Download, AlertCircle, X, Check } from "lucide-react";
-import { useState, useRef, useEffect } from "react";
+import { useRef, useEffect } from "react";
+import { useNotifications } from "@/hooks/useNotifications";
 
 interface Notification {
   id: string;
   type: "farm" | "user" | "system" | "alert";
   title: string;
   message: string;
-  timestamp: Date;
+  timestamp: Date | string;
   isRead: boolean;
-  link?: string;
-  icon: string;
 }
 
 interface NotificationDropdownProps {
@@ -19,28 +18,7 @@ interface NotificationDropdownProps {
   onClose: () => void;
   onNavigate: (page: string) => void;
 }
-
-// Sample notifications data
-const sampleNotifications: Notification[] = [
-  {
-    id: "1",
-    type: "farm",
-    title: "New farm created",
-    message: "Green Valley Farm by ahmed@email.com",
-    timestamp: new Date(Date.now() - 2 * 60 * 1000),
-    isRead: false,
-    icon: "Store",
-  },
-  {
-    id: "2",
-    type: "user",
-    title: "User milestone reached",
-    message: "1,000 users registered on the platform!",
-    timestamp: new Date(Date.now() - 60 * 60 * 1000),
-    isRead: false,
-    icon: "Award",
-  },
-];
+// ... (keeping imports and helpers)
 
 const getIconComponent = (iconName: string) => {
   const icons: { [key: string]: any } = {
@@ -62,9 +40,10 @@ const getIconColor = (type: string) => {
   return colors[type as keyof typeof colors] || colors.farm;
 };
 
-const getRelativeTime = (date: Date) => {
+const getRelativeTime = (date: Date | string) => {
+  const dateObj = new Date(date);
   const now = new Date();
-  const diffMs = now.getTime() - date.getTime();
+  const diffMs = now.getTime() - dateObj.getTime();
   const diffMins = Math.floor(diffMs / 60000);
   const diffHours = Math.floor(diffMs / 3600000);
   const diffDays = Math.floor(diffMs / 86400000);
@@ -80,8 +59,12 @@ export default function NotificationDropdown({
   onClose,
   onNavigate,
 }: NotificationDropdownProps) {
-  const [notifications, setNotifications] =
-    useState<Notification[]>(sampleNotifications);
+  const {
+    notifications,
+    loading,
+    markAsRead,
+    markAllAsRead: markAllNotificationsAsRead,
+  } = useNotifications(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   // Click outside to close
@@ -114,30 +97,19 @@ export default function NotificationDropdown({
     return () => document.removeEventListener("keydown", handleEscape);
   }, [isOpen, onClose]);
 
-  const markAllAsRead = () => {
-    setNotifications(
-      notifications.map((notif) => ({ ...notif, isRead: true }))
-    );
+  const handleMarkAllAsRead = async () => {
+    await markAllNotificationsAsRead();
   };
 
-  const markAsRead = (id: string) => {
-    setNotifications(
-      notifications.map((notif) =>
-        notif.id === id ? { ...notif, isRead: true } : notif
-      )
-    );
-  };
-
-  const handleNotificationClick = (notification: Notification) => {
-    markAsRead(notification.id);
-    if (notification.link) {
-      // Navigate to link
-      console.log("Navigate to:", notification.link);
+  const handleNotificationClick = async (notification: Notification) => {
+    if (!notification.isRead) {
+      await markAsRead(notification.id);
     }
     onClose();
   };
 
   const unreadCount = notifications.filter((n) => !n.isRead).length;
+  const displayedNotifications = notifications.slice(0, 3);
 
   if (!isOpen) return null;
 
@@ -159,7 +131,7 @@ export default function NotificationDropdown({
         </h3>
         {unreadCount > 0 && (
           <button
-            onClick={markAllAsRead}
+            onClick={handleMarkAllAsRead}
             className="text-[#4baf47] text-sm font-medium hover:text-[#3d9639] transition-colors"
             style={{ fontFamily: "Inter, sans-serif" }}
           >
@@ -169,7 +141,13 @@ export default function NotificationDropdown({
       </div>
 
       {/* Notifications List */}
-      <div className="max-h-[400px] overflow-y-auto">
+      <div
+        className="max-h-[400px] overflow-y-auto scrollbar-thin scrollbar-thumb-white scrollbar-track-gray-100 hover:scrollbar-thumb-gray-200"
+        style={{
+          scrollbarWidth: "thin",
+          scrollbarColor: "white #f3f4f6",
+        }}
+      >
         {notifications.length === 0 ? (
           // Empty State
           <div className="flex flex-col items-center justify-center py-12 px-6">
@@ -190,13 +168,13 @@ export default function NotificationDropdown({
             </p>
           </div>
         ) : (
-          notifications.map((notification, index) => {
+          displayedNotifications.map((notification, index) => {
             return (
               <div
                 key={notification.id}
                 onClick={() => handleNotificationClick(notification)}
                 className={`relative px-5 py-4 cursor-pointer transition-colors hover:bg-gray-50 ${
-                  index !== notifications.length - 1
+                  index !== displayedNotifications.length - 1
                     ? "border-b border-gray-100"
                     : ""
                 }`}
@@ -212,7 +190,7 @@ export default function NotificationDropdown({
                         {notification.title}
                       </p>
                       {!notification.isRead && (
-                        <span className="w-2 h-2 rounded-full bg-[#4baf47] flex-shrink-0 mt-1" />
+                        <span className="w-2 h-2 rounded-full bg-[#4baf47] shrink-0 mt-1" />
                       )}
                     </div>
                     <p
@@ -252,9 +230,4 @@ export default function NotificationDropdown({
       )}
     </div>
   );
-}
-
-// Export function to get unread count for badge
-export function getUnreadNotificationCount(): number {
-  return sampleNotifications.filter((n) => !n.isRead).length;
 }

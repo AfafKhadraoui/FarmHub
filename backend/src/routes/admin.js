@@ -132,6 +132,21 @@ router.patch(
   }
 );
 
+// GET /admin/users - Platform admin listing all users
+router.get("/users", authenticate, requirePlatformAdmin, async (req, res) => {
+  try {
+    const users = await prisma.user.findMany({
+      include: { farm: true }, // adjust as needed for your schema
+      orderBy: { createdAt: "desc" }
+    });
+    res.json({ data: users });
+  } catch (err) {
+    console.error(err);
+    return sendError(res, 500, "INTERNAL_ERROR", "Internal Server Error");
+  }
+});
+
+
 // POST /admin/profile/avatar
 router.post(
   "/profile/avatar",

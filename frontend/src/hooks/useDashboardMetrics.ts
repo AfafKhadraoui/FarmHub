@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
-import { adminService, type DashboardMetrics } from "@/services/adminService";
+import { adminService } from "@/services/adminService";
+import type { DashboardMetrics } from "@/services/adminService";
 
 export function useDashboardMetrics() {
   const [data, setData] = useState<DashboardMetrics | null>(null);

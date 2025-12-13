@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import {
   BarChart,
   Bar,
@@ -14,56 +15,9 @@ import {
   Tooltip,
   ResponsiveContainer,
 } from "recharts";
-import { TrendingUp, Activity, MapPin } from "lucide-react";
+import { TrendingUp, Activity, MapPin, RefreshCw } from "lucide-react";
 import CustomSelect from "./CustomSelect";
-import { useState } from "react";
-
-const userGrowthData = [
-  { month: "Jan", users: 145 },
-  { month: "Feb", users: 278 },
-  { month: "Mar", users: 412 },
-  { month: "Apr", users: 589 },
-  { month: "May", users: 756 },
-  { month: "Jun", users: 934 },
-  { month: "Jul", users: 1128 },
-  { month: "Aug", users: 1284 },
-];
-
-const taskVolumeData = [
-  { month: "Jan", tasks: 1200 },
-  { month: "Feb", tasks: 1890 },
-  { month: "Mar", tasks: 2340 },
-  { month: "Apr", tasks: 3210 },
-  { month: "May", tasks: 4567 },
-  { month: "Jun", tasks: 5234 },
-  { month: "Jul", tasks: 6123 },
-  { month: "Aug", tasks: 7456 },
-];
-
-const mostActiveFarmsData = [
-  { farm: "Green Valley", tasks: 523 },
-  { farm: "Sunrise", tasks: 487 },
-  { farm: "Golden Harvest", tasks: 456 },
-  { farm: "Fresh Fields", tasks: 412 },
-  { farm: "Organic Paradise", tasks: 389 },
-  { farm: "Nature Bounty", tasks: 345 },
-];
-
-const userDistributionData = [
-  { name: "Farm Owners", value: 523, color: "var(--admin-secondary)" },
-  { name: "Workers", value: 12324, color: "var(--admin-primary)" },
-];
-
-const locationData = [
-  { location: "Algiers", farms: 145 },
-  { location: "Oran", farms: 98 },
-  { location: "Constantine", farms: 76 },
-  { location: "Blida", farms: 54 },
-  { location: "Annaba", farms: 43 },
-  { location: "Tizi Ouzou", farms: 38 },
-  { location: "Sétif", farms: 29 },
-  { location: "Others", farms: 40 },
-];
+import { useAnalytics } from "@/hooks/useAnalytics";
 
 function TimeRangeSelector() {
   const [timeRange, setTimeRange] = useState("30");
@@ -84,22 +38,85 @@ function TimeRangeSelector() {
 }
 
 export default function AnalyticsPage() {
+  const { analytics, metrics, loading, error, refetch } = useAnalytics();
+
+  // Show loading state
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-96">
+        <div className="text-center">
+          <RefreshCw className="animate-spin h-8 w-8 text-[var(--admin-primary)] mx-auto mb-4" />
+          <p className="text-[var(--admin-text-muted)]">Loading analytics...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Show error state
+  if (error) {
+    return (
+      <div className="flex items-center justify-center h-96">
+        <div className="text-center">
+          <p className="text-red-500 mb-4">{error}</p>
+          <button
+            onClick={refetch}
+            className="px-4 py-2 bg-[var(--admin-primary)] text-white rounded-lg hover:opacity-90"
+          >
+            Retry
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // No data available
+  if (!analytics || !metrics) {
+    return (
+      <div className="flex items-center justify-center h-96">
+        <p className="text-[var(--admin-text-muted)]">No analytics data available</p>
+      </div>
+    );
+  }
+
+  // Calculate growth percentages (you can enhance this logic)
+  const calculateGrowth = (data: Array<{ month: string; users?: number; tasks?: number }>) => {
+    if (data.length < 2) return 0;
+    const current = data[data.length - 1];
+    const previous = data[data.length - 2];
+    const currentValue = (current.users || current.tasks) || 0;
+    const previousValue = (previous.users || previous.tasks) || 0;
+    if (previousValue === 0) return 0;
+    return (((currentValue - previousValue) / previousValue) * 100).toFixed(1);
+  };
+
+  const userGrowthPercent = parseFloat(calculateGrowth(analytics.userGrowth) as string);
+  const taskGrowthPercent = parseFloat(calculateGrowth(analytics.taskVolume) as string);
+
   return (
     <div>
       {/* Header */}
-      <div className="mb-6">
-        <h2
-          className="text-[var(--admin-text-dark)] text-2xl mb-1"
-          style={{ fontFamily: "Manrope, sans-serif", fontWeight: 700 }}
+      <div className="mb-6 flex justify-between items-center">
+        <div>
+          <h2
+            className="text-[var(--admin-text-dark)] text-2xl mb-1"
+            style={{ fontFamily: "Manrope, sans-serif", fontWeight: 700 }}
+          >
+            Platform Analytics
+          </h2>
+          <p
+            className="text-[var(--admin-text-muted)]"
+            style={{ fontFamily: "Inter, sans-serif", fontSize: "14px" }}
+          >
+            Comprehensive insights and metrics
+          </p>
+        </div>
+        <button
+          onClick={refetch}
+          className="flex items-center gap-2 px-4 py-2 border border-[var(--admin-border)] rounded-lg hover:bg-gray-50"
         >
-          Platform Analytics
-        </h2>
-        <p
-          className="text-[var(--admin-text-muted)]"
-          style={{ fontFamily: "Inter, sans-serif", fontSize: "14px" }}
-        >
-          Comprehensive insights and metrics
-        </p>
+          <RefreshCw size={16} />
+          <span>Refresh</span>
+        </button>
       </div>
 
       {/* Time Range Selector */}
@@ -130,13 +147,13 @@ export default function AnalyticsPage() {
                   fontSize: "14px",
                 }}
               >
-                +24.5%
+                {userGrowthPercent > 0 ? '+' : ''}{userGrowthPercent}%
               </span>
             </div>
           </div>
 
           <ResponsiveContainer width="100%" height={250}>
-            <LineChart data={userGrowthData}>
+            <LineChart data={analytics.userGrowth}>
               <CartesianGrid
                 strokeDasharray="3 3"
                 stroke="var(--admin-border)"
@@ -198,13 +215,13 @@ export default function AnalyticsPage() {
                   fontSize: "14px",
                 }}
               >
-                +31.2%
+                {taskGrowthPercent > 0 ? '+' : ''}{taskGrowthPercent}%
               </span>
             </div>
           </div>
 
           <ResponsiveContainer width="100%" height={250}>
-            <BarChart data={taskVolumeData}>
+            <BarChart data={analytics.taskVolume}>
               <CartesianGrid
                 strokeDasharray="3 3"
                 stroke="var(--admin-border)"
@@ -227,18 +244,6 @@ export default function AnalyticsPage() {
                   boxShadow: "0px 8px 24px rgba(75, 175, 71, 0.15)",
                   padding: "12px 16px",
                 }}
-                labelStyle={{
-                  color: "#1f1e17",
-                  fontWeight: 600,
-                  marginBottom: "4px",
-                  fontSize: "13px",
-                }}
-                itemStyle={{
-                  color: "#4baf47",
-                  fontWeight: 600,
-                  fontSize: "14px",
-                }}
-                cursor={{ fill: "rgba(75, 175, 71, 0.08)" }}
               />
               <Bar
                 dataKey="tasks"
@@ -264,7 +269,7 @@ export default function AnalyticsPage() {
         </h3>
 
         <ResponsiveContainer width="100%" height={300}>
-          <BarChart data={mostActiveFarmsData} layout="vertical">
+          <BarChart data={analytics.activeFarms} layout="vertical">
             <CartesianGrid strokeDasharray="3 3" stroke="var(--admin-border)" />
             <XAxis
               type="number"
@@ -287,18 +292,6 @@ export default function AnalyticsPage() {
                 boxShadow: "0px 8px 24px rgba(255, 107, 0, 0.15)",
                 padding: "12px 16px",
               }}
-              labelStyle={{
-                color: "#1f1e17",
-                fontWeight: 600,
-                marginBottom: "4px",
-                fontSize: "13px",
-              }}
-              itemStyle={{
-                color: "#ff6b00",
-                fontWeight: 600,
-                fontSize: "14px",
-              }}
-              cursor={{ fill: "rgba(255, 107, 0, 0.05)" }}
             />
             <Bar
               dataKey="tasks"
@@ -327,19 +320,23 @@ export default function AnalyticsPage() {
           <ResponsiveContainer width="100%" height={300}>
             <PieChart>
               <Pie
-                data={userDistributionData}
+                data={analytics.userDistribution}
                 cx="50%"
                 cy="50%"
                 labelLine={false}
                 label={({ name, percent }) =>
-                  `${name}: ${(percent * 100).toFixed(0)}%`
+                  `${name}: ${percent !== undefined ? (percent * 100).toFixed(0) : 0}%`
                 }
+
                 outerRadius={100}
                 fill="#8884d8"
                 dataKey="value"
               >
-                {userDistributionData.map((entry, index) => (
-                  <Cell key={`cell-${index}`} fill={entry.color} />
+                {analytics.userDistribution.map((entry, index) => (
+                  <Cell
+                    key={`cell-${index}`}
+                    fill={index === 0 ? "var(--admin-secondary)" : "var(--admin-primary)"}
+                  />
                 ))}
               </Pie>
               <Tooltip
@@ -355,11 +352,13 @@ export default function AnalyticsPage() {
           </ResponsiveContainer>
 
           <div className="flex justify-center gap-6 mt-4">
-            {userDistributionData.map((item) => (
+            {analytics.userDistribution.map((item, index) => (
               <div key={item.name} className="flex items-center gap-2">
                 <div
                   className="w-4 h-4 rounded-full"
-                  style={{ backgroundColor: item.color }}
+                  style={{
+                    backgroundColor: index === 0 ? "var(--admin-secondary)" : "var(--admin-primary)"
+                  }}
                 />
                 <span
                   className="text-[var(--admin-text-muted)]"
@@ -388,40 +387,43 @@ export default function AnalyticsPage() {
           </h3>
 
           <div className="space-y-3">
-            {locationData.map((loc) => (
-              <div key={loc.location}>
-                <div className="flex items-center justify-between mb-2">
-                  <div className="flex items-center gap-2">
-                    <MapPin size={16} className="text-[var(--admin-primary)]" />
+            {analytics.topLocations.map((loc) => {
+              const maxFarms = Math.max(...analytics.topLocations.map(l => l.farms));
+              return (
+                <div key={loc.location}>
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="flex items-center gap-2">
+                      <MapPin size={16} className="text-[var(--admin-primary)]" />
+                      <span
+                        className="text-[var(--admin-text-dark)]"
+                        style={{
+                          fontFamily: "Inter, sans-serif",
+                          fontSize: "14px",
+                          fontWeight: 600,
+                        }}
+                      >
+                        {loc.location}
+                      </span>
+                    </div>
                     <span
-                      className="text-[var(--admin-text-dark)]"
+                      className="text-[var(--admin-text-muted)]"
                       style={{
                         fontFamily: "Inter, sans-serif",
                         fontSize: "14px",
-                        fontWeight: 600,
                       }}
                     >
-                      {loc.location}
+                      {loc.farms} farms
                     </span>
                   </div>
-                  <span
-                    className="text-[var(--admin-text-muted)]"
-                    style={{
-                      fontFamily: "Inter, sans-serif",
-                      fontSize: "14px",
-                    }}
-                  >
-                    {loc.farms} farms
-                  </span>
+                  <div className="w-full h-2 bg-gray-100 rounded-full overflow-hidden">
+                    <div
+                      className="h-full bg-gradient-to-r from-[var(--admin-primary)] to-[var(--admin-secondary)] rounded-full transition-all"
+                      style={{ width: `${(loc.farms / maxFarms) * 100}%` }}
+                    />
+                  </div>
                 </div>
-                <div className="w-full h-2 bg-gray-100 rounded-full overflow-hidden">
-                  <div
-                    className="h-full bg-gradient-to-r from-[var(--admin-primary)] to-[var(--admin-secondary)] rounded-full transition-all"
-                    style={{ width: `${(loc.farms / 145) * 100}%` }}
-                  />
-                </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
       </div>

@@ -1,90 +1,85 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
+import { adminService } from "@/services/adminService";
+import type { Notification } from "@/services/adminService";
 
-export interface Notification {
-  id: string;
-  type: "farm" | "user" | "system" | "alert";
-  title: string;
-  message: string;
-  timestamp: Date;
-  isRead: boolean;
-}
-
-export function useNotifications() {
+export function useNotifications(unreadOnly: boolean = false) {
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const fetchNotifications = async () => {
+  const fetchNotifications = useCallback(async () => {
     try {
       setLoading(true);
-      // TODO: Replace with actual API call
-      // const data = await adminService.getNotifications();
-
-      // MOCK DATA - Remove when backend is ready
-      const mockNotifications: Notification[] = [
-        {
-          id: "1",
-          type: "farm",
-          title: "New Farm Created",
-          message:
-            "A new farm 'Sunset Valley' has been registered by ahmed@email.com",
-          timestamp: new Date(Date.now() - 1000 * 60 * 5),
-          isRead: false,
-        },
-        {
-          id: "2",
-          type: "user",
-          title: "User Milestone Reached",
-          message:
-            "Platform reached 1,000 registered users! Congratulations on this achievement.",
-          timestamp: new Date(Date.now() - 1000 * 60 * 60),
-          isRead: false,
-        },
-      ];
-
-      setNotifications(mockNotifications);
+      const data = await adminService.getNotifications(unreadOnly);
+      // Convert timestamp strings to Date objects for compatibility
+      const notificationsWithDates = data.map((n) => ({
+        ...n,
+        timestamp: new Date(n.timestamp) as any, // Keep as Date for backward compatibility
+      }));
+      setNotifications(notificationsWithDates);
       setError(null);
     } catch (err: any) {
-      setError(err.message || "Failed to fetch notifications");
-      console.error("Error fetching notifications:", err);
+      // If 403 (Forbidden), it means user is not admin. Return empty list instead of error.
+      if (err.response && err.response.status === 403) {
+        setNotifications([]);
+        setError(null);
+      } else {
+        setError(err.message || "Failed to fetch notifications");
+        console.error("Error fetching notifications:", err);
+      }
     } finally {
       setLoading(false);
     }
-  };
+  }, [unreadOnly]);
 
   useEffect(() => {
     fetchNotifications();
-  }, []);
+
+    // Listen for global notification updates
+    const handleUpdate = () => {
+      fetchNotifications();
+    };
+    window.addEventListener("notification-update", handleUpdate);
+    return () => window.removeEventListener("notification-update", handleUpdate);
+  }, [fetchNotifications]);
+
+  const dispatchUpdate = () => {
+    window.dispatchEvent(new Event("notification-update"));
+  };
 
   const markAsRead = async (id: string) => {
     try {
-      // TODO: Replace with actual API call
-      // await adminService.markNotificationAsRead(id);
+      await adminService.markNotificationAsRead(id);
       setNotifications((prev) =>
         prev.map((n) => (n.id === id ? { ...n, isRead: true } : n))
       );
+      dispatchUpdate();
     } catch (err: any) {
       console.error("Error marking notification as read:", err);
+      throw err;
     }
   };
 
   const markAllAsRead = async () => {
     try {
-      // TODO: Replace with actual API call
-      // await adminService.markAllNotificationsAsRead();
+      const result = await adminService.markAllNotificationsAsRead();
       setNotifications((prev) => prev.map((n) => ({ ...n, isRead: true })));
+      dispatchUpdate();
+      return result.count;
     } catch (err: any) {
       console.error("Error marking all notifications as read:", err);
+      throw err;
     }
   };
 
   const deleteNotification = async (id: string) => {
     try {
-      // TODO: Replace with actual API call
-      // await adminService.deleteNotification(id);
+      await adminService.deleteNotification(id);
       setNotifications((prev) => prev.filter((n) => n.id !== id));
+      dispatchUpdate();
     } catch (err: any) {
       console.error("Error deleting notification:", err);
+      throw err;
     }
   };
 

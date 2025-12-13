@@ -1,60 +1,55 @@
-const fs = require("fs");
-const path = require("path");
-const express = require("express");
-const jwt = require("jsonwebtoken");
-const { body, query, param, validationResult } = require("express-validator");
-const multer = require("multer");
-const { PrismaClient, UserRole, TaskStatus } = require("@prisma/client");
+const express = require('express');
+const { PrismaClient, UserRole, TaskStatus } = require('@prisma/client');
+const { query, param } = require('express-validator');
 const prisma = new PrismaClient();
 const router = express.Router();
-const { sendError } = require("../utils/error");
-const { handleValidationErrors } = require("../middleware/validation");
-const {
-  authenticate,
-  requirePlatformAdmin,
-} = require("../middleware/dashboardMiddleware");
+
+const { sendError } = require('../utils/error');
+const { handleValidationErrors } = require('../middleware/validation');
+const { authenticate, requirePlatformAdmin } = require('../middleware/dashboardMiddleware');
+
 // GET /admin/analytics/farm-growth
 router.get(
-  "/analytics/farm-growth",
+  '/analytics/farm-growth',
   authenticate,
   requirePlatformAdmin,
-  [query("months").optional().isInt({ min: 1, max: 24 }).toInt()],
+  [query('months').optional().isInt({ min: 1, max: 24 }).toInt()],
   handleValidationErrors,
   async (req, res) => {
     try {
       const months = req.query.months ? Number(req.query.months) : 6;
-      // Use raw SQL because Prisma can't group by date parts yet.[web:78]
+
       const rows = await prisma.$queryRaw`
-  SELECT
-    TO_CHAR("createdAt", 'Mon') AS month,
-    COUNT(*)::int AS farms
-  FROM "farms"
-  WHERE "createdAt" >= NOW() - (${months} || ' months')::interval
-  GROUP BY TO_CHAR("createdAt", 'Mon'), DATE_TRUNC('month', "createdAt")
-  ORDER BY DATE_TRUNC('month', "createdAt")
-`;
+        SELECT
+          TO_CHAR("createdAt", 'Mon') AS month,
+          COUNT(*)::int AS farms
+        FROM "farms"
+        WHERE "createdAt" >= NOW() - (${months} || ' months')::interval
+        GROUP BY TO_CHAR("createdAt", 'Mon'), DATE_TRUNC('month', "createdAt")
+        ORDER BY DATE_TRUNC('month', "createdAt")
+      `;
 
       res.json(rows.map((r) => ({ month: r.month, farms: r.farms })));
     } catch (err) {
-      console.error("FARM GROWTH ERROR:", JSON.stringify(err, null, 2));
-      return sendError(res, 500, "INTERNAL_ERROR", "Internal Server Error");
+      console.error('FARM GROWTH ERROR:', err);
+      return sendError(res, 500, 'INTERNAL_ERROR', 'Internal Server Error');
     }
   }
 );
 
 // GET /admin/farms/recent
 router.get(
-  "/farms/recent",
+  '/farms/recent',
   authenticate,
   requirePlatformAdmin,
-  [query("limit").optional().isInt({ min: 1, max: 100 }).toInt()],
+  [query('limit').optional().isInt({ min: 1, max: 100 }).toInt()],
   handleValidationErrors,
   async (req, res) => {
     try {
       const limit = req.query.limit ? Number(req.query.limit) : 5;
 
       const farms = await prisma.farm.findMany({
-        orderBy: { createdAt: "desc" },
+        orderBy: { createdAt: 'desc' },
         take: limit,
         include: {
           users: {
@@ -85,20 +80,20 @@ router.get(
       );
     } catch (err) {
       console.error(err);
-      return sendError(res, 500, "INTERNAL_ERROR", "Internal Server Error");
+      return sendError(res, 500, 'INTERNAL_ERROR', 'Internal Server Error');
     }
   }
 );
 
 // GET /admin/farms
 router.get(
-  "/farms",
+  '/farms',
   authenticate,
   requirePlatformAdmin,
   [
-    query("page").optional().isInt({ min: 1 }).toInt(),
-    query("limit").optional().isInt({ min: 1, max: 100 }).toInt(),
-    query("search").optional().isString(),
+    query('page').optional().isInt({ min: 1 }).toInt(),
+    query('limit').optional().isInt({ min: 1, max: 100 }).toInt(),
+    query('search').optional().isString(),
   ],
   handleValidationErrors,
   async (req, res) => {
@@ -106,13 +101,13 @@ router.get(
       const page = req.query.page ? Number(req.query.page) : 1;
       const limit = req.query.limit ? Number(req.query.limit) : 10;
       const skip = (page - 1) * limit;
-      console.log("page/limit types:", typeof page, typeof limit, page, limit);
       const search = req.query.search;
+
       const where = search
         ? {
             OR: [
-              { name: { contains: search, mode: "insensitive" } },
-              { location: { contains: search, mode: "insensitive" } },
+              { name: { contains: search, mode: 'insensitive' } },
+              { location: { contains: search, mode: 'insensitive' } },
             ],
           }
         : {};
@@ -123,7 +118,7 @@ router.get(
           where,
           skip,
           take: limit,
-          orderBy: { createdAt: "desc" },
+          orderBy: { createdAt: 'desc' },
           include: {
             users: {
               where: { role: UserRole.admin },
@@ -152,7 +147,7 @@ router.get(
           fields: f._count.fields,
           tasks: f._count.tasks,
           createdAt: f.createdAt,
-          status: "active", // not in schema; adjust if you add it
+          status: 'active',
         })),
         pagination: {
           total,
@@ -163,21 +158,21 @@ router.get(
       });
     } catch (err) {
       console.error(err);
-      return sendError(res, 500, "INTERNAL_ERROR", "Internal Server Error");
+      return sendError(res, 500, 'INTERNAL_ERROR', 'Internal Server Error');
     }
   }
 );
 
 // GET /admin/farms/:id
 router.get(
-  "/farms/:id",
+  '/farms/:id',
   authenticate,
   requirePlatformAdmin,
-  [param("id").isInt().toInt()],
+  [param('id').isInt().toInt()],
   handleValidationErrors,
   async (req, res) => {
     try {
-      const farmId = req.params.id;
+      const farmId = Number(req.params.id);
 
       const farm = await prisma.farm.findUnique({
         where: { id: farmId },
@@ -201,7 +196,7 @@ router.get(
       });
 
       if (!farm) {
-        return sendError(res, 404, "NOT_FOUND", "Farm not found");
+        return sendError(res, 404, 'NOT_FOUND', 'Farm not found');
       }
 
       const owner = farm.users.find((u) => u.role === UserRole.admin) || null;
@@ -243,22 +238,56 @@ router.get(
       });
     } catch (err) {
       console.error(err);
-      return sendError(res, 500, "INTERNAL_ERROR", "Internal Server Error");
+      return sendError(res, 500, 'INTERNAL_ERROR', 'Internal Server Error');
+    }
+  }
+);
+
+// DELETE /admin/farms/:id
+router.delete(
+  '/farms/:id',
+  authenticate,
+  requirePlatformAdmin,
+  [param('id').isInt().toInt()],
+  handleValidationErrors,
+  async (req, res) => {
+    try {
+      const farmId = Number(req.params.id);
+
+      // Delete child records first if FKs require it
+      await prisma.taskAssignment.deleteMany({
+        where: { task: { farmId } },
+      });
+      await prisma.task.deleteMany({ where: { farmId } });
+      await prisma.field.deleteMany({ where: { farmId } });
+
+      // Optionally detach users from this farm
+      await prisma.user.updateMany({
+        where: { farmId },
+        data: { farmId: null },
+      });
+
+      await prisma.farm.delete({ where: { id: farmId } });
+
+      return res.status(204).send();
+    } catch (err) {
+      console.error(err);
+      return sendError(res, 500, 'INTERNAL_ERROR', 'Internal Server Error');
     }
   }
 );
 
 // GET /admin/users
 router.get(
-  "/users",
+  '/users',
   authenticate,
   requirePlatformAdmin,
   [
-    query("page").optional().isInt({ min: 1 }).toInt(),
-    query("limit").optional().isInt({ min: 1, max: 100 }).toInt(),
-    query("role").optional().isIn(["admin", "worker", "platform_admin"]),
-    query("farmId").optional().isInt().toInt(),
-    query("search").optional().isString(),
+    query('page').optional().isInt({ min: 1 }).toInt(),
+    query('limit').optional().isInt({ min: 1, max: 100 }).toInt(),
+    query('role').optional().isIn(['admin', 'worker', 'platform_admin']),
+    query('farmId').optional().isInt().toInt(),
+    query('search').optional().isString(),
   ],
   handleValidationErrors,
   async (req, res) => {
@@ -266,17 +295,17 @@ router.get(
       const page = req.query.page ? Number(req.query.page) : 1;
       const limit = req.query.limit ? Number(req.query.limit) : 10;
       const skip = (page - 1) * limit;
-      const farmId = req.query.farmId ? Number(req.query.farmId) : 1;
+      const farmId = req.query.farmId ? Number(req.query.farmId) : null;
       const { role, search } = req.query;
 
       const where = {
         ...(role ? { role } : {}),
-        ...(farmId ? { farmId: farmId } : {}),
+        ...(farmId ? { farmId } : {}),
         ...(search
           ? {
               OR: [
-                { name: { contains: search, mode: "insensitive" } },
-                { email: { contains: search, mode: "insensitive" } },
+                { name: { contains: search, mode: 'insensitive' } },
+                { email: { contains: search, mode: 'insensitive' } },
               ],
             }
           : {}),
@@ -288,7 +317,7 @@ router.get(
           where,
           skip,
           take: limit,
-          orderBy: { createdAt: "desc" },
+          orderBy: { createdAt: 'desc' },
           include: {
             userFarm: { select: { id: true, name: true, location: true } },
           },
@@ -305,7 +334,7 @@ router.get(
           farmId: u.userFarm?.id ?? null,
           phone: u.phone,
           createdAt: u.createdAt,
-          status: "active",
+          status: 'active',
         })),
         pagination: {
           total,
@@ -316,17 +345,17 @@ router.get(
       });
     } catch (err) {
       console.error(err);
-      return sendError(res, 500, "INTERNAL_ERROR", "Internal Server Error");
+      return sendError(res, 500, 'INTERNAL_ERROR', 'Internal Server Error');
     }
   }
 );
 
 // GET /admin/users/:id
 router.get(
-  "/users/:id",
+  '/users/:id',
   authenticate,
   requirePlatformAdmin,
-  [param("id").isInt().toInt()],
+  [param('id').isInt().toInt()],
   handleValidationErrors,
   async (req, res) => {
     try {
@@ -345,15 +374,13 @@ router.get(
       });
 
       if (!user) {
-        return sendError(res, 404, "NOT_FOUND", "User not found");
+        return sendError(res, 404, 'NOT_FOUND', 'User not found');
       }
 
       const tasksAssigned = user.taskAssignments.length;
       const tasksCompleted = user.taskAssignments.filter(
         (ta) => ta.task.status === TaskStatus.completed
       ).length;
-
-      // fieldsManaged requires a manager relation in Field; 0 for now
       const fieldsManaged = 0;
 
       res.json({
@@ -378,108 +405,96 @@ router.get(
       });
     } catch (err) {
       console.error(err);
-      return sendError(res, 500, "INTERNAL_ERROR", "Internal Server Error");
+      return sendError(res, 500, 'INTERNAL_ERROR', 'Internal Server Error');
     }
   }
 );
 
 // GET /admin/analytics
-// GET /admin/analytics
-router.get(
-  "/analytics",
-  authenticate,
-  requirePlatformAdmin,
-  async (req, res) => {
-    try {
-      // Monthly user growth (last 12 months)
-      const userGrowth = await prisma.$queryRaw`
-        SELECT
-          TO_CHAR("createdAt", 'Mon') AS month,
-          COUNT(*)::int AS users
-        FROM "users"
-        WHERE "createdAt" >= NOW() - INTERVAL '12 months'
-        GROUP BY
-          TO_CHAR("createdAt", 'Mon'),
-          DATE_TRUNC('month', "createdAt")
-        ORDER BY DATE_TRUNC('month', "createdAt")
-      `;
+router.get('/analytics', authenticate, requirePlatformAdmin, async (req, res) => {
+  try {
+    const userGrowth = await prisma.$queryRaw`
+      SELECT
+        TO_CHAR("createdAt", 'Mon') AS month,
+        COUNT(*)::int AS users
+      FROM "users"
+      WHERE "createdAt" >= NOW() - INTERVAL '12 months'
+      GROUP BY
+        TO_CHAR("createdAt", 'Mon'),
+        DATE_TRUNC('month', "createdAt")
+      ORDER BY DATE_TRUNC('month', "createdAt")
+    `;
 
-      // Monthly task volume (last 12 months)
-      const taskVolume = await prisma.$queryRaw`
-        SELECT
-          TO_CHAR("createdAt", 'Mon') AS month,
-          COUNT(*)::int AS tasks
-        FROM "tasks"
-        WHERE "createdAt" >= NOW() - INTERVAL '12 months'
-        GROUP BY
-          TO_CHAR("createdAt", 'Mon'),
-          DATE_TRUNC('month', "createdAt")
-        ORDER BY DATE_TRUNC('month', "createdAt")
-      `;
+    const taskVolume = await prisma.$queryRaw`
+      SELECT
+        TO_CHAR("createdAt", 'Mon') AS month,
+        COUNT(*)::int AS tasks
+      FROM "tasks"
+      WHERE "createdAt" >= NOW() - INTERVAL '12 months'
+      GROUP BY
+        TO_CHAR("createdAt", 'Mon'),
+        DATE_TRUNC('month', "createdAt")
+      ORDER BY DATE_TRUNC('month', "createdAt")
+    `;
 
-      // Active farms by open tasks
-      const activeFarms = await prisma.$queryRaw`
-        SELECT
-          f.name AS farm,
-          COUNT(t.id)::int AS tasks
-        FROM "farms" f
-        LEFT JOIN "tasks" t
-          ON t."farmId" = f.id
-         AND t.status != 'completed'
-        GROUP BY f.id
-        ORDER BY tasks DESC
-        LIMIT 10
-      `;
+    const activeFarms = await prisma.$queryRaw`
+      SELECT
+        f.name AS farm,
+        COUNT(t.id)::int AS tasks
+      FROM "farms" f
+      LEFT JOIN "tasks" t
+        ON t."farmId" = f.id
+        AND t.status != 'completed'
+      GROUP BY f.id, f.name
+      ORDER BY tasks DESC
+      LIMIT 10
+    `;
 
-      // User distribution by role
-      const userDistribution = await prisma.$queryRaw`
-        SELECT role, COUNT(*)::int AS value
-        FROM "users"
-        GROUP BY role
-      `;
+    const userDistribution = await prisma.$queryRaw`
+      SELECT role, COUNT(*)::int AS value
+      FROM "users"
+      GROUP BY role
+    `;
 
-      // Top locations by farm count
-      const topLocations = await prisma.$queryRaw`
-        SELECT location, COUNT(*)::int AS farms
-        FROM "farms"
-        GROUP BY location
-        ORDER BY farms DESC
-        LIMIT 10
-      `;
+    const topLocations = await prisma.$queryRaw`
+      SELECT location, COUNT(*)::int AS farms
+      FROM "farms"
+      GROUP BY location
+      ORDER BY farms DESC
+      LIMIT 10
+    `;
 
-      res.json({
-        userGrowth: userGrowth.map((r) => ({
-          month: r.month,
-          users: r.users,
-        })),
-        taskVolume: taskVolume.map((r) => ({
-          month: r.month,
-          tasks: r.tasks,
-        })),
-        activeFarms: activeFarms.map((r) => ({
-          farm: r.farm,
-          tasks: r.tasks,
-        })),
-        userDistribution: userDistribution.map((r) => ({
-          name:
-            r.role === "admin"
-              ? "Farm Owners"
-              : r.role === "worker"
-                ? "Workers"
-                : "Platform Admins",
-          value: r.value,
-        })),
-        topLocations: topLocations.map((r) => ({
-          location: r.location,
-          farms: r.farms,
-        })),
-      });
-    } catch (err) {
-      console.error(err);
-      return sendError(res, 500, "INTERNAL_ERROR", "Internal Server Error");
-    }
+    res.json({
+      userGrowth: userGrowth.map((r) => ({
+        month: r.month,
+        users: r.users,
+      })),
+      taskVolume: taskVolume.map((r) => ({
+        month: r.month,
+        tasks: r.tasks,
+      })),
+      activeFarms: activeFarms.map((r) => ({
+        farm: r.farm,
+        tasks: r.tasks,
+      })),
+      userDistribution: userDistribution.map((r) => ({
+        name:
+          r.role === 'admin'
+            ? 'Farm Owners'
+            : r.role === 'worker'
+            ? 'Workers'
+            : 'Platform Admins',
+        value: r.value,
+      })),
+      topLocations: topLocations.map((r) => ({
+        location: r.location,
+        farms: r.farms,
+      })),
+    });
+  } catch (err) {
+    console.error(err);
+    return sendError(res, 500, 'INTERNAL_ERROR', 'Internal Server Error');
   }
-);
-// Mount search routes
-router.use("/search", require("./search"));
+});
+
 module.exports = router;

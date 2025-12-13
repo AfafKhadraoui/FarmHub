@@ -1,54 +1,32 @@
 "use client";
 
 import { ArrowRight } from "lucide-react";
-
-interface Farm {
-  name: string;
-  owner: string;
-  location: string;
-  created: string;
-}
+import { RecentFarm } from "@/services/adminService";
 
 interface RecentFarmsTableProps {
-  farms?: Farm[];
+  farms: RecentFarm[];
+  loading?: boolean;
+  error?: string | null;
   onViewAll?: () => void;
 }
 
-const defaultFarms: Farm[] = [
-  {
-    name: "Green Valley Farm",
-    owner: "Ahmed K.",
-    location: "Algiers",
-    created: "2h ago",
-  },
-  {
-    name: "Sunrise Farms",
-    owner: "Sara M.",
-    location: "Oran",
-    created: "5h ago",
-  },
-  {
-    name: "Golden Harvest",
-    owner: "Ali B.",
-    location: "Blida",
-    created: "1d ago",
-  },
-  {
-    name: "Fresh Fields",
-    owner: "Fatima Z.",
-    location: "Tizi Ouzou",
-    created: "2d ago",
-  },
-  {
-    name: "Organic Paradise",
-    owner: "Mohamed A.",
-    location: "Constantine",
-    created: "3d ago",
-  },
-];
+function getTimeAgo(dateString: string): string {
+  const date = new Date(dateString);
+  const now = new Date();
+  const diffMs = now.getTime() - date.getTime();
+  const diffMins = Math.floor(diffMs / 60000);
+  const diffHours = Math.floor(diffMins / 60);
+  const diffDays = Math.floor(diffHours / 24);
+
+  if (diffMins < 60) return `${diffMins}m ago`;
+  if (diffHours < 24) return `${diffHours}h ago`;
+  return `${diffDays}d ago`;
+}
 
 export default function RecentFarmsTable({
-  farms = defaultFarms,
+  farms,
+  loading,
+  error,
   onViewAll,
 }: RecentFarmsTableProps) {
   return (
@@ -65,76 +43,107 @@ export default function RecentFarmsTable({
 
       <div className="h-px bg-[var(--admin-border)] mb-6" />
 
-      {/* Table */}
-      <div className="overflow-x-auto">
-        <table className="w-full">
-          <thead>
-            <tr className="border-b border-[var(--admin-border)]">
-              <th
-                className="text-left pb-4 text-[var(--admin-text-muted)] text-sm uppercase"
-                style={{ fontFamily: "Inter, sans-serif", fontWeight: 600 }}
-              >
-                Farm Name
-              </th>
-              <th
-                className="text-left pb-4 text-[var(--admin-text-muted)] text-sm uppercase"
-                style={{ fontFamily: "Inter, sans-serif", fontWeight: 600 }}
-              >
-                Owner
-              </th>
-              <th
-                className="text-left pb-4 text-[var(--admin-text-muted)] text-sm uppercase"
-                style={{ fontFamily: "Inter, sans-serif", fontWeight: 600 }}
-              >
-                Location
-              </th>
-              <th
-                className="text-left pb-4 text-[var(--admin-text-muted)] text-sm uppercase"
-                style={{ fontFamily: "Inter, sans-serif", fontWeight: 600 }}
-              >
-                Created
-              </th>
-            </tr>
-          </thead>
-          <tbody>
-            {farms.map((farm, index) => (
-              <tr
-                key={index}
-                className="border-b border-gray-100 hover:bg-[var(--admin-bg-gray)] transition-colors"
-              >
-                <td
-                  className="py-4 text-[var(--admin-text-dark)]"
-                  style={{
-                    fontFamily: "Inter, sans-serif",
-                    fontWeight: 600,
-                    fontSize: "15px",
-                  }}
+      {/* Loading State */}
+      {loading ? (
+        <div className="space-y-4">
+          {[1, 2, 3, 4, 5].map((i) => (
+            <div key={i} className="flex gap-4 animate-pulse">
+              <div className="h-12 bg-gray-200 rounded flex-1"></div>
+              <div className="h-12 bg-gray-200 rounded flex-1"></div>
+              <div className="h-12 bg-gray-200 rounded flex-1"></div>
+              <div className="h-12 bg-gray-200 rounded w-24"></div>
+            </div>
+          ))}
+        </div>
+      ) : error ? (
+        <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+          <p className="text-red-600 text-sm">{error}</p>
+        </div>
+      ) : farms.length === 0 ? (
+        <div className="text-center py-8 text-gray-500">
+          No farms created yet
+        </div>
+      ) : (
+        /* Table */
+        <div className="overflow-x-auto">
+          <table className="w-full">
+            <thead>
+              <tr className="border-b border-[var(--admin-border)]">
+                <th
+                  className="text-left pb-4 text-[var(--admin-text-muted)] text-sm uppercase"
+                  style={{ fontFamily: "Inter, sans-serif", fontWeight: 600 }}
                 >
-                  {farm.name}
-                </td>
-                <td
-                  className="py-4 text-[var(--admin-text-muted)]"
-                  style={{ fontFamily: "Inter, sans-serif", fontSize: "15px" }}
+                  Farm Name
+                </th>
+                <th
+                  className="text-left pb-4 text-[var(--admin-text-muted)] text-sm uppercase"
+                  style={{ fontFamily: "Inter, sans-serif", fontWeight: 600 }}
                 >
-                  {farm.owner}
-                </td>
-                <td
-                  className="py-4 text-[var(--admin-text-muted)]"
-                  style={{ fontFamily: "Inter, sans-serif", fontSize: "15px" }}
+                  Owner
+                </th>
+                <th
+                  className="text-left pb-4 text-[var(--admin-text-muted)] text-sm uppercase"
+                  style={{ fontFamily: "Inter, sans-serif", fontWeight: 600 }}
                 >
-                  {farm.location}
-                </td>
-                <td
-                  className="py-4 text-[var(--admin-text-muted)]"
-                  style={{ fontFamily: "Inter, sans-serif", fontSize: "14px" }}
+                  Location
+                </th>
+                <th
+                  className="text-left pb-4 text-[var(--admin-text-muted)] text-sm uppercase"
+                  style={{ fontFamily: "Inter, sans-serif", fontWeight: 600 }}
                 >
-                  {farm.created}
-                </td>
+                  Created
+                </th>
               </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+            </thead>
+            <tbody>
+              {farms.map((farm) => (
+                <tr
+                  key={farm.id}
+                  className="border-b border-gray-100 hover:bg-[var(--admin-bg-gray)] transition-colors"
+                >
+                  <td
+                    className="py-4 text-[var(--admin-text-dark)]"
+                    style={{
+                      fontFamily: "Inter, sans-serif",
+                      fontWeight: 600,
+                      fontSize: "15px",
+                    }}
+                  >
+                    {farm.name}
+                  </td>
+                  <td
+                    className="py-4 text-[var(--admin-text-muted)]"
+                    style={{
+                      fontFamily: "Inter, sans-serif",
+                      fontSize: "15px",
+                    }}
+                  >
+                    {farm.owner || "N/A"}
+                  </td>
+                  <td
+                    className="py-4 text-[var(--admin-text-muted)]"
+                    style={{
+                      fontFamily: "Inter, sans-serif",
+                      fontSize: "15px",
+                    }}
+                  >
+                    {farm.location}
+                  </td>
+                  <td
+                    className="py-4 text-[var(--admin-text-muted)]"
+                    style={{
+                      fontFamily: "Inter, sans-serif",
+                      fontSize: "14px",
+                    }}
+                  >
+                    {getTimeAgo(farm.createdAt)}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
 
       {/* View All Button */}
       <div className="mt-6 flex justify-center">

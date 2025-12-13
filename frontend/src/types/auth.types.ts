@@ -2,40 +2,38 @@
 
 export type UserRole = 'admin' | 'worker' | 'platform_admin';
 
-// User interface with farm details
 export interface User {
   id: number;
   email: string;
   name: string;
-  phone?: string;
   role: UserRole;
-  farmId?: number;
-  createdAt: string;
-  updatedAt: string;
-  farm?: {
-    id: number;
-    name: string;
-    location: string;
-    joinCode: string;
-    createdAt: string;
-  };
+  farmId: number | null;
+  farmName?: string | null;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
-// Login Request
 export interface LoginRequest {
   email: string;
   password: string;
 }
 
-// Login Response
 export interface LoginResponse {
   success: boolean;
   message: string;
-  user: User;
-  token: string;
+  data: {
+    userId: number;
+    email: string;
+    name: string;
+    role: UserRole;
+    farmId: number | null;
+    farmName: string | null;
+    token: string;
+    refreshToken: string;
+    expiresIn: number;
+  };
 }
 
-// Register Admin Request
 export interface RegisterAdminRequest {
   name: string;
   email: string;
@@ -45,7 +43,6 @@ export interface RegisterAdminRequest {
   farmLocation: string;
 }
 
-// Register Worker Request
 export interface RegisterWorkerRequest {
   name: string;
   email: string;
@@ -54,18 +51,20 @@ export interface RegisterWorkerRequest {
   farmCode: string;
 }
 
-// Register Response (same for both admin and worker)
 export interface RegisterResponse {
   success: boolean;
   message: string;
-  user: User;
-  token: string;
+  data: {
+    userId: number;
+    email: string;
+    name: string;
+    role: UserRole;
+    farmId: number | null;
+    farmName?: string | null;
+    token: string;
+    refreshToken: string;
+    expiresIn: number;
+    joinCode?: string | null;  // <--- add this
+  };
 }
 
-// Auth Error
-export interface AuthError {
-  success: false;
-  error: string;
-  code: string;
-  details?: any;
-}
