@@ -1,5 +1,25 @@
 @baseUrl = http://localhost:5000
-@token = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MSwicm9sZSI6InBsYXRmb3JtX2FkbWluIiwiZW1haWwiOiJhZG1pbkBmYXJtaHViLmNvbSIsImlhdCI6MTc2Mzk5OTE2MCwiZXhwIjoxNzY0NjAzOTYwfQ.RxgeQrNbdUrRfZrVrPAnhEbq1_kM9IuGSg6AC4n7P08
+###admin created by seed
+# @name login
+POST {{baseUrl}}/api/auth/login
+Content-Type: application/json
+
+{
+  "email": "admin@farmhub.com",
+  "password": "Admin123"
+}
+###
+###login as platform admin created by loubna
+# @name login
+POST {{baseUrl}}/api/auth/login
+Content-Type: application/json
+
+{
+  "email": "superadmin@farmhub.com",
+  "password": "Admin1234"
+}
+###
+@token = {{login.response.body.data.token}}
 
 ### HEALTH CHECK (optional)
 GET {{baseUrl}}/
@@ -78,7 +98,11 @@ DELETE {{baseUrl}}/admin/notifications/notif-2
 Authorization: Bearer {{token}}
 
 ###
-
+###delete all notifications
+### DELETE /admin/notifications/all
+DELETE {{baseUrl}}/admin/notifications/all
+Authorization: Bearer {{token}}  
+###
 ### GET /admin/farms (paginated, no search)
 GET {{baseUrl}}/admin/farms?page=1&limit=10
 Authorization: Bearer {{token}}

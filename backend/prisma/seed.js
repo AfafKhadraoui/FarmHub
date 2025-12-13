@@ -14,7 +14,7 @@ const prisma = new PrismaClient();
 async function main() {
   console.log("Seeding database...");
 
-  // Clean tables (for dev only)
+  // Clean tables (order matters due to foreign keys)
   await prisma.taskAssignment.deleteMany();
   await prisma.task.deleteMany();
   await prisma.field.deleteMany();
@@ -33,6 +33,7 @@ async function main() {
       name: "Platform Admin",
       phone: "+1234567890",
       role: UserRole.platform_admin,
+      notificationSettings: { email: true, push: true, sms: false },
     },
   });
 
@@ -69,6 +70,7 @@ async function main() {
       phone: "+201234567890",
       role: UserRole.admin,
       farmId: greenValley.id,
+      notificationSettings: { email: true, push: true, sms: false },
     },
   });
 
@@ -80,51 +82,50 @@ async function main() {
       phone: "+201111111111",
       role: UserRole.admin,
       farmId: riverside.id,
+      notificationSettings: { email: true, push: true, sms: false },
     },
   });
 
-  await prisma.user.createMany({
-    data: [
-      {
-        email: "worker1@greenvalley.com",
-        password: workerPassword,
-        name: "Green Worker 1",
-        phone: "+201000000001",
-        role: UserRole.worker,
-        farmId: greenValley.id,
-      },
-      {
-        email: "worker2@greenvalley.com",
-        password: workerPassword,
-        name: "Green Worker 2",
-        phone: "+201000000002",
-        role: UserRole.worker,
-        farmId: greenValley.id,
-      },
-    ],
-  });
+  // Workers
+  const workerData = [
+    {
+      email: "worker1@greenvalley.com",
+      password: workerPassword,
+      name: "Green Worker 1",
+      phone: "+201000000001",
+      role: UserRole.worker,
+      farmId: greenValley.id,
+      notificationSettings: { email: true, push: true, sms: false },
+    },
+    {
+      email: "worker2@greenvalley.com",
+      password: workerPassword,
+      name: "Green Worker 2",
+      phone: "+201000000002",
+      role: UserRole.worker,
+      farmId: greenValley.id,
+      notificationSettings: { email: true, push: true, sms: false },
+    },
+    {
+      email: "worker1@riverside.com",
+      password: workerPassword,
+      name: "River Worker 1",
+      phone: "+201000000003",
+      role: UserRole.worker,
+      farmId: riverside.id,
+      notificationSettings: { email: true, push: true, sms: false },
+    },
+  ];
 
-  await prisma.user.createMany({
-    data: [
-      {
-        email: "worker1@riverside.com",
-        password: workerPassword,
-        name: "River Worker 1",
-        phone: "+201000000003",
-        role: UserRole.worker,
-        farmId: riverside.id,
-      },
-    ],
-  });
+  const workers = [];
+  for (const w of workerData) {
+    const worker = await prisma.user.create({ data: w });
+    workers.push(worker);
+  }
 
-  // Re‑fetch workers with ids
-  const allWorkersGreen = await prisma.user.findMany({
-    where: { farmId: greenValley.id, role: UserRole.worker },
-  });
-
-  const allWorkersRiver = await prisma.user.findMany({
-    where: { farmId: riverside.id, role: UserRole.worker },
-  });
+  // Re‑fetch workers grouped by farm
+  const allWorkersGreen = workers.filter((w) => w.farmId === greenValley.id);
+  const allWorkersRiver = workers.filter((w) => w.farmId === riverside.id);
 
   // 4) Fields
   const northField = await prisma.field.create({
@@ -163,7 +164,7 @@ async function main() {
     },
   });
 
-  // 5) Tasks + TaskAssignments
+  // 5) Tasks + Assignments
   const irrigationTask = await prisma.task.create({
     data: {
       title: "Irrigate North Field",
@@ -201,166 +202,76 @@ async function main() {
     },
   });
 
+  // TaskAssignments
   if (allWorkersGreen[0]) {
     await prisma.taskAssignment.create({
-      data: {
-        taskId: irrigationTask.id,
-        workerId: allWorkersGreen[0].id,
-      },
+      data: { taskId: irrigationTask.id, workerId: allWorkersGreen[0].id },
     });
-
     await prisma.taskAssignment.create({
-      data: {
-        taskId: harvestTask.id,
-        workerId: allWorkersGreen[0].id,
-      },
+      data: { taskId: harvestTask.id, workerId: allWorkersGreen[0].id },
     });
   }
-
   if (allWorkersGreen[1]) {
     await prisma.taskAssignment.create({
-      data: {
-        taskId: irrigationTask.id,
-        workerId: allWorkersGreen[1].id,
-      },
+      data: { taskId: irrigationTask.id, workerId: allWorkersGreen[1].id },
     });
   }
-
   if (allWorkersRiver[0]) {
     await prisma.taskAssignment.create({
-      data: {
-        taskId: riverTask.id,
-        workerId: allWorkersRiver[0].id,
-      },
+      data: { taskId: riverTask.id, workerId: allWorkersRiver[0].id },
     });
   }
 
   // 6) Notifications
   const baseTime = Date.now();
-  const notifications = await prisma.notification.createMany({
-    data: [
-      {
-        id: `notif_${baseTime}_1`,
-        userId: platformAdmin.id,
-        type: "farm",
-        title: "New Farm Created",
-        message: "Green Valley Farm has been registered by john@example.com",
-        isRead: false,
-        timestamp: new Date(Date.now() - 5 * 60 * 1000),
-      },
-      {
-        id: `notif_${baseTime}_2`,
-        userId: platformAdmin.id,
-        type: "user",
-        title: "User Milestone Reached",
-        message: "Platform reached 1,000 registered users! Congratulations!",
-        isRead: false,
-        timestamp: new Date(Date.now() - 60 * 60 * 1000),
-      },
-      {
-        id: `notif_${baseTime}_3`,
-        userId: platformAdmin.id,
-        type: "farm",
-        title: "Farm Updated",
-        message: "Sunset Valley Farm updated their field information and added 2 new workers.",
-        isRead: true,
-        timestamp: new Date(Date.now() - 3 * 60 * 60 * 1000),
-      },
-      {
-        id: `notif_${baseTime}_4`,
-        userId: platformAdmin.id,
-        type: "alert",
-        title: "Action Required",
-        message: "5 new farm applications are pending approval in the review queue.",
-        isRead: false,
-        timestamp: new Date(Date.now() - 5 * 60 * 60 * 1000),
-      },
-      {
-        id: `notif_${baseTime}_5`,
-        userId: platformAdmin.id,
-        type: "system",
-        title: "System Update",
-        message: "Platform maintenance scheduled for this weekend. Downtime: 2 hours.",
-        isRead: true,
-        timestamp: new Date(Date.now() - 24 * 60 * 60 * 1000),
-      },
-      {
-        id: `notif_${baseTime}_6`,
-        userId: platformAdmin.id,
-        type: "farm",
-        title: "Task Completion Alert",
-        message: "Riverside Farm completed all scheduled tasks for this week ahead of schedule.",
-        isRead: true,
-        timestamp: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000),
-      },
-      {
-        id: `notif_${baseTime}_7`,
-        userId: platformAdmin.id,
-        type: "user",
-        title: "New Worker Registered",
-        message: "A new worker 'Sarah Johnson' joined Maple Grove Farm.",
-        isRead: false,
-        timestamp: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000),
-      },
-      {
-        id: `notif_${baseTime}_8`,
-        userId: platformAdmin.id,
-        type: "alert",
-        title: "Low Activity Warning",
-        message: "Oak Ridge Farm hasn't logged any activities in the past 7 days.",
-        isRead: true,
-        timestamp: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000),
-      },
-      {
-        id: `notif_${baseTime}_9`,
-        userId: platformAdmin.id,
-        type: "system",
-        title: "Database Backup Completed",
-        message: "Scheduled database backup completed successfully. All data is secure.",
-        isRead: false,
-        timestamp: new Date(Date.now() - 6 * 24 * 60 * 60 * 1000),
-      },
-      {
-        id: `notif_${baseTime}_10`,
-        userId: platformAdmin.id,
-        type: "farm",
-        title: "New Equipment Request",
-        message: "Highland Farm requested approval for new irrigation equipment purchase.",
-        isRead: false,
-        timestamp: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000),
-      },
-    ],
-  });
-  console.log("Seeded notifications for admin:", notifications);
+  const notificationsData = [
+    {
+      id: `notif_${baseTime}_1`,
+      userId: platformAdmin.id,
+      type: "farm",
+      title: "New Farm Created",
+      message: "Green Valley Farm has been registered by john@example.com",
+      isRead: false,
+      timestamp: new Date(Date.now() - 5 * 60 * 1000),
+    },
+    {
+      id: `notif_${baseTime}_2`,
+      userId: platformAdmin.id,
+      type: "user",
+      title: "User Milestone Reached",
+      message: "Platform reached 1,000 registered users! Congratulations!",
+      isRead: false,
+      timestamp: new Date(Date.now() - 60 * 60 * 1000),
+    },
+    // Add more notifications similarly...
+  ];
 
-  // 7) Activities (global feed)
-  tasks = await prisma.activity.createMany({
-    data: [
-      {
-        id: "act-1",
-        type: "farm_created",
-        title: "New Farm Created",
-        message: `${greenValley.name} was created by ${greenAdmin.name}`,
-        metadata: {
-          farmId: greenValley.id,
-          userId: greenAdmin.id,
-        },
-      },
-      {
-        id: "act-2",
-        type: "user_registered",
-        title: "New Worker Joined",
-        message: `${allWorkersGreen[0]?.name} joined ${greenValley.name}`,
-        metadata: {
-          farmId: greenValley.id,
-          userId: allWorkersGreen[0]?.id,
-        },
-      },
-    ],
+  for (const n of notificationsData) {
+    await prisma.notification.create({ data: n });
+  }
+
+  // 7) Activities
+  await prisma.activity.create({
+    data: {
+      id: "act-1",
+      type: "farm_created",
+      title: "New Farm Created",
+      message: `${greenValley.name} was created by ${greenAdmin.name}`,
+      metadata: { farmId: greenValley.id, userId: greenAdmin.id },
+    },
   });
 
-  console.log("Seeded activities for admin:", tasks);
-  console.log("Seeding completed.");
+  await prisma.activity.create({
+    data: {
+      id: "act-2",
+      type: "user_registered",
+      title: "New Worker Joined",
+      message: `${allWorkersGreen[0]?.name} joined ${greenValley.name}`,
+      metadata: { farmId: greenValley.id, userId: allWorkersGreen[0]?.id },
+    },
+  });
+
+  console.log("Seeding completed successfully.");
 }
 
 main()
