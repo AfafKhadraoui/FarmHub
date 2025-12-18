@@ -38,14 +38,16 @@ export function WorkerCard({
   } = worker;
 
   return (
-    <div 
-      className="w-full rounded-[16px] border bg-white px-8 py-6 shadow-sm hover:shadow-lg transition-all"
-      style={{ borderColor: 'var(--admin-border)' }}
+      <div 
+      className="w-full rounded-2xl border bg-white p-8 shadow-sm hover:shadow-lg transition-all"
+      style={{ borderColor: 'var(--admin-border)', borderWidth: '1px' }}
       onMouseEnter={(e) => {
-        e.currentTarget.style.borderColor = 'var(--admin-primary)';
+        const el = e.currentTarget as HTMLDivElement;
+        el.style.borderColor = 'var(--admin-primary)';
       }}
       onMouseLeave={(e) => {
-        e.currentTarget.style.borderColor = 'var(--admin-border)';
+        const el = e.currentTarget as HTMLDivElement;
+        el.style.borderColor = 'var(--admin-border)';
       }}
     >
       <div className="flex items-start justify-between gap-6">
@@ -70,7 +72,7 @@ export function WorkerCard({
           </div>
 
           <div className="space-y-1">
-            <p className="text-[17px] font-semibold" style={{ color: 'var(--admin-text-dark)' }}>
+            <p className="text-[22px] font-semibold" style={{ color: 'var(--admin-text-dark)' }}>
               {name}
             </p>
             <p className="text-sm" style={{ color: 'var(--admin-text-muted)' }}>{email}</p>
@@ -109,27 +111,13 @@ export function WorkerCard({
         </div>
       </div>
 
-      {/* performance bar */}
-      <div className="mt-5">
-        <p className="text-sm font-semibold" style={{ color: 'var(--admin-text-dark)' }}>
-          Performance: {performancePercent}%
-        </p>
-        <div className="mt-2 h-[6px] rounded-full overflow-hidden" style={{ backgroundColor: 'var(--admin-border)' }}>
-          <div
-            className="h-full rounded-full"
-            style={{ 
-              width: `${performancePercent}%`,
-              backgroundColor: 'var(--admin-primary)'
-            }}
-          />
-        </div>
-      </div>
+      {/* performance removed as requested */}
 
       {/* buttons */}
-      <div className="mt-5 flex flex-wrap gap-3">
+      <div className="mt-6 flex flex-wrap gap-3">
         <Button
           type="button"
-          className="h-10 rounded-[12px] text-white px-6 text-sm font-semibold"
+          className="h-11 rounded-lg text-white px-6 text-[16px] font-semibold"
           style={{ backgroundColor: 'var(--admin-primary)' }}
           onClick={onViewProfile}
         >
@@ -138,7 +126,7 @@ export function WorkerCard({
         <Button
           type="button"
           variant="outline"
-          className="h-10 rounded-[12px] bg-white px-6 text-sm font-semibold"
+          className="h-11 rounded-lg bg-white px-6 text-[16px] font-semibold"
           style={{ 
             borderColor: 'var(--admin-border)',
             color: 'var(--admin-text-dark)'
@@ -150,7 +138,7 @@ export function WorkerCard({
         <Button
           type="button"
           variant="outline"
-          className="h-10 rounded-[12px] bg-white px-6 text-sm font-semibold"
+          className="h-11 rounded-lg bg-white px-6 text-[16px] font-semibold"
           style={{ 
             borderColor: 'var(--admin-border)',
             color: 'var(--admin-text-dark)'
