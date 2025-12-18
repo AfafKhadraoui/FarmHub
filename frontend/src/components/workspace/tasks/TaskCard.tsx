@@ -128,32 +128,41 @@ export function TaskCard({
 
   return (
     <>
-      <div 
-        className="w-full rounded-[16px] border bg-white px-8 py-6 shadow-sm hover:shadow-lg transition-all hover:border-opacity-60"
-        style={{ 
-          borderColor: 'var(--admin-border)'
+      <div
+        className="w-full rounded-2xl border bg-white p-8 shadow-sm hover:shadow-lg transition-all"
+        style={{
+          borderColor: 'var(--admin-border)',
+          borderWidth: '1px'
+        }}
+        onMouseEnter={(e) => {
+          const el = e.currentTarget as HTMLDivElement;
+          el.style.borderColor = 'var(--admin-primary)';
+        }}
+        onMouseLeave={(e) => {
+          const el = e.currentTarget as HTMLDivElement;
+          el.style.borderColor = 'var(--admin-border)';
         }}
       >
         {/* Top row */}
         <div className="flex items-start gap-4">
-          {/* Icon with realistic farm icon */}
-          <div className={`h-12 w-12 rounded-full ${bg} flex items-center justify-center`}>
-            <Icon size={24} className={color} />
-          </div>
+          {/* Icon */}
+          <div className={`w-16 h-16 rounded-full ${bg} flex items-center justify-center mb-2`}>{
+            <Icon size={28} className={color} />
+          }</div>
 
           <div className="flex-1">
             <div className="flex flex-wrap items-center gap-3">
-              <p className="text-[17px] font-semibold" style={{ color: 'var(--admin-text-dark)' }}>
+              <p className="text-[22px] font-semibold" style={{ color: 'var(--admin-text-dark)' }}>
                 {title}
                 {fieldName && ` – ${fieldName}`}
               </p>
             </div>
 
-            {/* badges row */}
-            <div className="mt-3 flex flex-wrap items-center gap-3 text-sm" style={{ color: 'var(--admin-text-muted)' }}>
+            {/* badges / details row */}
+            <div className="mt-3 flex flex-wrap items-center gap-3" style={{ color: 'var(--admin-text-muted)' }}>
               <PriorityBadge priority={priority} />
               {due && (
-                <span>
+                <span className="text-[16px]">
                   <span className="font-semibold">Due:</span>{' '}
                   {new Date(due).toLocaleDateString()}, {' '}
                   {new Date(due).toLocaleTimeString([], {
@@ -167,12 +176,12 @@ export function TaskCard({
 
             {/* assigned row (admin only) */}
             {mode === 'admin' && assignedWorkers.length > 0 && (
-              <div className="mt-3 flex items-center gap-2 text-sm" style={{ color: 'var(--admin-text-muted)' }}>
+              <div className="mt-3 flex items-center gap-2" style={{ color: 'var(--admin-text-muted)' }}>
                 <span className="font-semibold">Assigned to:</span>
                 {assignedWorkers.map((w: any) => (
                   <span
                     key={w.id}
-                    className="inline-flex items-center justify-center rounded-full text-white text-[11px] px-2 py-[2px] font-semibold"
+                    className="inline-flex items-center justify-center rounded-full text-white text-[12px] px-3 py-[4px] font-semibold"
                     style={{ backgroundColor: 'var(--admin-primary)' }}
                   >
                     {w.initials ?? w.name?.[0]}
@@ -183,29 +192,15 @@ export function TaskCard({
           </div>
         </div>
 
-        {/* progress */}
-        <div className="mt-5">
-          <p className="text-sm font-semibold" style={{ color: 'var(--admin-text-dark)' }}>
-            Progress: {progress}%
-          </p>
-          <div className="mt-2 h-[6px] rounded-full overflow-hidden" style={{ backgroundColor: 'var(--admin-border)' }}>
-            <div
-              className="h-full rounded-full"
-              style={{ 
-                width: `${progress}%`,
-                backgroundColor: 'var(--admin-blue)'
-              }}
-            />
-          </div>
-        </div>
+        {/* progress removed as requested */}
 
         {/* buttons */}
-        <div className="mt-5 flex flex-wrap gap-3">
+        <div className="mt-6 flex flex-wrap gap-3">
           {mode === 'worker' && (
             <>
               <Button
                 type="button"
-                className="h-10 rounded-[12px] text-white px-6 text-sm font-semibold"
+                className="h-11 rounded-lg text-white px-6 text-[16px] font-semibold"
                 style={{ backgroundColor: 'var(--admin-primary)' }}
                 onClick={() => setShowUpdateStatusModal(true)}
               >
@@ -214,7 +209,7 @@ export function TaskCard({
               <Button
                 type="button"
                 variant="outline"
-                className="h-10 rounded-[12px] bg-white px-6 text-sm font-semibold"
+                className="h-11 rounded-lg bg-white px-6 text-[16px] font-semibold"
                 style={{ 
                   borderColor: 'var(--admin-border)',
                   color: 'var(--admin-text-dark)'
@@ -226,7 +221,7 @@ export function TaskCard({
               <Button
                 type="button"
                 variant="outline"
-                className="h-10 rounded-[12px] bg-white px-6 text-sm font-semibold"
+                className="h-11 rounded-lg bg-white px-6 text-[16px] font-semibold"
                 style={{ 
                   borderColor: 'var(--admin-border)',
                   color: 'var(--admin-text-dark)'
@@ -242,7 +237,7 @@ export function TaskCard({
             <>
               <Button
                 type="button"
-                className="h-10 rounded-[12px] text-white px-6 text-sm font-semibold"
+                className="h-11 rounded-lg text-white px-6 text-[16px] font-semibold"
                 style={{ backgroundColor: 'var(--admin-primary)' }}
                 onClick={() => router.push(`/tasks/${id}`)}
               >
@@ -251,8 +246,8 @@ export function TaskCard({
               <Button
                 type="button"
                 variant="outline"
-                className="h-10 rounded-[12px] bg-white px-6 text-sm font-semibold"
-                style={{ 
+                className="h-11 rounded-lg bg-white px-6 text-[16px] font-semibold"
+                style={{
                   borderColor: 'var(--admin-border)',
                   color: 'var(--admin-text-dark)'
                 }}
@@ -263,8 +258,8 @@ export function TaskCard({
               <Button
                 type="button"
                 variant="outline"
-                className="h-10 rounded-[12px] bg-white px-6 text-sm font-semibold"
-                style={{ 
+                className="h-11 rounded-lg bg-white px-6 text-[16px] font-semibold"
+                style={{
                   borderColor: 'var(--admin-red)',
                   color: 'var(--admin-red)'
                 }}

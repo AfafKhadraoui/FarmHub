@@ -112,6 +112,7 @@ export default function EditTaskPage() {
         priority: data.priority,
         dueDate: data.dueDate,
         fieldId: data.fieldId,
+        assignedWorkerIds: data.assignedWorkerIds || [],
       });
       router.push(`/tasks/${id}`);
     } catch (error: any) {
@@ -178,6 +179,7 @@ export default function EditTaskPage() {
             priority: task.priority.toLowerCase() as 'low' | 'medium' | 'high',
             dueDate: task.dueDate ? new Date(task.dueDate).toISOString().slice(0, 16) : '',
             fieldId: task.fieldId?.toString() || '',
+            assignedWorkerIds: task.assignedWorkers ? task.assignedWorkers.map((w: any) => w.id) : [],
           }}
         />
       </div>

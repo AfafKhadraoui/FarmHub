@@ -244,28 +244,7 @@ export default function TaskDetailsPage() {
           </div>
         </div>
 
-        {/* Progress Section */}
-        {(task.progressPercent !== undefined || task.progress !== undefined) && (
-          <div className="pb-6 border-b" style={{ borderColor: 'var(--admin-border)' }}>
-            <div className="flex items-center justify-between mb-3">
-              <p className="text-base font-semibold" style={{ color: 'var(--admin-text-dark)' }}>
-                Progress
-              </p>
-              <p className="text-base font-bold" style={{ color: 'var(--admin-primary)' }}>
-                {task.progressPercent ?? task.progress}%
-              </p>
-            </div>
-            <div className="h-[8px] rounded-full overflow-hidden" style={{ backgroundColor: 'var(--admin-border)' }}>
-              <div
-                className="h-full rounded-full transition-all"
-                style={{ 
-                  width: `${task.progressPercent ?? task.progress}%`,
-                  backgroundColor: 'var(--admin-primary)'
-                }}
-              />
-            </div>
-          </div>
-        )}
+        {/* Progress removed from view per design */}
 
         {/* Assigned Workers Section */}
         {task.assignedWorkers && task.assignedWorkers.length > 0 && (

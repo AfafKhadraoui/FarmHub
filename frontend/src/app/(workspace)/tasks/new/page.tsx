@@ -17,7 +17,7 @@ export default function NewTaskPage() {
         priority: data.priority,
         dueDate: data.dueDate,
         fieldId: data.fieldId,
-        assignedWorkerIds: [],
+        assignedWorkerIds: data.assignedWorkerIds || [],
         notes: null,
       });
       router.push('/tasks');

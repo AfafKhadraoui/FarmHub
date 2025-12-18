@@ -2,7 +2,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Users, Activity, CheckCircle2 } from 'lucide-react';
+import { Users, Activity, CheckCircle2, ArrowUp, Check } from 'lucide-react';
 import  api  from '@/lib/api';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -137,12 +137,6 @@ export default function WorkersPage() {
               color: 'var(--admin-text-dark)'
             }}
           />
-          <Button 
-            className="h-11 rounded-xl text-white px-5 text-sm font-semibold"
-            style={{ backgroundColor: 'var(--admin-primary)' }}
-          >
-            + Invite Worker
-          </Button>
         </div>
       </div>
 
@@ -192,6 +186,7 @@ export default function WorkersPage() {
           type="workers"
           title="Total Workers"
           value={stats?.totalWorkers ?? dummyStats.totalWorkers}
+          subtitle={'+2 this month'}
         />
         <WorkerStatCard
           type="active"
@@ -200,7 +195,7 @@ export default function WorkersPage() {
         />
         <WorkerStatCard
           type="tasks"
-          title="Tasks Done This Week"
+          title="Tasks Done Today"
           value={stats?.tasksDoneThisWeek ?? dummyStats.tasksDoneThisWeek}
         />
       </div>
@@ -233,9 +228,10 @@ interface WorkerStatCardProps {
   title: string;
   value: number;
   type: 'workers' | 'active' | 'tasks';
+  subtitle?: string;
 }
 
-function WorkerStatCard({ title, value, type }: WorkerStatCardProps) {
+function WorkerStatCard({ title, value, type, subtitle }: WorkerStatCardProps) {
   const iconConfig = {
     workers: { Icon: Users, bg: 'bg-purple-50', color: 'text-purple-600' },
     active: { Icon: Activity, bg: 'bg-blue-50', color: 'text-blue-600' },
@@ -245,24 +241,26 @@ function WorkerStatCard({ title, value, type }: WorkerStatCardProps) {
   const config = iconConfig[type] || iconConfig.workers;
   const { Icon } = config;
 
+  const changeIcon = subtitle && subtitle.trim().startsWith('+') ? <ArrowUp size={12} /> : <Check size={12} />;
+
   return (
-    <div 
-      className="rounded-[16px] border bg-white px-6 py-5 shadow-sm hover:shadow-lg transition-all"
-      style={{ borderColor: 'var(--admin-border)' }}
-    >
-      <div className="flex items-start gap-4">
-        <div className={`h-12 w-12 rounded-full ${config.bg} flex items-center justify-center`}>
-          <Icon size={24} className={config.color} />
-        </div>
-        <div className="flex flex-col">
-          <span className="text-[28px] font-semibold leading-tight" style={{ color: 'var(--admin-text-dark)' }}>
-            {value}
-          </span>
-          <span className="mt-1 text-sm font-medium" style={{ color: 'var(--admin-text-dark)' }}>
-            {title}
-          </span>
-        </div>
+    <div className="bg-white border border-[#E5E7EB] rounded-2xl p-6 shadow-sm hover:shadow-lg transition-all h-[170px] flex flex-col">
+      <div className="w-11 h-11 bg-[#E8F5E9] rounded-full flex items-center justify-center text-[#4CAF50]">
+        <Icon size={24} strokeWidth={2} className={config.color} />
       </div>
+
+      <div className="font-bold text-[#1F2937] mt-3" style={{ fontFamily: 'Poppins, sans-serif', fontSize: '42px', lineHeight: '1' }}>
+        {String(value)}
+      </div>
+
+      <div className="font-medium text-[#6B7280] mt-2 text-[15px]">{title}</div>
+
+      {subtitle && (
+        <div className="flex items-center gap-1 text-[#4CAF50] font-medium text-[13px] mt-auto">
+          {changeIcon}
+          <span>{subtitle}</span>
+        </div>
+      )}
     </div>
   );
 }
