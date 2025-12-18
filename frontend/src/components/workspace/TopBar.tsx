@@ -3,6 +3,7 @@
 import React, { useState, useRef } from "react";
 import { Search, Bell } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
+import { useProfile } from "@/hooks/useProfile";
 import { NotificationsPanel } from "./NotificationsPanel";
 import { ProfileDropdown } from "./ProfileDropdown";
 
@@ -15,9 +16,13 @@ export function TopBar({ userRole = "worker" }: TopBarProps) {
   const [showProfile, setShowProfile] = useState(false);
   const [showSearch, setShowSearch] = useState(false);
   const { user } = useAuth();
+  const { profile } = useProfile();
 
   const bellRef = useRef<HTMLDivElement>(null);
   const profileRef = useRef<HTMLDivElement>(null);
+
+  // Determine if user is admin
+  const isAdmin = profile?.role?.toLowerCase() === "admin";
 
   const getInitials = (name?: string) => {
     if (!name) return "U";
@@ -68,7 +73,7 @@ export function TopBar({ userRole = "worker" }: TopBarProps) {
           <NotificationsPanel
             isOpen={showNotifications}
             onClose={() => setShowNotifications(false)}
-            triggerRef={bellRef}
+            triggerRef={bellRef as React.RefObject<HTMLElement>}
           />
         </div>
 
@@ -80,23 +85,24 @@ export function TopBar({ userRole = "worker" }: TopBarProps) {
         >
           <div className="w-12 h-12 rounded-full bg-linear-to-br from-[#4CAF50] to-[#81C784] flex items-center justify-center">
             <span className="text-white font-bold">
-              {getInitials(user?.name)}
+              {getInitials(profile?.name || user?.name)}
             </span>
           </div>
           <div className="flex flex-col">
             <span className="font-semibold text-[#1F2937]">
-              {user?.name || "User"}
+              {profile?.name || user?.name || "User"}
             </span>
             <span className="text-[13px] text-[#6B7280]">{getUserRole()}</span>
           </div>
           <ProfileDropdown
             isOpen={showProfile}
             onClose={() => setShowProfile(false)}
-            triggerRef={profileRef}
-            userName={user?.name}
+            triggerRef={profileRef as React.RefObject<HTMLElement>}
+            userName={profile?.name || user?.name}
             userRole={getUserRole()}
-            userEmail={user?.email}
-            userInitials={getInitials(user?.name)}
+            userEmail={profile?.email || user?.email}
+            userInitials={getInitials(profile?.name || user?.name)}
+            userRoleType={isAdmin ? "admin" : "worker"}
           />
         </div>
       </div>

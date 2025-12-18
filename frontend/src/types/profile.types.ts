@@ -7,6 +7,7 @@ export type FarmerProfile = {
 	phone?: string | null;
 	role: string; // e.g. 'admin' or other
 	farmId?: number | null;
+	farmName?: string | null;
 	avatar?: string | null;
 	createdAt?: string;
 };
