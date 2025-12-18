@@ -83,6 +83,17 @@ export function useNotifications(unreadOnly: boolean = false) {
     }
   };
 
+  const deleteAllNotifications = async () => {
+    try {
+      await adminService.deleteAllNotifications();
+      setNotifications([]);
+      dispatchUpdate();
+    } catch (err: any) {
+      console.error("Error deleting all notifications:", err);
+      throw err;
+    }
+  };
+
   const unreadCount = notifications.filter((n) => !n.isRead).length;
 
   return {
@@ -93,6 +104,7 @@ export function useNotifications(unreadOnly: boolean = false) {
     markAsRead,
     markAllAsRead,
     deleteNotification,
+    deleteAllNotifications,
     refetch: fetchNotifications,
   };
 }
