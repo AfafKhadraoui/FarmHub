@@ -10,7 +10,7 @@ const taskService = {
     // Helper to create notifications
     async createNotifications(tx, notifications) {
         if (!notifications || notifications.length === 0) return;
-        
+
         const notificationData = notifications.map(notif => ({
             id: `notif_${Date.now()}_${notif.userId}_${notif.taskId || ''}`,
             userId: notif.userId,
@@ -60,7 +60,7 @@ const taskService = {
     // Get task by id with role-based access control
     async getTaskById(userId, taskId) {
         const user = await this.getUserInfoOrFail(userId);
-        
+
         const whereClause = {
             id: taskId,
             farmId: user.farmId,
@@ -110,7 +110,7 @@ const taskService = {
         { title, description, status, priority, dueDate, fieldId, assignedWorkerIds = [], notes }
     ) {
         const user = await this.getUserInfoOrFail(userId);
-        
+
         // Only admin can create tasks
         if (user.role === 'worker') {
             throw new Error('Workers cannot create tasks');
@@ -188,7 +188,7 @@ const taskService = {
         { title, description, status, priority, dueDate, fieldId, assignedWorkerIds, notes }
     ) {
         const user = await this.getUserInfoOrFail(userId);
-        
+
         // Only admin can update tasks
         if (user.role === 'worker') {
             throw new Error('Workers cannot update tasks. Use updateTaskStatus instead.');
@@ -433,28 +433,35 @@ const taskService = {
     // Delete task (only admin/farmer)
     async deleteTask(userId, taskId) {
         const user = await this.getUserInfoOrFail(userId);
-        
+
         // Only admin can delete tasks
         if (user.role === 'worker') {
             throw new Error('Workers cannot delete tasks');
         }
 
         return prisma.$transaction(async (tx) => {
-            const deleted = await tx.task.deleteMany({
+            // Fetch task details before deletion to get fieldId
+            const task = await tx.task.findFirst({
                 where: { id: taskId, farmId: user.farmId },
+                select: { id: true, title: true, fieldId: true }
             });
 
-            if (!deleted.count) {
+            if (!task) {
                 throw new Error('Task not found or could not be deleted');
             }
+
+            await tx.task.delete({
+                where: { id: taskId },
+            });
 
             // Create activity log
             await this.createActivity(tx, {
                 type: 'task_deleted',
                 title: 'Task Deleted',
-                message: `${user.name} deleted task #${taskId}`,
+                message: `${user.name} deleted task: ${task.title}`,
                 metadata: {
                     taskId,
+                    fieldId: task.fieldId,
                     userId: userId,
                     farmId: user.farmId
                 }
@@ -467,7 +474,7 @@ const taskService = {
     // Add task assignment (only admin/farmer)
     async addTaskAssignment(userId, taskId, { workersIds }) {
         const user = await this.getUserInfoOrFail(userId);
-        
+
         // Only admin can assign tasks
         if (user.role === 'worker') {
             throw new Error('Workers cannot assign tasks');
@@ -478,7 +485,7 @@ const taskService = {
             const task = await tx.task.findFirst({
                 where: { id: taskId, farmId: user.farmId }
             });
-            
+
             if (!task) throw new Error('Task not found');
 
             // Verify workers belong to the same farm

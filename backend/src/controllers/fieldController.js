@@ -91,6 +91,26 @@ exports.createField = async (req, res) => {
       },
     });
 
+    // Log Activity
+    try {
+      await prisma.activity.create({
+        data: {
+          id: `act_field_create_${Date.now()}`,
+          type: "field_created",
+          title: "Field Created",
+          message: `Field "${name}" was created.`,
+          timestamp: new Date(),
+          metadata: {
+            fieldId: newField.id,
+            action: "create",
+            farmId
+          }
+        }
+      });
+    } catch (logErr) {
+      console.error("Failed to log creation activity:", logErr);
+    }
+
     res.json({ ...newField, progress: 0 });
   } catch (error) {
     console.error("Create field error:", error);
@@ -184,6 +204,27 @@ exports.updateField = async (req, res) => {
       totalTasks === 0 ? 0 : Math.round((doneTasks / totalTasks) * 100);
 
     const { tasks, ...fieldData } = updatedField;
+
+    // Log Activity
+    try {
+      await prisma.activity.create({
+        data: {
+          id: `act_field_update_${Date.now()}`,
+          type: "field_updated",
+          title: "Field Updated",
+          message: `Field "${updatedField.name}" was updated by ${userName}.`,
+          timestamp: new Date(),
+          metadata: {
+            fieldId: updatedField.id,
+            authorName: userName,
+            action: "update",
+            farmId
+          }
+        }
+      });
+    } catch (logErr) {
+      console.error("Failed to log update activity:", logErr);
+    }
 
     res.json({
       message: "Field updated",
@@ -524,7 +565,7 @@ exports.getFieldHistory = async (req, res) => {
       historyStream = [...historyStream, ...versionEvents];
     }
 
-    if (filter === "all" || filter === "tasks" || filter === "maintenance") {
+    if (filter === "all" || filter === "tasks" || filter === "task" || filter === "maintenance") {
       const fieldTasks = await prisma.task.findMany({
         where: {
           fieldId: parseInt(id),
@@ -547,7 +588,7 @@ exports.getFieldHistory = async (req, res) => {
         const eventType = isMaintenance ? "maintenance" : "task";
 
         if (filter === "maintenance" && !isMaintenance) return acc;
-        if (filter === "tasks" && isMaintenance) return acc;
+        if ((filter === "tasks" || filter === "task") && isMaintenance) return acc;
 
         const workers = t.taskAssignments
           .map((ta) => ta.worker.name)
@@ -569,7 +610,7 @@ exports.getFieldHistory = async (req, res) => {
       historyStream = [...historyStream, ...processedTasks];
     }
 
-    if (filter === "all" || filter === "updates") {
+    if (filter === "all" || filter === "updates" || filter === "update") {
       const activities = await prisma.activity.findMany({
         where: {
           metadata: {
