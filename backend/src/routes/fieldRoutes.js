@@ -14,6 +14,7 @@ router.get("/search", fieldController.searchField);
 router.get("/details", fieldController.getFieldDetails);//GET /fields/details to return the details of each field
 router.get("/filter", fieldController.filterField);//GET /fields/filter?status=value
 router.put("/:id", fieldController.updateField); // PUT /fields/:id 
+router.post("/:fieldId/unassign-worker/:workerId", fieldController.unassignWorkerFromField);
 router.delete("/:id", fieldController.deleteField); // DELETE /fields/:id
 
 module.exports = router;

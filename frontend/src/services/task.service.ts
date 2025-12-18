@@ -64,3 +64,9 @@ export async function createTask(data: any) {
   const res = await api.post('/tasks', data);
   return res.data;
 }
+
+/** Delete task (only admin/farmer) */
+export async function deleteTask(id: number) {
+  const res = await api.delete(`/tasks/${id}`);
+  return res.data;
+}

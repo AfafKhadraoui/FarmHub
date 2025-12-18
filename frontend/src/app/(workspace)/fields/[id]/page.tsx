@@ -13,6 +13,8 @@ import {
   ChevronRight,
   Loader2,
   AlertCircle,
+  Trash2,
+  UserX,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/hooks/useAuth";
@@ -20,6 +22,7 @@ import { EditFieldModal } from "@/components/workspace/modals/EditFieldModal";
 import { ArchiveFieldModal } from "@/components/workspace/modals/ArchiveFieldModal";
 import { CreateTaskModal } from "@/components/workspace/modals/CreateTaskModal";
 import { fieldService } from "@/services/field.service";
+import { deleteTask } from "@/services/task.service";
 
 export default function FieldDetailPage({
   params,
@@ -33,6 +36,11 @@ export default function FieldDetailPage({
   const [showArchiveModal, setShowArchiveModal] = useState(false);
   const [showCreateTaskModal, setShowCreateTaskModal] = useState(false);
   const [showAssignWorkersModal, setShowAssignWorkersModal] = useState(false);
+  
+  // Confirmation Modal States
+  const [deletingTaskId, setDeletingTaskId] = useState<number | null>(null);
+  const [removingWorker, setRemovingWorker] = useState<any>(null);
+  const [isProcessing, setIsProcessing] = useState(false);
 
   // Data state
   const [fieldData, setFieldData] = useState<any>(null);
@@ -77,6 +85,36 @@ export default function FieldDetailPage({
       fetchData();
     }
   }, [user, id]);
+
+  const handleDeleteTask = async () => {
+    if (!deletingTaskId) return;
+    try {
+      setIsProcessing(true);
+      await deleteTask(deletingTaskId);
+      fetchData();
+      setDeletingTaskId(null);
+    } catch (err) {
+      console.error("Failed to delete task:", err);
+      alert("Failed to delete task. Please try again.");
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  const handleRemoveWorker = async () => {
+    if (!removingWorker || !fieldData?.id) return;
+    try {
+      setIsProcessing(true);
+      await fieldService.unassignWorker(fieldData.id, removingWorker.id);
+      fetchData();
+      setRemovingWorker(null);
+    } catch (err) {
+      console.error("Failed to remove worker:", err);
+      alert("Failed to remove worker. Please try again.");
+    } finally {
+      setIsProcessing(false);
+    }
+  };
 
   const getStatusColor = (status: string) => {
     const colors: Record<string, { bg: string; text: string }> = {
@@ -372,23 +410,37 @@ export default function FieldDetailPage({
                         <h3 className="font-semibold text-[#1F2937] text-[17px]">
                           {task.title}
                         </h3>
-                        <span
-                          className="px-3 py-1.5 rounded-lg font-semibold text-[14px]"
-                          style={{ backgroundColor: styles.bg, color: styles.text }}
-                        >
-                          {task.status.replace("_", " ").toUpperCase()}
-                        </span>
+                        <div className="flex items-center gap-2">
+                          <span
+                            className="px-3 py-1.5 rounded-lg font-semibold text-[14px]"
+                            style={{ backgroundColor: styles.bg, color: styles.text }}
+                          >
+                            {task.status.replace("_", " ").toUpperCase()}
+                          </span>
+                          {isAdmin && (
+                            <button
+                              onClick={() => setDeletingTaskId(task.id)}
+                              className="p-1.5 text-red-500 hover:bg-red-50 rounded-lg transition-colors cursor-pointer"
+                              title="Delete Task"
+                            >
+                              <Trash2 size={16} />
+                            </button>
+                          )}
+                        </div>
                       </div>
-                      <p className="text-[#6B7280] text-[15px]">
-                        Due: {formatDate(task.dueDate)} 
-                        {task.priority && ` • Priority: ${task.priority.toUpperCase()}`}
-                      </p>
+                      <div className="flex items-center justify-between">
+                        <p className="text-[#6B7280] text-[15px]">
+                          Due: {formatDate(task.dueDate)} 
+                          {task.priority && ` • Priority: ${task.priority.toUpperCase()}`}
+                        </p>
+                      </div>
                     </div>
                   </div>
                 </div>
               );
             })
           )}
+
 
 
         </div>
@@ -435,12 +487,22 @@ export default function FieldDetailPage({
                       {worker.email}
                     </p>
                   </div>
+                  {isAdmin && (
+                    <button
+                      onClick={() => setRemovingWorker(worker)}
+                      className="ml-auto p-2 text-red-500 hover:bg-red-50 rounded-lg transition-colors cursor-pointer"
+                      title="Remove Worker"
+                    >
+                      <UserX size={18} />
+                    </button>
+                  )}
                 </div>
               ))
             )}
           </div>
         </div>
       )}
+
 
       {/* PART 34: Field History Section - Admin/Farmer only */}
       {!isWorker && (
@@ -536,6 +598,68 @@ export default function FieldDetailPage({
           fieldId={parseInt(id)}
           fieldName={fieldData.name}
         />
+      )}
+
+      {/* Delete Task Confirmation Modal */}
+      {deletingTaskId && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[60] p-4">
+          <div className="bg-white rounded-2xl p-8 max-w-md w-full shadow-2xl animate-in zoom-in duration-200">
+            <div className="w-16 h-16 bg-red-50 rounded-full flex items-center justify-center mb-6 mx-auto">
+              <Trash2 size={32} className="text-red-500" />
+            </div>
+            <h2 className="text-2xl font-bold text-center text-[#1F2937] mb-3">Delete Task?</h2>
+            <p className="text-[#6B7280] text-center mb-8">
+              Are you sure you want to delete this task? This action cannot be undone.
+            </p>
+            <div className="flex gap-4">
+              <button
+                onClick={() => setDeletingTaskId(null)}
+                disabled={isProcessing}
+                className="flex-1 h-12 bg-white border border-[#D1D5DB] text-[#6B7280] rounded-xl font-semibold hover:bg-[#F9FAFB] transition-all disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleDeleteTask}
+                disabled={isProcessing}
+                className="flex-1 h-12 bg-red-500 text-white rounded-xl font-semibold hover:bg-red-600 transition-all flex items-center justify-center shadow-lg hover:shadow-red-200 disabled:opacity-50"
+              >
+                {isProcessing ? <Loader2 size={20} className="animate-spin" /> : "Delete"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Remove Worker Confirmation Modal */}
+      {removingWorker && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[60] p-4">
+          <div className="bg-white rounded-2xl p-8 max-w-md w-full shadow-2xl animate-in zoom-in duration-200">
+            <div className="w-16 h-16 bg-red-50 rounded-full flex items-center justify-center mb-6 mx-auto">
+              <UserX size={32} className="text-red-500" />
+            </div>
+            <h2 className="text-2xl font-bold text-center text-[#1F2937] mb-3">Remove Worker?</h2>
+            <p className="text-[#6B7280] text-center mb-8">
+              Are you sure you want to remove <strong>{removingWorker.name}</strong> from this field? They will be unassigned from all tasks in this field.
+            </p>
+            <div className="flex gap-4">
+              <button
+                onClick={() => setRemovingWorker(null)}
+                disabled={isProcessing}
+                className="flex-1 h-12 bg-white border border-[#D1D5DB] text-[#6B7280] rounded-xl font-semibold hover:bg-[#F9FAFB] transition-all disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleRemoveWorker}
+                disabled={isProcessing}
+                className="flex-1 h-12 bg-red-500 text-white rounded-xl font-semibold hover:bg-red-600 transition-all flex items-center justify-center shadow-lg hover:shadow-red-200 disabled:opacity-50"
+              >
+                {isProcessing ? <Loader2 size={20} className="animate-spin" /> : "Remove"}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </>
   );

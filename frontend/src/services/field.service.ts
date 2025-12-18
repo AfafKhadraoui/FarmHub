@@ -56,5 +56,11 @@ export const fieldService = {
   update: async (id: number, data: any) => {
     const response = await api.put(`/fields/${id}`, data);
     return response.data;
+  },
+
+  // Unassign worker from field
+  unassignWorker: async (fieldId: number, workerId: number) => {
+    const response = await api.post(`/fields/${fieldId}/unassign-worker/${workerId}`);
+    return response.data;
   }
 };

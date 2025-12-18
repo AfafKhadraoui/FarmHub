@@ -195,6 +195,41 @@ exports.updateField = async (req, res) => {
   }
 };
 
+// POST /fields/:fieldId/unassign-worker/:workerId
+exports.unassignWorkerFromField = async (req, res) => {
+  const { fieldId, workerId } = req.params;
+  const { farmId } = req.user;
+
+  try {
+    const field = await prisma.field.findUnique({
+      where: { id: parseInt(fieldId) },
+    });
+
+    if (!field || field.farmId !== farmId) {
+      return res.status(404).json({ error: "Field not found" });
+    }
+
+    const fieldTasks = await prisma.task.findMany({
+      where: { fieldId: parseInt(fieldId) },
+      select: { id: true },
+    });
+
+    const taskIds = fieldTasks.map((t) => t.id);
+
+    await prisma.taskAssignment.deleteMany({
+      where: {
+        workerId: parseInt(workerId),
+        taskId: { in: taskIds },
+      },
+    });
+
+    res.json({ success: true, message: "Worker unassigned from field" });
+  } catch (error) {
+    console.error("Unassign Error:", error);
+    res.status(500).json({ success: false, error: "Failed to unassign worker" });
+  }
+};
+
 // DELETE /fields/:id
 exports.deleteField = async (req, res) => {
   const { id } = req.params;
