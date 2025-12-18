@@ -15,6 +15,7 @@ import {
   AlertCircle,
   Trash2,
   UserX,
+  CheckCircle,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/hooks/useAuth";
@@ -36,7 +37,7 @@ export default function FieldDetailPage({
   const [showArchiveModal, setShowArchiveModal] = useState(false);
   const [showCreateTaskModal, setShowCreateTaskModal] = useState(false);
   const [showAssignWorkersModal, setShowAssignWorkersModal] = useState(false);
-  
+
   // Confirmation Modal States
   const [deletingTaskId, setDeletingTaskId] = useState<number | null>(null);
   const [removingWorker, setRemovingWorker] = useState<any>(null);
@@ -120,11 +121,39 @@ export default function FieldDetailPage({
     try {
       setIsProcessing(true);
       await updateTaskStatus(taskId, "completed");
-      fetchData(); // Refresh to see updated progress
+
+      // Remove completed task from the list
+      setFieldData((prev: any) => ({
+        ...prev,
+        tasks: prev.tasks.filter((t: any) => t.id !== taskId),
+      }));
+
       (window as any).showToast?.("Task marked as completed!", "success");
     } catch (err) {
       console.error("Failed to complete task:", err);
       (window as any).showToast?.("Failed to update task", "error");
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  const handleStatusChange = async (taskId: number, newStatus: string) => {
+    try {
+      setIsProcessing(true);
+      await updateTaskStatus(taskId, newStatus);
+
+      // Update task status locally without full page refresh
+      setFieldData((prev: any) => ({
+        ...prev,
+        tasks: prev.tasks.map((t: any) =>
+          t.id === taskId ? { ...t, status: newStatus } : t
+        ),
+      }));
+
+      (window as any).showToast?.("Task status updated!", "success");
+    } catch (err) {
+      console.error("Failed to update task status:", err);
+      (window as any).showToast?.("Failed to update task status", "error");
     } finally {
       setIsProcessing(false);
     }
@@ -136,15 +165,17 @@ export default function FieldDetailPage({
       planted: { bg: "#CCE5FF", text: "#004085" },
       growing: { bg: "#D4EDDA", text: "#155724" },
       harvesting: { bg: "#FFF3CD", text: "#856404" },
-      harvested: { bg: "#E2E3E5", text: "#383D41" },
+      harvested: { bg: "#FEEBC8", text: "#744210" },
     };
     return colors[status.toLowerCase()] || colors.idle;
   };
 
   const getTaskIcon = (title: string) => {
     const lowerTitle = title.toLowerCase();
-    if (lowerTitle.includes("water") || lowerTitle.includes("irrig")) return <Droplet size={24} className="text-[#3B82F6]" />;
-    if (lowerTitle.includes("pest") || lowerTitle.includes("bug")) return <Bug size={24} className="text-[#EF4444]" />;
+    if (lowerTitle.includes("water") || lowerTitle.includes("irrig"))
+      return <Droplet size={24} className="text-[#3B82F6]" />;
+    if (lowerTitle.includes("pest") || lowerTitle.includes("bug"))
+      return <Bug size={24} className="text-[#EF4444]" />;
     return <Leaf size={24} className="text-[#F59E0B]" />;
   };
 
@@ -182,7 +213,9 @@ export default function FieldDetailPage({
           <AlertCircle size={32} className="text-red-500" />
         </div>
         <div>
-          <h2 className="text-2xl font-bold text-[#1F2937] mb-2">Oops! Something went wrong</h2>
+          <h2 className="text-2xl font-bold text-[#1F2937] mb-2">
+            Oops! Something went wrong
+          </h2>
           <p className="text-[#6B7280]">{error || "Field not found"}</p>
         </div>
         <button
@@ -260,7 +293,8 @@ export default function FieldDetailPage({
                   color: getStatusColor(fieldData.status).text,
                 }}
               >
-                {fieldData.status.charAt(0).toUpperCase() + fieldData.status.slice(1)}
+                {fieldData.status.charAt(0).toUpperCase() +
+                  fieldData.status.slice(1)}
               </span>
             </div>
             <p className="mt-3 text-[#6B7280] text-[18px]">
@@ -286,14 +320,18 @@ export default function FieldDetailPage({
               <div className="font-semibold text-[#374151] text-[16px] mb-2">
                 Size
               </div>
-              <div className="text-[#6B7280] text-[15px]">{fieldData.size} hectares</div>
+              <div className="text-[#6B7280] text-[15px]">
+                {fieldData.size} hectares
+              </div>
             </div>
 
             <div>
               <div className="font-semibold text-[#374151] text-[16px] mb-2">
                 Crop Type
               </div>
-              <div className="text-[#6B7280] text-[15px]">{fieldData.cropType}</div>
+              <div className="text-[#6B7280] text-[15px]">
+                {fieldData.cropType}
+              </div>
             </div>
 
             <div>
@@ -301,7 +339,8 @@ export default function FieldDetailPage({
                 Status
               </div>
               <div className="text-[#6B7280] text-[15px]">
-                {fieldData.status.charAt(0).toUpperCase() + fieldData.status.slice(1)}
+                {fieldData.status.charAt(0).toUpperCase() +
+                  fieldData.status.slice(1)}
               </div>
             </div>
 
@@ -310,7 +349,9 @@ export default function FieldDetailPage({
                 <div className="font-semibold text-[#374151] text-[16px] mb-2">
                   Location
                 </div>
-                <div className="text-[#6B7280] text-[15px]">{fieldData.location}</div>
+                <div className="text-[#6B7280] text-[15px]">
+                  {fieldData.location}
+                </div>
               </div>
             )}
 
@@ -343,14 +384,18 @@ export default function FieldDetailPage({
               <div className="font-semibold text-[#374151] text-[16px] mb-2">
                 Planted
               </div>
-              <div className="text-[#6B7280] text-[15px]">{formatDate(fieldData.plantedDate)}</div>
+              <div className="text-[#6B7280] text-[15px]">
+                {formatDate(fieldData.plantedDate)}
+              </div>
             </div>
 
             <div>
               <div className="font-semibold text-[#374151] text-[16px] mb-2">
                 Expected Harvest
               </div>
-              <div className="text-[#6B7280] text-[15px]">{formatDate(fieldData.harvestDate)}</div>
+              <div className="text-[#6B7280] text-[15px]">
+                {formatDate(fieldData.harvestDate)}
+              </div>
             </div>
 
             {/* Progress Timeline Visual */}
@@ -363,10 +408,13 @@ export default function FieldDetailPage({
                   {[
                     { label: "Planted", key: "planted" },
                     { label: "Growing", key: "growing" },
-                    { label: "Done", key: "harvested" }
+                    { label: "Done", key: "harvested" },
                   ].map((step, idx, arr) => {
                     const statusOrder = ["planted", "growing", "harvested"];
-                    const normalizedStatus = fieldData.status.toLowerCase() === "harvesting" ? "harvested" : fieldData.status.toLowerCase();
+                    const normalizedStatus =
+                      fieldData.status.toLowerCase() === "harvesting"
+                        ? "harvested"
+                        : fieldData.status.toLowerCase();
                     const currentIdx = statusOrder.indexOf(normalizedStatus);
                     const isCompleted = currentIdx > idx;
                     const isActive = currentIdx === idx;
@@ -374,31 +422,49 @@ export default function FieldDetailPage({
                     return (
                       <React.Fragment key={step.key}>
                         <div className="flex flex-col items-center flex-1 relative">
-                          <div 
+                          <div
                             className={`w-5 h-5 rounded-full z-10 flex items-center justify-center transition-all ${
-                              isCompleted ? "bg-[#4CAF50]" : 
-                              isActive ? "bg-white border-4 border-[#4CAF50] shadow-[0_0_10px_rgba(76,175,80,0.4)]" : 
-                              "bg-[#D1D5DB]"
+                              isCompleted
+                                ? "bg-[#4CAF50]"
+                                : isActive
+                                ? "bg-white border-4 border-[#4CAF50] shadow-[0_0_10px_rgba(76,175,80,0.4)]"
+                                : "bg-[#D1D5DB]"
                             }`}
                           >
                             {isCompleted && (
-                              <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                              <svg
+                                className="w-3 h-3 text-white"
+                                fill="none"
+                                viewBox="0 0 24 24"
+                                stroke="currentColor"
+                              >
+                                <path
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  strokeWidth={3}
+                                  d="M5 13l4 4L19 7"
+                                />
                               </svg>
                             )}
                           </div>
-                          <span className={`mt-2 text-[12px] font-bold transition-colors ${
-                            isCompleted ? "text-[#4CAF50]" : 
-                            isActive ? "text-[#1F2937]" : 
-                            "text-[#9CA3AF]"
-                          }`}>
+                          <span
+                            className={`mt-2 text-[12px] font-bold transition-colors ${
+                              isCompleted
+                                ? "text-[#4CAF50]"
+                                : isActive
+                                ? "text-[#1F2937]"
+                                : "text-[#9CA3AF]"
+                            }`}
+                          >
                             {step.label}
                           </span>
                         </div>
                         {idx < arr.length - 1 && (
-                          <div className={`flex-1 h-1 -mx-2 mt-2 self-start transform translate-y-0.5 rounded-full ${
-                            currentIdx > idx ? "bg-[#4CAF50]" : "bg-[#E5E7EB]"
-                          }`}></div>
+                          <div
+                            className={`flex-1 h-1 -mx-2 mt-2 self-start transform translate-y-0.5 rounded-full ${
+                              currentIdx > idx ? "bg-[#4CAF50]" : "bg-[#E5E7EB]"
+                            }`}
+                          ></div>
                         )}
                       </React.Fragment>
                     );
@@ -417,7 +483,9 @@ export default function FieldDetailPage({
             className="font-semibold text-[#1F2937]"
             style={{ fontFamily: "Poppins, sans-serif", fontSize: "24px" }}
           >
-            {isAdmin ? `Active Tasks (${activeTasks.length} tasks)` : "Your Tasks"}
+            {isAdmin
+              ? `Active Tasks (${activeTasks.length} tasks)`
+              : "Your Tasks"}
           </h2>
           {isAdmin && (
             <button
@@ -432,12 +500,21 @@ export default function FieldDetailPage({
 
         <div className="bg-white border border-[#E5E7EB] rounded-2xl p-8 shadow-sm">
           {activeTasks.length === 0 ? (
-            <p className="text-[#6B7280] italic text-center py-4">No active tasks</p>
+            <p className="text-[#6B7280] italic text-center py-4">
+              No active tasks
+            </p>
           ) : (
             activeTasks.map((task: any, idx: number) => {
               const styles = getTaskStatusStyles(task.status);
               return (
-                <div key={task.id} className={`py-5 ${idx !== activeTasks.length - 1 ? "border-b border-[#F3F4F6]" : ""}`}>
+                <div
+                  key={task.id}
+                  className={`py-5 ${
+                    idx !== activeTasks.length - 1
+                      ? "border-b border-[#F3F4F6]"
+                      : ""
+                  }`}
+                >
                   <div className="flex items-start gap-4">
                     <div className="w-12 h-12 bg-gray-50 rounded-full flex items-center justify-center shrink-0">
                       {getTaskIcon(task.title)}
@@ -450,7 +527,10 @@ export default function FieldDetailPage({
                         <div className="flex items-center gap-2">
                           <span
                             className="px-3 py-1.5 rounded-lg font-semibold text-[14px]"
-                            style={{ backgroundColor: styles.bg, color: styles.text }}
+                            style={{
+                              backgroundColor: styles.bg,
+                              color: styles.text,
+                            }}
                           >
                             {task.status.replace("_", " ").toUpperCase()}
                           </span>
@@ -465,22 +545,56 @@ export default function FieldDetailPage({
                           )}
                         </div>
                       </div>
-                      <div className="flex items-center justify-between">
+                      <div className="flex items-center justify-between mt-3">
                         <p className="text-[#6B7280] text-[15px]">
-                          Due: {formatDate(task.dueDate)} 
-                          {task.priority && ` • Priority: ${task.priority.toUpperCase()}`}
+                          Due: {formatDate(task.dueDate)}
+                          {task.priority &&
+                            ` • Priority: ${task.priority.toUpperCase()}`}
                         </p>
                         {isWorker && (
-                          <button
-                            onClick={() => handleCompleteTask(task.id)}
-                            disabled={isProcessing}
-                            className="h-8 px-3 bg-green-50 text-green-600 rounded-lg text-xs font-bold hover:bg-green-100 transition-colors flex items-center gap-1 cursor-pointer disabled:opacity-50"
-                          >
-                            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
-                            </svg>
-                            Mark as Complete
-                          </button>
+                          <div className="flex items-center gap-3">
+                            {/* Always show dropdown and button, regardless of status */}
+                            <>
+                              {/* Status Dropdown for Workers */}
+                              <select
+                                value={task.status}
+                                onChange={(e) => {
+                                  const newStatus = e.target.value;
+                                  handleStatusChange(task.id, newStatus);
+                                }}
+                                disabled={isProcessing}
+                                style={{ minWidth: "140px" }}
+                                className="px-3.5 py-2 border-2 border-gray-200 rounded-lg text-sm font-medium bg-white hover:border-green-500 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 disabled:opacity-50 disabled:cursor-not-allowed transition-all cursor-pointer shadow-sm"
+                              >
+                                <option value="pending">Pending</option>
+                                <option value="in_progress">In Progress</option>
+                                <option value="completed">Completed</option>
+                              </select>
+                              {/* Quick Complete Button with Tooltip - removes task from list */}
+                              <div className="relative group">
+                                <button
+                                  onClick={() => handleCompleteTask(task.id)}
+                                  disabled={isProcessing}
+                                  className="inline-flex items-center justify-center w-10 h-10 bg-gradient-to-r from-[#4CAF50] to-[#45a049] text-white rounded-lg font-semibold hover:from-[#45a049] hover:to-[#388E3C] transition-all shadow-md hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed transform hover:scale-110 active:scale-95"
+                                  aria-label="Mark as completed and archive"
+                                >
+                                  {isProcessing ? (
+                                    <Loader2
+                                      size={18}
+                                      className="animate-spin"
+                                    />
+                                  ) : (
+                                    <CheckCircle size={20} strokeWidth={2.5} />
+                                  )}
+                                </button>
+                                {/* Tooltip */}
+                                <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-1.5 bg-gray-900 text-white text-xs rounded-lg whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none shadow-lg z-10">
+                                  Complete & Archive Task
+                                  <div className="absolute top-full left-1/2 transform -translate-x-1/2 -mt-1 border-4 border-transparent border-t-gray-900"></div>
+                                </div>
+                              </div>
+                            </>
+                          </div>
                         )}
                       </div>
                     </div>
@@ -489,9 +603,6 @@ export default function FieldDetailPage({
               );
             })
           )}
-
-
-
         </div>
       </div>
 
@@ -518,13 +629,26 @@ export default function FieldDetailPage({
 
           <div className="bg-white border border-[#E5E7EB] rounded-2xl p-8 shadow-sm">
             {workers.length === 0 ? (
-              <p className="text-[#6B7280] italic text-center py-4">No workers assigned to this field</p>
+              <p className="text-[#6B7280] italic text-center py-4">
+                No workers assigned to this field
+              </p>
             ) : (
               workers.map((worker: any, idx: number) => (
-                <div key={worker.id} className={`py-5 ${idx !== workers.length - 1 ? "border-b border-[#F3F4F6]" : ""} flex items-center gap-5`}>
+                <div
+                  key={worker.id}
+                  className={`py-5 ${
+                    idx !== workers.length - 1
+                      ? "border-b border-[#F3F4F6]"
+                      : ""
+                  } flex items-center gap-5`}
+                >
                   <div className="relative">
                     <div className="w-14 h-14 bg-linear-to-br from-[#4CAF50] to-[#388E3C] rounded-full flex items-center justify-center text-white font-bold text-[16px]">
-                      {worker.name.split(" ").map((n: string) => n[0]).join("").toUpperCase()}
+                      {worker.name
+                        .split(" ")
+                        .map((n: string) => n[0])
+                        .join("")
+                        .toUpperCase()}
                     </div>
                     <div className="absolute bottom-0 right-0 w-3 h-3 bg-[#4CAF50] rounded-full border-2 border-white"></div>
                   </div>
@@ -552,7 +676,6 @@ export default function FieldDetailPage({
         </div>
       )}
 
-
       {/* PART 34: Field History Section - Admin/Farmer only */}
       {!isWorker && (
         <div className="mt-8">
@@ -574,13 +697,24 @@ export default function FieldDetailPage({
 
           <div className="bg-white border border-[#E5E7EB] rounded-2xl p-8 shadow-sm">
             {history.length === 0 ? (
-              <p className="text-[#6B7280] italic text-center py-4">No history records found</p>
+              <p className="text-[#6B7280] italic text-center py-4">
+                No history records found
+              </p>
             ) : (
               history.map((event: any, idx: number) => (
-                <div key={idx} className={`py-5 ${idx !== history.length - 1 ? "border-b border-[#F3F4F6]" : ""} flex items-start gap-5`}>
-                  <div className={`w-12 h-12 rounded-full flex items-center justify-center shrink-0 ${
-                    event.type === "status" ? "bg-[#E8F5E9]" : "bg-[#DBEAFE]"
-                  }`}>
+                <div
+                  key={idx}
+                  className={`py-5 ${
+                    idx !== history.length - 1
+                      ? "border-b border-[#F3F4F6]"
+                      : ""
+                  } flex items-start gap-5`}
+                >
+                  <div
+                    className={`w-12 h-12 rounded-full flex items-center justify-center shrink-0 ${
+                      event.type === "status" ? "bg-[#E8F5E9]" : "bg-[#DBEAFE]"
+                    }`}
+                  >
                     {event.type === "status" ? (
                       <Calendar size={24} className="text-[#4CAF50]" />
                     ) : (
@@ -620,8 +754,12 @@ export default function FieldDetailPage({
             location: fieldData.location || "",
             cropType: (fieldData.cropType || "").toLowerCase(),
             status: (fieldData.status || "idle").toLowerCase(),
-            plantingDate: fieldData.plantedDate ? fieldData.plantedDate.split("T")[0] : "",
-            harvestDate: fieldData.harvestDate ? fieldData.harvestDate.split("T")[0] : "",
+            plantingDate: fieldData.plantedDate
+              ? fieldData.plantedDate.split("T")[0]
+              : "",
+            harvestDate: fieldData.harvestDate
+              ? fieldData.harvestDate.split("T")[0]
+              : "",
             description: fieldData.statusNotes || "",
           }}
         />
@@ -656,9 +794,12 @@ export default function FieldDetailPage({
             <div className="w-16 h-16 bg-red-50 rounded-full flex items-center justify-center mb-6 mx-auto">
               <Trash2 size={32} className="text-red-500" />
             </div>
-            <h2 className="text-2xl font-bold text-center text-[#1F2937] mb-3">Delete Task?</h2>
+            <h2 className="text-2xl font-bold text-center text-[#1F2937] mb-3">
+              Delete Task?
+            </h2>
             <p className="text-[#6B7280] text-center mb-8">
-              Are you sure you want to delete this task? This action cannot be undone.
+              Are you sure you want to delete this task? This action cannot be
+              undone.
             </p>
             <div className="flex gap-4">
               <button
@@ -673,7 +814,11 @@ export default function FieldDetailPage({
                 disabled={isProcessing}
                 className="flex-1 h-12 bg-red-500 text-white rounded-xl font-semibold hover:bg-red-600 transition-all flex items-center justify-center shadow-lg hover:shadow-red-200 disabled:opacity-50"
               >
-                {isProcessing ? <Loader2 size={20} className="animate-spin" /> : "Delete"}
+                {isProcessing ? (
+                  <Loader2 size={20} className="animate-spin" />
+                ) : (
+                  "Delete"
+                )}
               </button>
             </div>
           </div>
@@ -687,9 +832,13 @@ export default function FieldDetailPage({
             <div className="w-16 h-16 bg-red-50 rounded-full flex items-center justify-center mb-6 mx-auto">
               <UserX size={32} className="text-red-500" />
             </div>
-            <h2 className="text-2xl font-bold text-center text-[#1F2937] mb-3">Remove Worker?</h2>
+            <h2 className="text-2xl font-bold text-center text-[#1F2937] mb-3">
+              Remove Worker?
+            </h2>
             <p className="text-[#6B7280] text-center mb-8">
-              Are you sure you want to remove <strong>{removingWorker.name}</strong> from this field? They will be unassigned from all tasks in this field.
+              Are you sure you want to remove{" "}
+              <strong>{removingWorker.name}</strong> from this field? They will
+              be unassigned from all tasks in this field.
             </p>
             <div className="flex gap-4">
               <button
@@ -704,7 +853,11 @@ export default function FieldDetailPage({
                 disabled={isProcessing}
                 className="flex-1 h-12 bg-red-500 text-white rounded-xl font-semibold hover:bg-red-600 transition-all flex items-center justify-center shadow-lg hover:shadow-red-200 disabled:opacity-50"
               >
-                {isProcessing ? <Loader2 size={20} className="animate-spin" /> : "Remove"}
+                {isProcessing ? (
+                  <Loader2 size={20} className="animate-spin" />
+                ) : (
+                  "Remove"
+                )}
               </button>
             </div>
           </div>

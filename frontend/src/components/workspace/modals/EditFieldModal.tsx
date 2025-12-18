@@ -31,7 +31,9 @@ export function EditFieldModal({
     size: fieldData?.size || "",
     location: fieldData?.location || "",
     cropType: fieldData?.cropType || "",
-    status: (fieldData?.status === "harvesting" ? "harvested" : fieldData?.status) || "idle",
+    status:
+      (fieldData?.status === "harvesting" ? "harvested" : fieldData?.status) ||
+      "idle",
     customCrop: "",
     plantingDate: fieldData?.plantingDate || "",
     harvestDate: fieldData?.harvestDate || "",
@@ -42,15 +44,50 @@ export function EditFieldModal({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    // Validation
+
+    // Comprehensive Validation
     const newErrors: Record<string, string> = {};
+
+    // Required fields
+    if (!formData.fieldName.trim()) {
+      newErrors.fieldName = "Field name is required";
+    } else if (formData.fieldName.trim().length < 2) {
+      newErrors.fieldName = "Field name must be at least 2 characters";
+    }
+
+    if (!formData.size) {
+      newErrors.size = "Size is required";
+    } else if (parseFloat(formData.size) <= 0) {
+      newErrors.size = "Size must be greater than 0";
+    } else if (parseFloat(formData.size) > 10000) {
+      newErrors.size = "Size seems too large. Please verify.";
+    }
+
+    if (!formData.cropType) {
+      newErrors.cropType = "Crop type is required";
+    }
+
+    if (formData.cropType === "other" && !formData.customCrop.trim()) {
+      newErrors.customCrop = "Please specify the crop name";
+    }
+
+    // Date validations
     if (formData.plantingDate && formData.harvestDate) {
-      if (new Date(formData.harvestDate) < new Date(formData.plantingDate)) {
+      const plantDate = new Date(formData.plantingDate);
+      const harvestDate = new Date(formData.harvestDate);
+
+      if (harvestDate < plantDate) {
         newErrors.harvestDate = "Harvest date cannot be before planting date";
       }
+
+      // Check if dates are too far apart (more than 2 years)
+      const daysDiff =
+        (harvestDate.getTime() - plantDate.getTime()) / (1000 * 60 * 60 * 24);
+      if (daysDiff > 730) {
+        newErrors.harvestDate = "Harvest date seems too far in the future";
+      }
     }
-    
+
     if (Object.keys(newErrors).length > 0) {
       setErrors(newErrors);
       return;
@@ -60,19 +97,28 @@ export function EditFieldModal({
     setIsLoading(true);
 
     try {
-      const crop = formData.cropType === "other" ? formData.customCrop : formData.cropType;
-      
+      const crop =
+        formData.cropType === "other" ? formData.customCrop : formData.cropType;
+
       const response = await fieldService.update(fieldId, {
         name: formData.fieldName,
         size: parseFloat(formData.size),
         cropType: crop,
         status: formData.status,
-        plantedDate: formData.plantingDate ? new Date(formData.plantingDate) : null,
-        harvestDate: formData.harvestDate ? new Date(formData.harvestDate) : null,
+        plantedDate: formData.plantingDate
+          ? new Date(formData.plantingDate)
+          : null,
+        harvestDate: formData.harvestDate
+          ? new Date(formData.harvestDate)
+          : null,
       });
 
       // If the field was versioned (ID changed), redirect to the new ID
-      if (response.field && response.field.id && response.field.id !== fieldId) {
+      if (
+        response.field &&
+        response.field.id &&
+        response.field.id !== fieldId
+      ) {
         onClose();
         (window as any).showToast?.("New crop season started!", "success");
         window.location.href = `/fields/${response.field.id}`;
@@ -322,10 +368,14 @@ export function EditFieldModal({
                 onChange={(e) =>
                   setFormData({ ...formData, harvestDate: e.target.value })
                 }
-                className={`w-full h-11 px-4 border ${errors.harvestDate ? "border-red-500" : "border-[#D1D5DB]"} rounded-lg focus:outline-none focus:ring-2 focus:ring-[#4CAF50] focus:border-transparent`}
+                className={`w-full h-11 px-4 border ${
+                  errors.harvestDate ? "border-red-500" : "border-[#D1D5DB]"
+                } rounded-lg focus:outline-none focus:ring-2 focus:ring-[#4CAF50] focus:border-transparent`}
               />
               {errors.harvestDate && (
-                <p className="mt-1 text-xs text-red-500">{errors.harvestDate}</p>
+                <p className="mt-1 text-xs text-red-500">
+                  {errors.harvestDate}
+                </p>
               )}
             </div>
           </div>

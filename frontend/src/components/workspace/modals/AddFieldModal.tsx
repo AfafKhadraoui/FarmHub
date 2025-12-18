@@ -11,7 +11,11 @@ interface AddFieldModalProps {
   onSuccess?: () => void;
 }
 
-export function AddFieldModal({ isOpen, onClose, onSuccess }: AddFieldModalProps): React.JSX.Element {
+export function AddFieldModal({
+  isOpen,
+  onClose,
+  onSuccess,
+}: AddFieldModalProps): React.JSX.Element {
   const [formData, setFormData] = useState({
     fieldName: "",
     size: "",
@@ -27,15 +31,50 @@ export function AddFieldModal({ isOpen, onClose, onSuccess }: AddFieldModalProps
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    // Validation
+
+    // Comprehensive Validation
     const newErrors: Record<string, string> = {};
+
+    // Required fields
+    if (!formData.fieldName.trim()) {
+      newErrors.fieldName = "Field name is required";
+    } else if (formData.fieldName.trim().length < 2) {
+      newErrors.fieldName = "Field name must be at least 2 characters";
+    }
+
+    if (!formData.size) {
+      newErrors.size = "Size is required";
+    } else if (parseFloat(formData.size) <= 0) {
+      newErrors.size = "Size must be greater than 0";
+    } else if (parseFloat(formData.size) > 10000) {
+      newErrors.size = "Size seems too large. Please verify.";
+    }
+
+    if (!formData.cropType) {
+      newErrors.cropType = "Crop type is required";
+    }
+
+    if (formData.cropType === "other" && !formData.customCrop.trim()) {
+      newErrors.customCrop = "Please specify the crop name";
+    }
+
+    // Date validations
     if (formData.plantingDate && formData.harvestDate) {
-      if (new Date(formData.harvestDate) < new Date(formData.plantingDate)) {
+      const plantDate = new Date(formData.plantingDate);
+      const harvestDate = new Date(formData.harvestDate);
+
+      if (harvestDate < plantDate) {
         newErrors.harvestDate = "Harvest date cannot be before planting date";
       }
+
+      // Check if dates are too far apart (more than 2 years)
+      const daysDiff =
+        (harvestDate.getTime() - plantDate.getTime()) / (1000 * 60 * 60 * 24);
+      if (daysDiff > 730) {
+        newErrors.harvestDate = "Harvest date seems too far in the future";
+      }
     }
-    
+
     if (Object.keys(newErrors).length > 0) {
       setErrors(newErrors);
       return;
@@ -45,8 +84,9 @@ export function AddFieldModal({ isOpen, onClose, onSuccess }: AddFieldModalProps
     setIsLoading(true);
 
     try {
-      const crop = formData.cropType === "other" ? formData.customCrop : formData.cropType;
-      
+      const crop =
+        formData.cropType === "other" ? formData.customCrop : formData.cropType;
+
       await fieldService.create({
         name: formData.fieldName,
         size: parseFloat(formData.size),
@@ -59,7 +99,7 @@ export function AddFieldModal({ isOpen, onClose, onSuccess }: AddFieldModalProps
       onClose();
       if (onSuccess) onSuccess();
       (window as any).showToast?.("Field created successfully!", "success");
-      
+
       // Reset form
       setFormData({
         fieldName: "",
@@ -79,10 +119,10 @@ export function AddFieldModal({ isOpen, onClose, onSuccess }: AddFieldModalProps
     }
   };
 
-  const isFormValid = 
-    formData.fieldName && 
-    formData.size && 
-    formData.cropType && 
+  const isFormValid =
+    formData.fieldName &&
+    formData.size &&
+    formData.cropType &&
     (formData.cropType !== "other" || formData.customCrop.trim() !== "");
 
   const footer = (
@@ -130,12 +170,18 @@ export function AddFieldModal({ isOpen, onClose, onSuccess }: AddFieldModalProps
             <input
               type="text"
               value={formData.fieldName}
-              onChange={(e) =>
-                setFormData({ ...formData, fieldName: e.target.value })
-              }
+              onChange={(e) => {
+                setFormData({ ...formData, fieldName: e.target.value });
+                if (errors.fieldName) setErrors({ ...errors, fieldName: "" });
+              }}
               placeholder="e.g., North Field, Field A"
-              className="w-full h-11 px-4 border border-[#D1D5DB] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#4CAF50] focus:border-transparent"
+              className={`w-full h-11 px-4 border ${
+                errors.fieldName ? "border-red-500" : "border-[#D1D5DB]"
+              } rounded-lg focus:outline-none focus:ring-2 focus:ring-[#4CAF50] focus:border-transparent`}
             />
+            {errors.fieldName && (
+              <p className="mt-1 text-xs text-red-500">{errors.fieldName}</p>
+            )}
           </div>
 
           {/* Size */}
@@ -145,13 +191,22 @@ export function AddFieldModal({ isOpen, onClose, onSuccess }: AddFieldModalProps
             </label>
             <input
               type="number"
+              step="0.01"
+              min="0.01"
+              max="10000"
               value={formData.size}
-              onChange={(e) =>
-                setFormData({ ...formData, size: e.target.value })
-              }
+              onChange={(e) => {
+                setFormData({ ...formData, size: e.target.value });
+                if (errors.size) setErrors({ ...errors, size: "" });
+              }}
               placeholder="e.g., 12"
-              className="w-full h-11 px-4 border border-[#D1D5DB] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#4CAF50] focus:border-transparent"
+              className={`w-full h-11 px-4 border ${
+                errors.size ? "border-red-500" : "border-[#D1D5DB]"
+              } rounded-lg focus:outline-none focus:ring-2 focus:ring-[#4CAF50] focus:border-transparent`}
             />
+            {errors.size && (
+              <p className="mt-1 text-xs text-red-500">{errors.size}</p>
+            )}
           </div>
 
           {/* Location */}
@@ -184,10 +239,13 @@ export function AddFieldModal({ isOpen, onClose, onSuccess }: AddFieldModalProps
             </label>
             <select
               value={formData.cropType}
-              onChange={(e) =>
-                setFormData({ ...formData, cropType: e.target.value })
-              }
-              className="w-full h-11 px-4 border border-[#D1D5DB] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#4CAF50] focus:border-transparent bg-white"
+              onChange={(e) => {
+                setFormData({ ...formData, cropType: e.target.value });
+                if (errors.cropType) setErrors({ ...errors, cropType: "" });
+              }}
+              className={`w-full h-11 px-4 border ${
+                errors.cropType ? "border-red-500" : "border-[#D1D5DB]"
+              } rounded-lg focus:outline-none focus:ring-2 focus:ring-[#4CAF50] focus:border-transparent bg-white`}
             >
               <option value="">Select crop type</option>
               <option value="wheat">Wheat</option>
@@ -201,23 +259,33 @@ export function AddFieldModal({ isOpen, onClose, onSuccess }: AddFieldModalProps
               <option value="onions">Onions</option>
               <option value="other">Other</option>
             </select>
+            {errors.cropType && (
+              <p className="mt-1 text-xs text-red-500">{errors.cropType}</p>
+            )}
           </div>
 
           {/* Custom Crop (if Other selected) */}
           {formData.cropType === "other" && (
             <div>
               <label className="block font-medium text-[#374151] mb-2">
-                Specify Crop
+                Specify Crop <span className="text-[#EF4444]">*</span>
               </label>
               <input
                 type="text"
                 value={formData.customCrop}
-                onChange={(e) =>
-                  setFormData({ ...formData, customCrop: e.target.value })
-                }
+                onChange={(e) => {
+                  setFormData({ ...formData, customCrop: e.target.value });
+                  if (errors.customCrop)
+                    setErrors({ ...errors, customCrop: "" });
+                }}
                 placeholder="Enter crop name"
-                className="w-full h-11 px-4 border border-[#D1D5DB] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#4CAF50] focus:border-transparent"
+                className={`w-full h-11 px-4 border ${
+                  errors.customCrop ? "border-red-500" : "border-[#D1D5DB]"
+                } rounded-lg focus:outline-none focus:ring-2 focus:ring-[#4CAF50] focus:border-transparent`}
               />
+              {errors.customCrop && (
+                <p className="mt-1 text-xs text-red-500">{errors.customCrop}</p>
+              )}
             </div>
           )}
         </div>
@@ -255,10 +323,14 @@ export function AddFieldModal({ isOpen, onClose, onSuccess }: AddFieldModalProps
                 onChange={(e) =>
                   setFormData({ ...formData, harvestDate: e.target.value })
                 }
-                className={`w-full h-11 px-4 border ${errors.harvestDate ? "border-red-500" : "border-[#D1D5DB]"} rounded-lg focus:outline-none focus:ring-2 focus:ring-[#4CAF50] focus:border-transparent`}
+                className={`w-full h-11 px-4 border ${
+                  errors.harvestDate ? "border-red-500" : "border-[#D1D5DB]"
+                } rounded-lg focus:outline-none focus:ring-2 focus:ring-[#4CAF50] focus:border-transparent`}
               />
               {errors.harvestDate && (
-                <p className="mt-1 text-xs text-red-500">{errors.harvestDate}</p>
+                <p className="mt-1 text-xs text-red-500">
+                  {errors.harvestDate}
+                </p>
               )}
             </div>
           </div>

@@ -37,7 +37,7 @@ export default function FieldsPage() {
     try {
       setIsLoading(true);
       let data: any[] = [];
-      
+
       if (isWorker) {
         data = await fieldService.getWorkerFields();
       } else {
@@ -49,14 +49,16 @@ export default function FieldsPage() {
       const mappedFields: Field[] = data.map((field: any) => {
         // Calculate active tasks
         const tasks = field.tasks || [];
-        const activeTasksCount = tasks.filter((t: any) => t.status !== "completed").length;
+        const activeTasksCount = tasks.filter(
+          (t: any) => t.status !== "completed"
+        ).length;
 
         // Calculate unique assigned workers
         const workerIds = new Set();
         tasks.forEach((t: any) => {
           if (t.taskAssignments) {
             t.taskAssignments.forEach((ta: any) => {
-               if (ta.workerId) workerIds.add(ta.workerId);
+              if (ta.workerId) workerIds.add(ta.workerId);
             });
           }
         });
@@ -93,14 +95,16 @@ export default function FieldsPage() {
 
   // Apply status filter
   const fields =
-    filter === "all" ? fieldsData : fieldsData.filter((f) => f.status === filter);
+    filter === "all"
+      ? fieldsData
+      : fieldsData.filter((f) => f.status === filter);
 
   const getStatusColor = (status: string) => {
     const colors: Record<string, { bg: string; text: string }> = {
       idle: { bg: "#F8D7DA", text: "#721C24" },
       planted: { bg: "#CCE5FF", text: "#004085" },
       growing: { bg: "#D4EDDA", text: "#155724" },
-      harvested: { bg: "#E2E3E5", text: "#383D41" },
+      harvested: { bg: "#FEEBC8", text: "#744210" },
     };
     return colors[status] || colors.idle;
   };
@@ -108,7 +112,7 @@ export default function FieldsPage() {
   const handleViewField = (fieldId: number) => {
     // router.push(`/fields/${fieldId}`);
     // For now notify not implemented if page doesn't exist
-    // Check if the page exists in codebase? 
+    // Check if the page exists in codebase?
     // Usually it is [id]/page.tsx. Assuming it exists.
     router.push(`/fields/${fieldId}`);
   };
@@ -162,35 +166,41 @@ export default function FieldsPage() {
               {/* Filter Menu */}
               {showFilterMenu && (
                 <div className="absolute right-0 mt-2 w-52 bg-white border border-[#E5E7EB] rounded-xl shadow-xl z-50 py-1 overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200">
-                  {["all", "idle", "planted", "growing", "harvested"].map((status) => {
-                    const statusColor = status !== "all" ? getStatusColor(status) : null;
-                    return (
-                      <button
-                        key={status}
-                        onClick={() => {
-                          setFilter(status as any);
-                          setShowFilterMenu(false);
-                        }}
-                        className={`w-full text-left px-4 py-2.5 flex items-center gap-3 hover:bg-[#F9FAFB] transition-colors ${
-                          filter === status
-                            ? "bg-[#F0F9F1] text-[#4CAF50] font-semibold"
-                            : "text-[#4B5563]"
-                        }`}
-                      >
-                        {status === "all" ? (
-                          <div className="w-2.5 h-2.5 rounded-full bg-[#9CA3AF]" />
-                        ) : (
-                          <div 
-                            className="w-2.5 h-2.5 rounded-full" 
-                            style={{ backgroundColor: statusColor?.text }}
-                          />
-                        )}
-                        <span className="text-[14px]">
-                          {status === "all" ? "All Fields" : status.charAt(0).toUpperCase() + status.slice(1)}
-                        </span>
-                      </button>
-                    );
-                  })}
+                  {["all", "idle", "planted", "growing", "harvested"].map(
+                    (status) => {
+                      const statusColor =
+                        status !== "all" ? getStatusColor(status) : null;
+                      return (
+                        <button
+                          key={status}
+                          onClick={() => {
+                            setFilter(status as any);
+                            setShowFilterMenu(false);
+                          }}
+                          className={`w-full text-left px-4 py-2.5 flex items-center gap-3 hover:bg-[#F9FAFB] transition-colors ${
+                            filter === status
+                              ? "bg-[#F0F9F1] text-[#4CAF50] font-semibold"
+                              : "text-[#4B5563]"
+                          }`}
+                        >
+                          {status === "all" ? (
+                            <div className="w-2.5 h-2.5 rounded-full bg-[#9CA3AF]" />
+                          ) : (
+                            <div
+                              className="w-2.5 h-2.5 rounded-full"
+                              style={{ backgroundColor: statusColor?.text }}
+                            />
+                          )}
+                          <span className="text-[14px]">
+                            {status === "all"
+                              ? "All Fields"
+                              : status.charAt(0).toUpperCase() +
+                                status.slice(1)}
+                          </span>
+                        </button>
+                      );
+                    }
+                  )}
                 </div>
               )}
             </div>
@@ -237,72 +247,75 @@ export default function FieldsPage() {
           {fields
             .filter((f) => filter === "all" || f.status === filter)
             .map((field) => {
-            const statusColor = getStatusColor(field.status);
-            return (
-              <div
-                key={field.id}
-                className="bg-white border border-[#E5E7EB] rounded-2xl p-8 shadow-sm hover:shadow-lg transition-all flex flex-col h-[480px]"
-              >
-                {/* Icon */}
-                <div className="w-16 h-16 bg-[#E8F5E9] rounded-full flex items-center justify-center mb-6">
-                  <MapPin size={36} className="text-[#4CAF50]" />
-                </div>
-
-                {/* Field Name */}
-                <h3 className="font-semibold text-[#1F2937] text-[22px] mb-3">
-                  {field.name}
-                </h3>
-
-                {/* Details */}
-                <p className="text-[#6B7280] text-[16px] mb-2">{field.size}</p>
-                <p className="text-[#6B7280] text-[16px] mb-5">
-                  {field.cropType}
-                </p>
-
-                {/* Status Badge */}
-                <span
-                  className="inline-block px-4 py-2 rounded-xl font-bold text-[13px] mb-6 w-fit"
-                  style={{
-                    backgroundColor: statusColor.bg,
-                    color: statusColor.text,
-                  }}
+              const statusColor = getStatusColor(field.status);
+              return (
+                <div
+                  key={field.id}
+                  className="bg-white border border-[#E5E7EB] rounded-2xl p-8 shadow-sm hover:shadow-lg transition-all flex flex-col h-[480px]"
                 >
-                  {field.status.charAt(0).toUpperCase() + field.status.slice(1)}
-                </span>
-
-                {/* Progress Section */}
-                <div className="mb-8">
-                  <div className="font-semibold text-[#374151] mb-3 text-[16px]">
-                    Progress: {field.progress}%
+                  {/* Icon */}
+                  <div className="w-16 h-16 bg-[#E8F5E9] rounded-full flex items-center justify-center mb-6">
+                    <MapPin size={36} className="text-[#4CAF50]" />
                   </div>
-                  <div className="w-full h-3 bg-[#E5E7EB] rounded-full overflow-hidden">
-                    <div
-                      className="h-full bg-linear-to-r from-[#66BB6A] to-[#4CAF50] rounded-full transition-all"
-                      style={{ width: `${field.progress}%` }}
-                    />
+
+                  {/* Field Name */}
+                  <h3 className="font-semibold text-[#1F2937] text-[22px] mb-3">
+                    {field.name}
+                  </h3>
+
+                  {/* Details */}
+                  <p className="text-[#6B7280] text-[16px] mb-2">
+                    {field.size}
+                  </p>
+                  <p className="text-[#6B7280] text-[16px] mb-5">
+                    {field.cropType}
+                  </p>
+
+                  {/* Status Badge */}
+                  <span
+                    className="inline-block px-4 py-2 rounded-xl font-bold text-[13px] mb-6 w-fit"
+                    style={{
+                      backgroundColor: statusColor.bg,
+                      color: statusColor.text,
+                    }}
+                  >
+                    {field.status.charAt(0).toUpperCase() +
+                      field.status.slice(1)}
+                  </span>
+
+                  {/* Progress Section */}
+                  <div className="mb-8">
+                    <div className="font-semibold text-[#374151] mb-3 text-[16px]">
+                      Progress: {field.progress}%
+                    </div>
+                    <div className="w-full h-3 bg-[#E5E7EB] rounded-full overflow-hidden">
+                      <div
+                        className="h-full bg-linear-to-r from-[#66BB6A] to-[#4CAF50] rounded-full transition-all"
+                        style={{ width: `${field.progress}%` }}
+                      />
+                    </div>
                   </div>
-                </div>
 
-                {/* Stats */}
-                <div className="flex items-center justify-between mb-6 text-[15px]">
-                  <span className="text-[#6B7280]">
-                    Tasks: {field.activeTasks}
-                  </span>
-                  <span className="text-[#6B7280]">
-                    Workers: {field.assignedWorkers}
-                  </span>
-                </div>
+                  {/* Stats */}
+                  <div className="flex items-center justify-between mb-6 text-[15px]">
+                    <span className="text-[#6B7280]">
+                      Tasks: {field.activeTasks}
+                    </span>
+                    <span className="text-[#6B7280]">
+                      Workers: {field.assignedWorkers}
+                    </span>
+                  </div>
 
-                {/* View Button */}
-                <button
-                  onClick={() => handleViewField(field.id)}
-                  className="w-full h-16 mt-auto px-8 bg-[#4CAF50] text-white rounded-lg font-bold hover:bg-[#388E3C] transition-all hover:shadow-lg cursor-pointer text-[18px]"
-                >
-                  View Details
-                </button>
-              </div>
-            );
-          })}
+                  {/* View Button */}
+                  <button
+                    onClick={() => handleViewField(field.id)}
+                    className="w-full h-16 mt-auto px-8 bg-[#4CAF50] text-white rounded-lg font-bold hover:bg-[#388E3C] transition-all hover:shadow-lg cursor-pointer text-[18px]"
+                  >
+                    View Details
+                  </button>
+                </div>
+              );
+            })}
         </div>
       )}
     </>
