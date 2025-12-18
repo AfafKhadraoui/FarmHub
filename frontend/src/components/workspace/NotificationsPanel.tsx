@@ -38,8 +38,10 @@ export function NotificationsPanel({
     const diffInSeconds = Math.floor((now.getTime() - date.getTime()) / 1000);
 
     if (diffInSeconds < 60) return "Just now";
-    if (diffInSeconds < 3600) return `${Math.floor(diffInSeconds / 60)} minutes ago`;
-    if (diffInSeconds < 86400) return `${Math.floor(diffInSeconds / 3600)} hours ago`;
+    if (diffInSeconds < 3600)
+      return `${Math.floor(diffInSeconds / 60)} minutes ago`;
+    if (diffInSeconds < 86400)
+      return `${Math.floor(diffInSeconds / 3600)} hours ago`;
     return `${Math.floor(diffInSeconds / 86400)} days ago`;
   };
 
@@ -139,17 +141,21 @@ export function NotificationsPanel({
 
   const getNotificationIcon = (type: string) => {
     // Map backend types to icons
-    if (type.includes("task")) return <CheckCircle size={20} className="text-[#4CAF50]" />;
-    if (type.includes("alert") || type.includes("overdue")) return <AlertCircle size={20} className="text-[#EF4444]" />;
-    if (type.includes("worker")) return <UserPlus size={20} className="text-[#2196F3]" />;
+    if (type.includes("task"))
+      return <CheckCircle size={20} className="text-[#3B82F6]" />;
+    if (type.includes("alert") || type.includes("overdue"))
+      return <AlertCircle size={20} className="text-[#EF4444]" />;
+    if (type.includes("worker"))
+      return <UserPlus size={20} className="text-[#2196F3]" />;
     return <Bell size={20} className="text-[#FF9800]" />;
   };
 
   const getNotificationBgColor = (type: string) => {
-     if (type.includes("task")) return "bg-[#E8F5E9]";
-     if (type.includes("alert") || type.includes("overdue")) return "bg-[#FFEBEE]";
-     if (type.includes("worker")) return "bg-[#E3F2FD]";
-     return "bg-[#FFF3E0]";
+    if (type.includes("task")) return "bg-[#DBEAFE]";
+    if (type.includes("alert") || type.includes("overdue"))
+      return "bg-[#FFEBEE]";
+    if (type.includes("worker")) return "bg-[#E3F2FD]";
+    return "bg-[#FFF3E0]";
   };
 
   return (
@@ -218,7 +224,7 @@ export function NotificationsPanel({
       {/* Notifications List */}
       <div className="flex-1 overflow-y-auto max-h-[400px]">
         {isLoading ? (
-            <div className="p-8 text-center text-gray-400">Loading...</div>
+          <div className="p-8 text-center text-gray-400">Loading...</div>
         ) : displayedLimited.length === 0 ? (
           // Empty State
           <div className="flex flex-col items-center justify-center py-16 px-6">
@@ -293,15 +299,15 @@ export function NotificationsPanel({
 
       {/* Footer */}
       <div className="p-4 border-t border-[#E5E7EB]">
-          <button
-            onClick={() => {
-              router.push("/notifications");
-              onClose();
-            }}
-            className="w-full text-center text-[#4CAF50] font-medium text-[14px] hover:underline"
-          >
-            View All Notifications →
-          </button>
+        <button
+          onClick={() => {
+            router.push("/notifications");
+            onClose();
+          }}
+          className="w-full text-center text-[#4CAF50] font-medium text-[14px] hover:underline"
+        >
+          View All Notifications →
+        </button>
       </div>
 
       <style>{`

@@ -76,7 +76,8 @@ export default function NotificationsPage() {
   };
 
   const handleDeleteAll = async () => {
-    if (!window.confirm("Are you sure you want to delete all notifications?")) return;
+    if (!window.confirm("Are you sure you want to delete all notifications?"))
+      return;
     try {
       await notificationService.deleteAll();
       setNotifications([]);
@@ -84,7 +85,6 @@ export default function NotificationsPage() {
       console.error("Failed to delete all notifications:", error);
     }
   };
-
 
   const getRelativeTime = (date: Date | string): string => {
     const dateObj = typeof date === "string" ? new Date(date) : date;
@@ -101,16 +101,37 @@ export default function NotificationsPage() {
   const getTypeColor = (type: string): string => {
     const colorMap: Record<string, string> = {
       "task-assigned": "bg-blue-100 text-blue-700",
+      task_assigned: "bg-blue-100 text-blue-700",
+      taskAssigned: "bg-blue-100 text-blue-700",
       "task-overdue": "bg-red-100 text-red-700",
-      "task-completed": "bg-green-100 text-green-700",
+      task_overdue: "bg-red-100 text-red-700",
+      taskOverdue: "bg-red-100 text-red-700",
+      "task-completed": "bg-blue-100 text-blue-700",
+      task_completed: "bg-blue-100 text-blue-700",
+      taskCompletion: "bg-blue-100 text-blue-700",
+      taskCompleted: "bg-blue-100 text-blue-700",
       "task-updated": "bg-blue-100 text-blue-700",
+      task_updated: "bg-blue-100 text-blue-700",
+      taskUpdated: "bg-blue-100 text-blue-700",
       "field-update": "bg-purple-100 text-purple-700",
+      field_update: "bg-purple-100 text-purple-700",
+      fieldUpdate: "bg-purple-100 text-purple-700",
       "weather-alert": "bg-orange-100 text-orange-700",
+      weather_alert: "bg-orange-100 text-orange-700",
+      weatherAlert: "bg-orange-100 text-orange-700",
       system: "bg-gray-100 text-gray-700",
       "harvest-schedule": "bg-green-100 text-green-700",
+      harvest_schedule: "bg-green-100 text-green-700",
+      harvestSchedule: "bg-green-100 text-green-700",
       "equipment-alert": "bg-yellow-100 text-yellow-700",
+      equipment_alert: "bg-yellow-100 text-yellow-700",
+      equipmentAlert: "bg-yellow-100 text-yellow-700",
       "worker-report": "bg-indigo-100 text-indigo-700",
+      worker_report: "bg-indigo-100 text-indigo-700",
+      workerReport: "bg-indigo-100 text-indigo-700",
       "schedule-update": "bg-purple-100 text-purple-700",
+      schedule_update: "bg-purple-100 text-purple-700",
+      scheduleUpdate: "bg-purple-100 text-purple-700",
     };
     return colorMap[type] || "bg-gray-100 text-gray-700";
   };
@@ -187,14 +208,14 @@ export default function NotificationsPage() {
                 </button>
               )}
               {notifications.length > 0 && (
-                 <button
-                 onClick={handleDeleteAll}
-                 className="px-4 py-2 bg-red-50 text-red-600 border border-red-200 rounded-lg font-medium hover:bg-red-100 transition-colors flex items-center gap-2"
-                 style={{ fontFamily: "Inter, sans-serif" }}
-               >
-                 <Trash2 size={18} />
-                 Delete All
-               </button>
+                <button
+                  onClick={handleDeleteAll}
+                  className="px-4 py-2 bg-red-50 text-red-600 border border-red-200 rounded-lg font-medium hover:bg-red-100 transition-colors flex items-center gap-2"
+                  style={{ fontFamily: "Inter, sans-serif" }}
+                >
+                  <Trash2 size={18} />
+                  Delete All
+                </button>
               )}
             </div>
           </div>
@@ -237,7 +258,9 @@ export default function NotificationsPage() {
           {/* Notifications List */}
           <div className="divide-y divide-gray-200">
             {isLoading ? (
-               <div className="p-12 text-center text-gray-500">Loading notifications...</div>
+              <div className="p-12 text-center text-gray-500">
+                Loading notifications...
+              </div>
             ) : notifications.length === 0 ? (
               <div className="p-12 text-center">
                 <Bell size={48} className="text-gray-300 mx-auto mb-3" />
