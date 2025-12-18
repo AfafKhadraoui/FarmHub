@@ -362,8 +362,90 @@ async function main() {
     },
   ];
 
+  // Admin Notifications
   for (const n of notificationsData) {
     await prisma.notification.create({ data: n });
+  }
+
+  // Farmer Notifications (Green Admin)
+  const farmerNotifications = [
+    {
+      id: `notif_farmer_${baseTime}_1`,
+      userId: greenAdmin.id,
+      type: "field-update",
+      title: "Field Status Update",
+      message: "North Field irrigation completed successfully",
+      isRead: false,
+      timestamp: new Date(Date.now() - 10 * 60 * 1000),
+    },
+    {
+      id: `notif_farmer_${baseTime}_2`,
+      userId: greenAdmin.id,
+      type: "harvest-schedule",
+      title: "Harvest Schedule Reminder",
+      message: "Corn harvest in South Field scheduled for next week",
+      isRead: true,
+      timestamp: new Date(Date.now() - 24 * 60 * 60 * 1000),
+    },
+    {
+      id: `notif_farmer_${baseTime}_3`,
+      userId: greenAdmin.id,
+      type: "worker-report",
+      title: "Worker Activity",
+      message: "Green Worker 1 completed 5 tasks this week",
+      isRead: false,
+      timestamp: new Date(Date.now() - 48 * 60 * 60 * 1000),
+    },
+    {
+      id: `notif_farmer_${baseTime}_4`,
+      userId: greenAdmin.id,
+      type: "weather-alert",
+      title: "Weather Alert",
+      message: "High chance of rain tomorrow. Plan irrigation accordingly.",
+      isRead: false,
+      timestamp: new Date(Date.now() - 2 * 60 * 60 * 1000),
+    }
+  ];
+
+  for (const n of farmerNotifications) {
+    await prisma.notification.create({ data: n });
+  }
+
+  // Worker Notifications
+  if (allWorkersGreen[0]) {
+    const workerNotifications = [
+      {
+        id: `notif_worker_${baseTime}_1`,
+        userId: allWorkersGreen[0].id,
+        type: "task-assigned",
+        title: "New Task Assigned",
+        message: "You have been assigned to 'Irrigate North Field'",
+        isRead: false,
+        timestamp: new Date(Date.now() - 15 * 60 * 1000),
+      },
+      {
+        id: `notif_worker_${baseTime}_2`,
+        userId: allWorkersGreen[0].id,
+        type: "task-overdue",
+        title: "Task Overdue",
+        message: "Task 'Clean Equipment' is overdue by 2 hours",
+        isRead: false,
+        timestamp: new Date(Date.now() - 2 * 60 * 60 * 1000),
+      },
+      {
+        id: `notif_worker_${baseTime}_3`,
+        userId: allWorkersGreen[0].id,
+        type: "schedule-update",
+        title: "Schedule Change",
+        message: "Your shift tomorrow starts at 7:00 AM",
+        isRead: true,
+        timestamp: new Date(Date.now() - 24 * 60 * 60 * 1000),
+      }
+    ];
+
+    for (const n of workerNotifications) {
+      await prisma.notification.create({ data: n });
+    }
   }
 
   // 7) Activities

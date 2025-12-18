@@ -1,10 +1,12 @@
 "use client";
 
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { Search, Bell } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { NotificationsPanel } from "./NotificationsPanel";
 import { ProfileDropdown } from "./ProfileDropdown";
+
+import { notificationService } from "@/services/notification.service";
 
 interface TopBarProps {
   userRole?: "admin" | "worker";
@@ -14,10 +16,26 @@ export function TopBar({ userRole = "worker" }: TopBarProps) {
   const [showNotifications, setShowNotifications] = useState(false);
   const [showProfile, setShowProfile] = useState(false);
   const [showSearch, setShowSearch] = useState(false);
+  const [unreadCount, setUnreadCount] = useState(0);
   const { user } = useAuth();
 
   const bellRef = useRef<HTMLDivElement>(null);
   const profileRef = useRef<HTMLDivElement>(null);
+
+  const fetchUnreadCount = async () => {
+    try {
+      const stats = await notificationService.getStats();
+      setUnreadCount(stats.unread);
+    } catch (error) {
+      console.error("Failed to fetch notification stats:", error);
+    }
+  };
+
+  useEffect(() => {
+    fetchUnreadCount();
+    const unsubscribe = notificationService.subscribe(fetchUnreadCount);
+    return () => unsubscribe();
+  }, []);
 
   const getInitials = (name?: string) => {
     if (!name) return "U";
@@ -62,13 +80,18 @@ export function TopBar({ userRole = "worker" }: TopBarProps) {
           onClick={() => setShowNotifications(!showNotifications)}
         >
           <Bell size={24} className="text-[#4B5563]" />
-          <div className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 rounded-full flex items-center justify-center">
-            <span className="text-white text-[10px] font-bold">2</span>
-          </div>
+          {unreadCount > 0 && (
+            <div className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 rounded-full flex items-center justify-center">
+              <span className="text-white text-[10px] font-bold">
+                {unreadCount > 99 ? "99+" : unreadCount}
+              </span>
+            </div>
+          )}
           <NotificationsPanel
             isOpen={showNotifications}
             onClose={() => setShowNotifications(false)}
             triggerRef={bellRef}
+            onUpdate={fetchUnreadCount}
           />
         </div>
 

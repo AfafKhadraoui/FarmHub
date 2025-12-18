@@ -1,8 +1,9 @@
 "use client";
 
 import { Bell, Check, Trash2 } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useAuth } from "@/hooks/useAuth";
+import { notificationService } from "@/services/notification.service";
 
 interface Notification {
   id: string;
@@ -16,131 +17,74 @@ interface Notification {
 export default function NotificationsPage() {
   const { user } = useAuth();
   const [filter, setFilter] = useState<"all" | "unread">("all");
+  const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
-  // Different notifications for worker vs farmer
-  const workerNotifications: Notification[] = [
-    {
-      id: "1",
-      type: "task-assigned",
-      title: "New Task Assigned",
-      message:
-        "You have been assigned to water Field A. Due date: Tomorrow 8:00 AM",
-      timestamp: new Date(Date.now() - 5 * 60 * 1000).toISOString(),
-      isRead: false,
-    },
-    {
-      id: "2",
-      type: "task-overdue",
-      title: "Task Deadline Approaching",
-      message: "Reminder: Fertilize Field B is due in 2 hours",
-      timestamp: new Date(Date.now() - 30 * 60 * 1000).toISOString(),
-      isRead: false,
-    },
-    {
-      id: "3",
-      type: "weather-alert",
-      title: "Weather Alert",
-      message:
-        "Heavy rain expected tomorrow. Consider postponing outdoor tasks",
-      timestamp: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
-      isRead: false,
-    },
-    {
-      id: "4",
-      type: "task-completed",
-      title: "Task Completed",
-      message:
-        "Your task 'Inspect irrigation system' has been marked as completed",
-      timestamp: new Date(Date.now() - 5 * 60 * 60 * 1000).toISOString(),
-      isRead: true,
-    },
-    {
-      id: "5",
-      type: "schedule-update",
-      title: "Schedule Update",
-      message:
-        "Your work schedule for next week has been updated by the farm manager",
-      timestamp: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(),
-      isRead: true,
-    },
-  ];
+  const fetchNotifications = async () => {
+    try {
+      setIsLoading(true);
+      // If filter is unread, pass isRead: false
+      const data = await notificationService.getAll(
+        filter === "unread" ? { isRead: false } : undefined
+      );
+      setNotifications(data);
+    } catch (error) {
+      console.error("Failed to fetch notifications:", error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
-  const farmerNotifications: Notification[] = [
-    {
-      id: "1",
-      type: "field-update",
-      title: "Field Status Update",
-      message: "Field C irrigation system maintenance completed successfully",
-      timestamp: new Date(Date.now() - 10 * 60 * 1000).toISOString(),
-      isRead: false,
-    },
-    {
-      id: "2",
-      type: "harvest-schedule",
-      title: "Harvest Schedule",
-      message: "Tomato harvest in Field A scheduled for next Monday",
-      timestamp: new Date(Date.now() - 45 * 60 * 1000).toISOString(),
-      isRead: false,
-    },
-    {
-      id: "3",
-      type: "weather-alert",
-      title: "Weather Forecast",
-      message:
-        "Favorable conditions for planting this week. Temperature 22-28°C",
-      timestamp: new Date(Date.now() - 3 * 60 * 60 * 1000).toISOString(),
-      isRead: false,
-    },
-    {
-      id: "4",
-      type: "worker-report",
-      title: "Worker Task Completed",
-      message: "Ahmed completed fertilizer application in Field B",
-      timestamp: new Date(Date.now() - 6 * 60 * 60 * 1000).toISOString(),
-      isRead: true,
-    },
-    {
-      id: "5",
-      type: "equipment-alert",
-      title: "Equipment Alert",
-      message: "Tractor #2 requires scheduled maintenance within 3 days",
-      timestamp: new Date(Date.now() - 20 * 60 * 60 * 1000).toISOString(),
-      isRead: true,
-    },
-    {
-      id: "6",
-      type: "schedule-update",
-      title: "Crop Rotation Planning",
-      message:
-        "Time to plan crop rotation for Field D. Winter crops recommended",
-      timestamp: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
-      isRead: true,
-    },
-  ];
-
-  const initialNotifications =
-    user?.role === "worker" ? workerNotifications : farmerNotifications;
-  const [notifications, setNotifications] =
-    useState<Notification[]>(initialNotifications);
+  useEffect(() => {
+    fetchNotifications();
+    const unsubscribe = notificationService.subscribe(fetchNotifications);
+    return () => unsubscribe();
+  }, [filter]);
 
   const stats = {
     total: notifications.length,
     unread: notifications.filter((n) => !n.isRead).length,
   };
 
-  const handleMarkAsRead = (id: string) => {
-    setNotifications((prev) =>
-      prev.map((n) => (n.id === id ? { ...n, isRead: true } : n))
-    );
+  const handleMarkAsRead = async (id: string) => {
+    try {
+      await notificationService.markAsRead(id);
+      setNotifications((prev) =>
+        prev.map((n) => (n.id === id ? { ...n, isRead: true } : n))
+      );
+    } catch (error) {
+      console.error("Failed to mark as read:", error);
+    }
   };
 
-  const handleDelete = (id: string) => {
-    setNotifications((prev) => prev.filter((n) => n.id !== id));
+  const handleDelete = async (id: string) => {
+    try {
+      await notificationService.delete(id);
+      setNotifications((prev) => prev.filter((n) => n.id !== id));
+    } catch (error) {
+      console.error("Failed to delete notification:", error);
+    }
   };
 
-  const handleMarkAllRead = () => {
-    setNotifications((prev) => prev.map((n) => ({ ...n, isRead: true })));
+  const handleMarkAllRead = async () => {
+    try {
+      await notificationService.markAllAsRead();
+      setNotifications((prev) => prev.map((n) => ({ ...n, isRead: true })));
+    } catch (error) {
+      console.error("Failed to mark all as read:", error);
+    }
   };
+
+  const handleDeleteAll = async () => {
+    if (!window.confirm("Are you sure you want to delete all notifications?")) return;
+    try {
+      await notificationService.deleteAll();
+      setNotifications([]);
+    } catch (error) {
+      console.error("Failed to delete all notifications:", error);
+    }
+  };
+
 
   const getRelativeTime = (date: Date | string): string => {
     const dateObj = typeof date === "string" ? new Date(date) : date;
@@ -170,9 +114,6 @@ export default function NotificationsPage() {
     };
     return colorMap[type] || "bg-gray-100 text-gray-700";
   };
-
-  const filteredNotifications =
-    filter === "all" ? notifications : notifications.filter((n) => !n.isRead);
 
   return (
     <div className="p-8">
@@ -235,15 +176,27 @@ export default function NotificationsPage() {
               </div>
             </div>
 
-            {stats.unread > 0 && (
-              <button
-                onClick={handleMarkAllRead}
-                className="px-4 py-2 bg-[#4CAF50] text-white rounded-lg font-medium hover:bg-[#388E3C] transition-colors"
-                style={{ fontFamily: "Inter, sans-serif" }}
-              >
-                Mark All as Read
-              </button>
-            )}
+            <div className="flex gap-3">
+              {stats.unread > 0 && (
+                <button
+                  onClick={handleMarkAllRead}
+                  className="px-4 py-2 bg-[#4CAF50] text-white rounded-lg font-medium hover:bg-[#388E3C] transition-colors"
+                  style={{ fontFamily: "Inter, sans-serif" }}
+                >
+                  Mark All as Read
+                </button>
+              )}
+              {notifications.length > 0 && (
+                 <button
+                 onClick={handleDeleteAll}
+                 className="px-4 py-2 bg-red-50 text-red-600 border border-red-200 rounded-lg font-medium hover:bg-red-100 transition-colors flex items-center gap-2"
+                 style={{ fontFamily: "Inter, sans-serif" }}
+               >
+                 <Trash2 size={18} />
+                 Delete All
+               </button>
+              )}
+            </div>
           </div>
         </div>
 
@@ -283,7 +236,9 @@ export default function NotificationsPage() {
 
           {/* Notifications List */}
           <div className="divide-y divide-gray-200">
-            {filteredNotifications.length === 0 ? (
+            {isLoading ? (
+               <div className="p-12 text-center text-gray-500">Loading notifications...</div>
+            ) : notifications.length === 0 ? (
               <div className="p-12 text-center">
                 <Bell size={48} className="text-gray-300 mx-auto mb-3" />
                 <p
@@ -296,7 +251,7 @@ export default function NotificationsPage() {
                 </p>
               </div>
             ) : (
-              filteredNotifications.map((notification) => (
+              notifications.map((notification) => (
                 <div
                   key={notification.id}
                   className={`p-6 hover:bg-gray-50 transition-colors ${
@@ -311,12 +266,7 @@ export default function NotificationsPage() {
                       )}`}
                       style={{ fontFamily: "Inter, sans-serif" }}
                     >
-                      {notification.type
-                        .split("-")
-                        .map(
-                          (word) => word.charAt(0).toUpperCase() + word.slice(1)
-                        )
-                        .join(" ")}
+                      {notification.type}
                     </div>
 
                     {/* Content */}
