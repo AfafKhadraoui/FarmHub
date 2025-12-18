@@ -1,3 +1,4 @@
+//this file can used to fetch the activities instead of doing it with mock data 
 const express = require("express");
 const { param, query } = require("express-validator");
 const { PrismaClient } = require("@prisma/client");

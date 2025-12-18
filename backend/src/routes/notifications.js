@@ -9,6 +9,7 @@ const {
 } = require("../middleware/dashboardMiddleware");
 const { sendError } = require("../utils/error");
 const { handleValidationErrors } = require("../middleware/validation");
+
 router.get(
   "/notifications",
   authenticate,
@@ -91,6 +92,34 @@ router.patch(
         success: true,
         message: "All notifications marked as read",
         count: updated.count,
+      });
+    } catch (err) {
+      console.error(err);
+      return sendError(res, 500, "INTERNAL_ERROR", "Internal Server Error");
+    }
+  }
+);
+
+// DELETE /admin/notifications/all to delete all notifications
+router.delete(
+  "/notifications/all",
+  authenticate,
+  requirePlatformAdmin,
+  handleValidationErrors,
+  async (req, res) => {
+    try {
+      const deleted = await prisma.notification.deleteMany({
+        where: { userId: req.user.id },
+      });
+
+      if (deleted.count === 0) {
+        return sendError(res, 404, "NOT_FOUND", "Notifications not found");
+      }
+
+      res.json({
+        success: true,
+        message: "All notifications deleted",
+        count: deleted.count,
       });
     } catch (err) {
       console.error(err);

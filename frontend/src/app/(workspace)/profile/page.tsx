@@ -23,6 +23,8 @@ import {
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useRouter } from "next/navigation";
+import { CustomAlert } from "@/components/workspace/CustomAlert";
+import { ChangePasswordModal } from "@/components/workspace/modals/ChangePasswordModal";
 
 // Mock data matching API response for Admin
 const mockAdminProfile = {
@@ -103,6 +105,16 @@ export default function ProfilePage() {
   const [saving, setSaving] = useState(false);
   const [profileImage, setProfileImage] = useState<string | null>(null);
   const [showLogoutModal, setShowLogoutModal] = useState(false);
+  const [showChangePasswordModal, setShowChangePasswordModal] = useState(false);
+  const [alert, setAlert] = useState<{
+    isOpen: boolean;
+    type: "success" | "error";
+    message: string;
+  }>({
+    isOpen: false,
+    type: "success",
+    message: "",
+  });
 
   // Use mock data based on user role (default to worker for demo)
   const mockProfile =
@@ -129,12 +141,17 @@ export default function ProfilePage() {
 
   const handleSave = async () => {
     setSaving(true);
-    
+
     // Simulate API call
     setTimeout(() => {
       setSaving(false);
       setIsEditing(false);
-      alert("Profile updated successfully!");
+      setAlert({
+        isOpen: true,
+        type: "success",
+        message: "Profile updated successfully!",
+      });
+      setTimeout(() => setAlert({ ...alert, isOpen: false }), 3000);
     }, 1000);
   };
 
@@ -155,6 +172,23 @@ export default function ProfilePage() {
     localStorage.removeItem("accessToken");
     document.cookie = "token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
     router.push("/login");
+  };
+  const handlePasswordSuccess = (message: string) => {
+    setAlert({
+      isOpen: true,
+      type: "success",
+      message,
+    });
+    setTimeout(() => setAlert({ ...alert, isOpen: false }), 3000);
+  };
+
+  const handlePasswordError = (message: string) => {
+    setAlert({
+      isOpen: true,
+      type: "error",
+      message,
+    });
+    setTimeout(() => setAlert({ ...alert, isOpen: false }), 3000);
   };
 
   const formatDate = (dateString?: string) => {
@@ -249,11 +283,10 @@ export default function ProfilePage() {
               </h2>
               <div className="flex items-center gap-2">
                 <span
-                  className={`px-3 py-1 rounded-full text-[13px] font-semibold flex items-center gap-1 ${
-                    isAdmin
-                      ? "bg-[#E8F5E9] text-[#4CAF50]"
-                      : "bg-[#DBEAFE] text-[#3B82F6]"
-                  }`}
+                  className={`px-3 py-1 rounded-full text-[13px] font-semibold flex items-center gap-1 ${isAdmin
+                    ? "bg-[#E8F5E9] text-[#4CAF50]"
+                    : "bg-[#DBEAFE] text-[#3B82F6]"
+                    }`}
                 >
                   <Shield size={14} />
                   {profileData.role.charAt(0).toUpperCase() +
@@ -261,11 +294,10 @@ export default function ProfilePage() {
                 </span>
                 {isWorker && profileData.status && (
                   <span
-                    className={`px-3 py-1 rounded-full text-[13px] font-semibold ${
-                      profileData.status === "active"
-                        ? "bg-[#E8F5E9] text-[#4CAF50]"
-                        : "bg-[#FEE2E2] text-[#EF4444]"
-                    }`}
+                    className={`px-3 py-1 rounded-full text-[13px] font-semibold ${profileData.status === "active"
+                      ? "bg-[#E8F5E9] text-[#4CAF50]"
+                      : "bg-[#FEE2E2] text-[#EF4444]"
+                      }`}
                   >
                     {profileData.status.charAt(0).toUpperCase() +
                       profileData.status.slice(1)}
@@ -462,13 +494,12 @@ export default function ProfilePage() {
                 >
                   <div className="flex items-center gap-3">
                     <div
-                      className={`w-2 h-2 rounded-full ${
-                        task.status === "completed"
-                          ? "bg-[#4CAF50]"
-                          : task.status === "in_progress"
+                      className={`w-2 h-2 rounded-full ${task.status === "completed"
+                        ? "bg-[#4CAF50]"
+                        : task.status === "in_progress"
                           ? "bg-[#F59E0B]"
                           : "bg-[#9CA3AF]"
-                      }`}
+                        }`}
                     />
                     <div>
                       <div className="text-[#1F2937] text-[14px] font-medium">
@@ -481,11 +512,10 @@ export default function ProfilePage() {
                   </div>
                   <div className="text-right">
                     <span
-                      className={`px-2 py-1 rounded-full text-[11px] font-semibold ${
-                        task.status === "completed"
-                          ? "bg-[#E8F5E9] text-[#4CAF50]"
-                          : "bg-[#FEF3C7] text-[#F59E0B]"
-                      }`}
+                      className={`px-2 py-1 rounded-full text-[11px] font-semibold ${task.status === "completed"
+                        ? "bg-[#E8F5E9] text-[#4CAF50]"
+                        : "bg-[#FEF3C7] text-[#F59E0B]"
+                        }`}
                     >
                       {task.status.replace("_", " ").toUpperCase()}
                     </span>
@@ -526,31 +556,11 @@ export default function ProfilePage() {
                   </div>
                 </div>
               </div>
-              <button className="h-10 px-5 bg-white border border-[#D1D5DB] text-[#4B5563] rounded-lg font-medium hover:bg-[#F9FAFB] transition-all">
-                Change Password
-              </button>
-            </div>
-
-            {/* Notification Settings */}
-            <div className="flex items-center justify-between pb-4 border-b border-[#E5E7EB]">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-[#FEF3C7] rounded-lg flex items-center justify-center">
-                  <Bell size={20} className="text-[#F59E0B]" />
-                </div>
-                <div>
-                  <div className="font-semibold text-[#1F2937] text-[15px]">
-                    Notification Preferences
-                  </div>
-                  <div className="text-[#6B7280] text-[13px]">
-                    Manage your notification settings
-                  </div>
-                </div>
-              </div>
               <button
-                onClick={() => router.push("/settings")}
+                onClick={() => setShowChangePasswordModal(true)}
                 className="h-10 px-5 bg-white border border-[#D1D5DB] text-[#4B5563] rounded-lg font-medium hover:bg-[#F9FAFB] transition-all"
               >
-                Manage
+                Change Password
               </button>
             </div>
 
@@ -587,51 +597,80 @@ export default function ProfilePage() {
                             transform: translateY(0);
                           }
                         }
+                          @keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateX(100%);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.animate-slideIn {
+  animation: slideIn 0.3s ease-out;
+}
                       `}</style>
-                    </div>
-              
-                    {/* Logout Confirmation Modal */}
-                    <Modal
-                      isOpen={showLogoutModal}
-                      onClose={() => setShowLogoutModal(false)}
-                      title=""
-                      width="400px"
-                      showCloseButton={false}
-                      footer={
-                        <>
-                          <button
-                            onClick={() => setShowLogoutModal(false)}
-                            className="h-11 px-6 bg-white border border-[#D1D5DB] text-[#4B5563] rounded-lg font-semibold hover:bg-[#F9FAFB] transition-all"
-                          >
-                            Cancel
-                          </button>
-                          <button
-                            onClick={confirmLogout}
-                            className="h-11 px-6 bg-[#F44336] text-white rounded-lg font-semibold hover:bg-[#D32F2F] transition-all"
-                          >
-                            Logout
-                          </button>
-                        </>
-                      }
-                    >
-                      <div className="text-center py-4">
-                        <div className="w-16 h-16 bg-[#FFF3E0] rounded-full flex items-center justify-center mx-auto mb-5">
-                          <LogOut size={36} className="text-[#FF9800]" />
-                        </div>
-              
-                        <h2
-                          className="font-bold text-[#1F2937] mb-4"
-                          style={{ fontFamily: "Poppins, sans-serif", fontSize: "24px" }}
-                        >
-                          Logout?
-                        </h2>
-              
-                        <p className="text-[#6B7280]">Are you sure you want to logout?</p>
-                      </div>
-                    </Modal>
             </div>
+
+            {/* Logout Confirmation Modal */}
+            <Modal
+              isOpen={showLogoutModal}
+              onClose={() => setShowLogoutModal(false)}
+              title=""
+              width="400px"
+              showCloseButton={false}
+              footer={
+                <>
+                  <button
+                    onClick={() => setShowLogoutModal(false)}
+                    className="h-11 px-6 bg-white border border-[#D1D5DB] text-[#4B5563] rounded-lg font-semibold hover:bg-[#F9FAFB] transition-all"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={confirmLogout}
+                    className="h-11 px-6 bg-[#F44336] text-white rounded-lg font-semibold hover:bg-[#D32F2F] transition-all"
+                  >
+                    Logout
+                  </button>
+                </>
+              }
+            >
+              <div className="text-center py-4">
+                <div className="w-16 h-16 bg-[#FFF3E0] rounded-full flex items-center justify-center mx-auto mb-5">
+                  <LogOut size={36} className="text-[#FF9800]" />
+                </div>
+
+                <h2
+                  className="font-bold text-[#1F2937] mb-4"
+                  style={{ fontFamily: "Poppins, sans-serif", fontSize: "24px" }}
+                >
+                  Logout?
+                </h2>
+
+                <p className="text-[#6B7280]">Are you sure you want to logout?</p>
+              </div>
+            </Modal>
           </div>
         </div>
+      </div>
+      {/* Change Password Modal */}
+      <ChangePasswordModal
+        isOpen={showChangePasswordModal}
+        onClose={() => setShowChangePasswordModal(false)}
+        onSuccess={handlePasswordSuccess}
+        onError={handlePasswordError}
+      />
+
+      {/* Custom Alert */}
+      <CustomAlert
+        isOpen={alert.isOpen}
+        onClose={() => setAlert({ ...alert, isOpen: false })}
+        type={alert.type}
+        message={alert.message}
+      />
     </>
   );
 }
