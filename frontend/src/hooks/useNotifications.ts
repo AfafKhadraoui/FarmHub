@@ -40,7 +40,8 @@ export function useNotifications(unreadOnly: boolean = false) {
       fetchNotifications();
     };
     window.addEventListener("notification-update", handleUpdate);
-    return () => window.removeEventListener("notification-update", handleUpdate);
+    return () =>
+      window.removeEventListener("notification-update", handleUpdate);
   }, [fetchNotifications]);
 
   const dispatchUpdate = () => {
@@ -85,12 +86,15 @@ export function useNotifications(unreadOnly: boolean = false) {
 
   const deleteAllNotifications = async () => {
     try {
+      setLoading(true);
       await adminService.deleteAllNotifications();
       setNotifications([]);
       dispatchUpdate();
     } catch (err: any) {
       console.error("Error deleting all notifications:", err);
       throw err;
+    } finally {
+      setLoading(false);
     }
   };
 

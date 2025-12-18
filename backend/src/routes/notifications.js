@@ -128,4 +128,27 @@ router.delete(
     }
   }
 );
+
+// DELETE /admin/notifications (delete all)
+router.delete(
+  "/notifications",
+  authenticate,
+  requirePlatformAdmin,
+  async (req, res) => {
+    try {
+      const deleted = await prisma.notification.deleteMany({
+        where: { userId: req.user.id },
+      });
+
+      res.json({
+        success: true,
+        message: "All notifications deleted",
+        count: deleted.count,
+      });
+    } catch (err) {
+      console.error(err);
+      return sendError(res, 500, "INTERNAL_ERROR", "Internal Server Error");
+    }
+  }
+);
 module.exports = router;

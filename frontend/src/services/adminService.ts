@@ -512,13 +512,17 @@ export const adminService = {
 
   /**
    * Delete all notifications
-   * DELETE /userNotifications/deleteAll
+   * DELETE /admin/notifications
    */
-  deleteAllNotifications: async (): Promise<{ message: string }> => {
+  deleteAllNotifications: async (): Promise<{
+    message: string;
+    count: number;
+  }> => {
     try {
       const response = await api.delete<{
         message: string;
-      }>("/userNotifications/deleteAll");
+        count: number;
+      }>("/admin/notifications");
       return response.data;
     } catch (error) {
       console.error("Failed to delete all notifications:", error);
