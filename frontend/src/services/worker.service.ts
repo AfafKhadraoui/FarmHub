@@ -69,14 +69,15 @@ export interface GetWorkersParams {
 }
 
 export async function getWorkers(params: GetWorkersParams = {}) {
-  const res = await api.get<WorkerListResponse>('/workers', { params });
-  return res.data;
+  const res = await api.get<any>('/workers', { params });
+  // The backend returns { success: true, data: { items: [], pagination: {} } }
+  return res.data?.data || { items: [], pagination: {} };
 }
 
 // GET /workers/:id
 export async function getWorkerById(id: number) {
-  const res = await api.get<WorkerDetails>(`/workers/${id}`);
-  return res.data;
+  const res = await api.get<any>(`/workers/${id}`);
+  return res.data?.data;
 }
 
 // PUT /workers/:id

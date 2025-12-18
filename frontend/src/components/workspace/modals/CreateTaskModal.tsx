@@ -1,39 +1,56 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Modal } from "./Modal";
-import { Clock } from "lucide-react";
+import { Clock, Loader2 } from "lucide-react";
+import { createTask } from "@/services/task.service";
+import { getWorkers } from "@/services/worker.service";
 
 interface CreateTaskModalProps {
   isOpen: boolean;
   onClose: () => void;
   fieldName?: string;
+  fieldId: number;
 }
 
 export function CreateTaskModal({
   isOpen,
   onClose,
   fieldName = "Field A",
+  fieldId,
 }: CreateTaskModalProps) {
   const [formData, setFormData] = useState({
     title: "",
     description: "",
     priority: "medium",
     dueDate: "",
-    dueTime: "",
-    workers: [] as string[],
+    dueTime: "09:00",
+    workers: [] as number[],
     category: "irrigation",
   });
 
   const [isLoading, setIsLoading] = useState(false);
-  const [showWorkerDropdown, setShowWorkerDropdown] = useState(false);
+  const [isFetchingWorkers, setIsFetchingWorkers] = useState(false);
+  const [availableWorkers, setAvailableWorkers] = useState<any[]>([]);
 
-  const workers = [
-    { id: "ahmed", name: "Ahmed Khalil", initials: "AK" },
-    { id: "sara", name: "Sara Mansouri", initials: "SM" },
-    { id: "ali", name: "Ali Benali", initials: "AB" },
-    { id: "fatima", name: "Fatima Hassan", initials: "FH" },
-  ];
+  useEffect(() => {
+    if (isOpen) {
+      const fetchWorkers = async () => {
+        try {
+          setIsFetchingWorkers(true);
+          const data = await getWorkers({ limit: 100 });
+          // Combined safety check: handle null data or missing items array
+          setAvailableWorkers(data?.items || []);
+        } catch (error) {
+          console.error("Failed to fetch workers:", error);
+          setAvailableWorkers([]); // Default to empty array on error
+        } finally {
+          setIsFetchingWorkers(false);
+        }
+      };
+      fetchWorkers();
+    }
+  }, [isOpen]);
 
-  const handleWorkerToggle = (workerId: string) => {
+  const handleWorkerToggle = (workerId: number) => {
     setFormData((prev) => ({
       ...prev,
       workers: prev.workers.includes(workerId)
@@ -46,22 +63,35 @@ export function CreateTaskModal({
     e.preventDefault();
     setIsLoading(true);
 
-    // Simulate API call
-    setTimeout(() => {
-      setIsLoading(false);
-      onClose();
+    try {
+      await createTask({
+        title: formData.title,
+        description: formData.description,
+        priority: formData.priority,
+        dueDate: new Date(`${formData.dueDate}T${formData.dueTime || "09:00"}:00`),
+        fieldId: fieldId,
+        assignedWorkerIds: formData.workers,
+        category: formData.category,
+      });
+
       (window as any).showToast?.("Task created successfully!", "success");
+      onClose();
       // Reset form
       setFormData({
         title: "",
         description: "",
         priority: "medium",
         dueDate: "",
-        dueTime: "",
+        dueTime: "09:00",
         workers: [],
         category: "irrigation",
       });
-    }, 1000);
+    } catch (error) {
+      console.error("Failed to create task:", error);
+      (window as any).showToast?.("Failed to create task", "error");
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const isFormValid =
@@ -233,24 +263,32 @@ export function CreateTaskModal({
               Assign Workers <span className="text-[#EF4444]">*</span>
             </label>
 
-            <div className="border border-[#D1D5DB] rounded-lg p-3 space-y-2">
-              {workers.map((worker) => (
-                <label
-                  key={worker.id}
-                  className="flex items-center gap-3 p-2 hover:bg-[#F9FAFB] rounded-lg cursor-pointer transition-colors"
-                >
-                  <input
-                    type="checkbox"
-                    checked={formData.workers.includes(worker.id)}
-                    onChange={() => handleWorkerToggle(worker.id)}
-                    className="w-4 h-4 text-[#4CAF50] focus:ring-[#4CAF50] rounded"
-                  />
-                  <div className="w-8 h-8 bg-[#4CAF50] rounded-full flex items-center justify-center text-white font-semibold text-[14px]">
-                    {worker.initials}
-                  </div>
-                  <span className="text-[#374151]">{worker.name}</span>
-                </label>
-              ))}
+            <div className="border border-[#D1D5DB] rounded-lg p-3 space-y-2 max-h-[200px] overflow-y-auto">
+              {isFetchingWorkers ? (
+                <div className="flex items-center justify-center p-4">
+                  <Loader2 className="w-6 h-6 text-green-500 animate-spin" />
+                </div>
+              ) : availableWorkers.length === 0 ? (
+                <p className="text-center text-[#9CA3AF] py-4">No workers available</p>
+              ) : (
+                availableWorkers.map((worker: any) => (
+                  <label
+                    key={worker.id}
+                    className="flex items-center gap-3 p-2 hover:bg-[#F9FAFB] rounded-lg cursor-pointer transition-colors"
+                  >
+                    <input
+                      type="checkbox"
+                      checked={formData.workers.includes(worker.id)}
+                      onChange={() => handleWorkerToggle(worker.id)}
+                      className="w-4 h-4 text-[#4CAF50] focus:ring-[#4CAF50] rounded"
+                    />
+                    <div className="w-8 h-8 bg-[#4CAF50] rounded-full flex items-center justify-center text-white font-semibold text-[14px]">
+                      {worker.name.charAt(0)}
+                    </div>
+                    <span className="text-[#374151]">{worker.name}</span>
+                  </label>
+                ))
+              )}
             </div>
 
             {formData.workers.length > 0 && (

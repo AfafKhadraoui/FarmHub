@@ -1,9 +1,11 @@
 import React, { useState } from "react";
 import { Modal } from "./Modal";
+import { fieldService } from "@/services/field.service";
 
 interface EditFieldModalProps {
   isOpen: boolean;
   onClose: () => void;
+  fieldId: number;
   fieldData?: {
     name: string;
     size: string;
@@ -19,20 +21,19 @@ interface EditFieldModalProps {
 export function EditFieldModal({
   isOpen,
   onClose,
+  fieldId,
   fieldData,
 }: EditFieldModalProps) {
   const [formData, setFormData] = useState({
-    fieldName: fieldData?.name || "Field A",
-    size: fieldData?.size || "12",
-    location: fieldData?.location || "North Plot",
-    cropType: fieldData?.cropType || "wheat",
-    status: fieldData?.status || "growing",
+    fieldName: fieldData?.name || "",
+    size: fieldData?.size || "",
+    location: fieldData?.location || "",
+    cropType: fieldData?.cropType || "",
+    status: fieldData?.status || "idle",
     customCrop: "",
-    plantingDate: fieldData?.plantingDate || "2024-03-01",
-    harvestDate: fieldData?.harvestDate || "2024-08-15",
-    description:
-      fieldData?.description ||
-      "Primary wheat field with advanced irrigation system",
+    plantingDate: fieldData?.plantingDate || "",
+    harvestDate: fieldData?.harvestDate || "",
+    description: fieldData?.description || "",
   });
 
   const [isLoading, setIsLoading] = useState(false);
@@ -41,12 +42,27 @@ export function EditFieldModal({
     e.preventDefault();
     setIsLoading(true);
 
-    // Simulate API call
-    setTimeout(() => {
-      setIsLoading(false);
+    try {
+      const crop = formData.cropType === "other" ? formData.customCrop : formData.cropType;
+      
+      await fieldService.update(fieldId, {
+        name: formData.fieldName,
+        size: parseFloat(formData.size),
+        cropType: crop,
+        status: formData.status,
+        plantedDate: formData.plantingDate ? new Date(formData.plantingDate) : null,
+        harvestDate: formData.harvestDate ? new Date(formData.harvestDate) : null,
+        // Backend doesn't support location/description yet but we can add them to metadata if we want
+      });
+
       onClose();
       (window as any).showToast?.("Field updated successfully!", "success");
-    }, 1000);
+    } catch (error) {
+      console.error("Failed to update field:", error);
+      (window as any).showToast?.("Failed to update field", "error");
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const isFormValid = formData.fieldName && formData.size && formData.cropType;

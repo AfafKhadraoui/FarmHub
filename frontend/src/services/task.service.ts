@@ -58,3 +58,9 @@ export async function fetchWorkerTasks(params: WorkerTasksParams = {}) {
     };
   };
 }
+
+/** Create task (only admin/farmer) */
+export async function createTask(data: any) {
+  const res = await api.post('/tasks', data);
+  return res.data;
+}

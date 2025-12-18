@@ -44,7 +44,11 @@ exports.listFields = async (req, res) => {
       take: limit,
       orderBy: { updatedAt: "desc" },
       include: {
-        tasks: true,
+        tasks: {
+          include: {
+            taskAssignments: true,
+          },
+        },
       },
     });
 
@@ -55,8 +59,7 @@ exports.listFields = async (req, res) => {
     // map over fields and add progress
     const fieldsWithProgress = fields.map((field) => {
       const progress = calculateProgress(field);
-      const { tasks, ...fieldData } = field;
-      return { ...fieldData, progress };
+      return { ...field, progress };
     });
 
     res.json({
@@ -72,7 +75,7 @@ exports.listFields = async (req, res) => {
 // POST /fields (Create new field)
 exports.createField = async (req, res) => {
   try {
-    const { name, size, cropType } = req.body;
+    const { name, size, cropType, plantedDate, harvestDate } = req.body;
     const { farmId } = req.user;
 
     const newField = await prisma.field.create({
@@ -82,13 +85,15 @@ exports.createField = async (req, res) => {
         cropType,
         farmId,
         status: "planted",
-        plantedDate: new Date(),
+        plantedDate: plantedDate ? new Date(plantedDate) : new Date(),
+        harvestDate: harvestDate ? new Date(harvestDate) : null,
         active: true,
       },
     });
 
     res.json({ ...newField, progress: 0 });
   } catch (error) {
+    console.error("Create field error:", error);
     res.status(500).json({ error: "Failed to create field" });
   }
 };
@@ -96,15 +101,20 @@ exports.createField = async (req, res) => {
 // PUT /fields/:id (Versioning & Updates)
 exports.updateField = async (req, res) => {
   const { id } = req.params;
-  const { name, size, cropType, status, notes } = req.body;
+  const { name, size, cropType, status, notes, active, plantedDate, harvestDate } = req.body;
   const { farmId } = req.user;
-  userName = await prisma.user.findUnique({
-    where: { id: req.user.id },
-    select: { name: true },
-  });
-  userName = userName.name;
-  console.log("username:", userName);
-  console.log("farmid:", farmId);
+
+  let userName = "Unknown";
+  try {
+    const user = await prisma.user.findUnique({
+      where: { id: req.user.id },
+      select: { name: true },
+    });
+    if (user) userName = user.name;
+  } catch (err) {
+    console.error("Error fetching user for update:", err);
+  }
+
   try {
     const currentField = await prisma.field.findUnique({
       where: { id: parseInt(id) },
@@ -136,7 +146,8 @@ exports.updateField = async (req, res) => {
             farmId,
             cropType,
             status: status || "planted",
-            plantedDate: new Date(),
+            plantedDate: plantedDate ? new Date(plantedDate) : new Date(),
+            harvestDate: harvestDate ? new Date(harvestDate) : null,
             active: true,
             lastUpdatedBy: userName,
             statusNotes: "New crop season started",
@@ -156,8 +167,11 @@ exports.updateField = async (req, res) => {
         name,
         size,
         status,
+        active: active !== undefined ? active : currentField.active,
+        plantedDate: plantedDate ? new Date(plantedDate) : currentField.plantedDate,
+        harvestDate: harvestDate ? new Date(harvestDate) : currentField.harvestDate,
         lastUpdatedBy: userName,
-        statusNotes: notes,
+        statusNotes: notes || currentField.statusNotes,
       },
       include: { tasks: true },
     });
@@ -285,7 +299,7 @@ exports.filterField = async (req, res) => {
 // Get field details
 exports.getFieldDetails = async (req, res) => {
   try {
-    const { fieldId } = req.params;
+    const fieldId = req.params.fieldId || req.query.fieldId;
     const { farmId } = req.user;
 
     const fieldData = await prisma.field.findFirst({
@@ -371,13 +385,18 @@ exports.getWorkerFields = async (req, res) => {
           },
         },
       },
-      include: { tasks: true },
+      include: {
+        tasks: {
+          include: {
+            taskAssignments: true,
+          },
+        },
+      },
     });
 
     const fieldsWithProgress = fields.map((field) => {
       const progress = calculateProgress(field);
-      const { tasks, ...fieldData } = field;
-      return { ...fieldData, progress };
+      return { ...field, progress };
     });
 
     res.json(fieldsWithProgress);

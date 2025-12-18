@@ -149,6 +149,7 @@ enum FieldStatus {
   planted
   growing
   harvesting
+  harvested
 }
 
 enum TaskStatus {

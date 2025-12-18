@@ -1,13 +1,15 @@
 import React, { useState } from "react";
 import { Modal } from "./Modal";
 import { Calendar } from "lucide-react";
+import { fieldService } from "@/services/field.service";
 
 interface AddFieldModalProps {
   isOpen: boolean;
   onClose: () => void;
+  onSuccess?: () => void;
 }
 
-export function AddFieldModal({ isOpen, onClose }: AddFieldModalProps) {
+export function AddFieldModal({ isOpen, onClose, onSuccess }: AddFieldModalProps) {
   const [formData, setFormData] = useState({
     fieldName: "",
     size: "",
@@ -25,11 +27,22 @@ export function AddFieldModal({ isOpen, onClose }: AddFieldModalProps) {
     e.preventDefault();
     setIsLoading(true);
 
-    // Simulate API call
-    setTimeout(() => {
-      setIsLoading(false);
+    try {
+      const crop = formData.cropType === "other" ? formData.customCrop : formData.cropType;
+      
+      await fieldService.create({
+        name: formData.fieldName,
+        size: parseFloat(formData.size),
+        cropType: crop,
+        status: "planted", // Default status
+        plantedDate: formData.plantingDate || null,
+        harvestDate: formData.harvestDate || null,
+      });
+
       onClose();
+      if (onSuccess) onSuccess();
       (window as any).showToast?.("Field created successfully!", "success");
+      
       // Reset form
       setFormData({
         fieldName: "",
@@ -41,10 +54,19 @@ export function AddFieldModal({ isOpen, onClose }: AddFieldModalProps) {
         harvestDate: "",
         description: "",
       });
-    }, 1000);
+    } catch (error) {
+      console.error("Failed to create field:", error);
+      (window as any).showToast?.("Failed to create field", "error");
+    } finally {
+      setIsLoading(false);
+    }
   };
 
-  const isFormValid = formData.fieldName && formData.size && formData.cropType;
+  const isFormValid = 
+    formData.fieldName && 
+    formData.size && 
+    formData.cropType && 
+    (formData.cropType !== "other" || formData.customCrop.trim() !== "");
 
   const footer = (
     <>
