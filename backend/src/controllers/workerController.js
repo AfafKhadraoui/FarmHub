@@ -158,7 +158,7 @@ const workerController = {
     // Get available workers for a specific task
     async getAvailableWorkersForTask(req, res) {
         try {
-            const taskId = parseIntOrDefault(req.params.taskId, null);
+            const taskId = parseIntOrDefault(req.params.id, null);
             if (!taskId) {
                 throw new Error('Invalid task id');
             }

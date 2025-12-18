@@ -22,7 +22,7 @@ import { EditFieldModal } from "@/components/workspace/modals/EditFieldModal";
 import { ArchiveFieldModal } from "@/components/workspace/modals/ArchiveFieldModal";
 import { CreateTaskModal } from "@/components/workspace/modals/CreateTaskModal";
 import { fieldService } from "@/services/field.service";
-import { deleteTask } from "@/services/task.service";
+import { deleteTask, updateTaskStatus } from "@/services/task.service";
 
 export default function FieldDetailPage({
   params,
@@ -111,6 +111,20 @@ export default function FieldDetailPage({
     } catch (err) {
       console.error("Failed to remove worker:", err);
       alert("Failed to remove worker. Please try again.");
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  const handleCompleteTask = async (taskId: number) => {
+    try {
+      setIsProcessing(true);
+      await updateTaskStatus(taskId, "completed");
+      fetchData(); // Refresh to see updated progress
+      (window as any).showToast?.("Task marked as completed!", "success");
+    } catch (err) {
+      console.error("Failed to complete task:", err);
+      (window as any).showToast?.("Failed to update task", "error");
     } finally {
       setIsProcessing(false);
     }
@@ -346,22 +360,45 @@ export default function FieldDetailPage({
               </div>
               <div className="relative">
                 <div className="flex items-center justify-between mb-2">
-                  {["Planted", "Growing", "Harvest"].map((step, idx) => {
-                    const statusOrder = ["planted", "growing", "harvesting", "harvested"];
-                    const currentIdx = statusOrder.indexOf(fieldData.status.toLowerCase());
-                    const isCompleted = currentIdx >= idx;
+                  {[
+                    { label: "Planted", key: "planted" },
+                    { label: "Growing", key: "growing" },
+                    { label: "Done", key: "harvested" }
+                  ].map((step, idx, arr) => {
+                    const statusOrder = ["planted", "growing", "harvested"];
+                    const normalizedStatus = fieldData.status.toLowerCase() === "harvesting" ? "harvested" : fieldData.status.toLowerCase();
+                    const currentIdx = statusOrder.indexOf(normalizedStatus);
+                    const isCompleted = currentIdx > idx;
                     const isActive = currentIdx === idx;
 
                     return (
-                      <React.Fragment key={step}>
-                        <div className="flex flex-col items-center flex-1">
-                          <div className={`w-4 h-4 rounded-full ${isCompleted ? "bg-[#4CAF50]" : "bg-[#D1D5DB]"}`}></div>
-                          <span className={`mt-2 text-[13px] font-medium ${isCompleted ? "text-[#6B7280]" : "text-[#9CA3AF]"}`}>
-                            {step}
+                      <React.Fragment key={step.key}>
+                        <div className="flex flex-col items-center flex-1 relative">
+                          <div 
+                            className={`w-5 h-5 rounded-full z-10 flex items-center justify-center transition-all ${
+                              isCompleted ? "bg-[#4CAF50]" : 
+                              isActive ? "bg-white border-4 border-[#4CAF50] shadow-[0_0_10px_rgba(76,175,80,0.4)]" : 
+                              "bg-[#D1D5DB]"
+                            }`}
+                          >
+                            {isCompleted && (
+                              <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                              </svg>
+                            )}
+                          </div>
+                          <span className={`mt-2 text-[12px] font-bold transition-colors ${
+                            isCompleted ? "text-[#4CAF50]" : 
+                            isActive ? "text-[#1F2937]" : 
+                            "text-[#9CA3AF]"
+                          }`}>
+                            {step.label}
                           </span>
                         </div>
-                        {idx < 2 && (
-                          <div className={`flex-1 h-1 -mx-1 ${currentIdx > idx ? "bg-[#4CAF50]" : "bg-[#D1D5DB]"}`}></div>
+                        {idx < arr.length - 1 && (
+                          <div className={`flex-1 h-1 -mx-2 mt-2 self-start transform translate-y-0.5 rounded-full ${
+                            currentIdx > idx ? "bg-[#4CAF50]" : "bg-[#E5E7EB]"
+                          }`}></div>
                         )}
                       </React.Fragment>
                     );
@@ -433,6 +470,18 @@ export default function FieldDetailPage({
                           Due: {formatDate(task.dueDate)} 
                           {task.priority && ` • Priority: ${task.priority.toUpperCase()}`}
                         </p>
+                        {isWorker && (
+                          <button
+                            onClick={() => handleCompleteTask(task.id)}
+                            disabled={isProcessing}
+                            className="h-8 px-3 bg-green-50 text-green-600 rounded-lg text-xs font-bold hover:bg-green-100 transition-colors flex items-center gap-1 cursor-pointer disabled:opacity-50"
+                          >
+                            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
+                            </svg>
+                            Mark as Complete
+                          </button>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -569,8 +618,8 @@ export default function FieldDetailPage({
             name: fieldData.name,
             size: fieldData.size.toString(),
             location: fieldData.location || "",
-            cropType: fieldData.cropType.toLowerCase(),
-            status: fieldData.status.toLowerCase(),
+            cropType: (fieldData.cropType || "").toLowerCase(),
+            status: (fieldData.status || "idle").toLowerCase(),
             plantingDate: fieldData.plantedDate ? fieldData.plantedDate.split("T")[0] : "",
             harvestDate: fieldData.harvestDate ? fieldData.harvestDate.split("T")[0] : "",
             description: fieldData.statusNotes || "",

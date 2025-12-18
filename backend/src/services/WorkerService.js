@@ -291,10 +291,10 @@ const WorkerService = {
 
         // Workers who have tasks updated today (active today)
         const activeWorkersToday = workers.filter(worker =>
-                worker.taskAssignments.some(assignment =>
-                    assignment.task.updatedAt >= todayStart
-                )
-            ).length;
+            worker.taskAssignments.some(assignment =>
+                assignment.task.updatedAt >= todayStart
+            )
+        ).length;
 
 
         return {

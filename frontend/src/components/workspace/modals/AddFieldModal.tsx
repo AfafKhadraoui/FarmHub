@@ -1,3 +1,5 @@
+"use client";
+
 import React, { useState } from "react";
 import { Modal } from "./Modal";
 import { Calendar } from "lucide-react";
@@ -9,7 +11,7 @@ interface AddFieldModalProps {
   onSuccess?: () => void;
 }
 
-export function AddFieldModal({ isOpen, onClose, onSuccess }: AddFieldModalProps) {
+export function AddFieldModal({ isOpen, onClose, onSuccess }: AddFieldModalProps): React.JSX.Element {
   const [formData, setFormData] = useState({
     fieldName: "",
     size: "",
@@ -20,11 +22,26 @@ export function AddFieldModal({ isOpen, onClose, onSuccess }: AddFieldModalProps
     harvestDate: "",
     description: "",
   });
-
+  const [errors, setErrors] = useState<Record<string, string>>({});
   const [isLoading, setIsLoading] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Validation
+    const newErrors: Record<string, string> = {};
+    if (formData.plantingDate && formData.harvestDate) {
+      if (new Date(formData.harvestDate) < new Date(formData.plantingDate)) {
+        newErrors.harvestDate = "Harvest date cannot be before planting date";
+      }
+    }
+    
+    if (Object.keys(newErrors).length > 0) {
+      setErrors(newErrors);
+      return;
+    }
+
+    setErrors({});
     setIsLoading(true);
 
     try {
@@ -238,8 +255,11 @@ export function AddFieldModal({ isOpen, onClose, onSuccess }: AddFieldModalProps
                 onChange={(e) =>
                   setFormData({ ...formData, harvestDate: e.target.value })
                 }
-                className="w-full h-11 px-4 border border-[#D1D5DB] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#4CAF50] focus:border-transparent"
+                className={`w-full h-11 px-4 border ${errors.harvestDate ? "border-red-500" : "border-[#D1D5DB]"} rounded-lg focus:outline-none focus:ring-2 focus:ring-[#4CAF50] focus:border-transparent`}
               />
+              {errors.harvestDate && (
+                <p className="mt-1 text-xs text-red-500">{errors.harvestDate}</p>
+              )}
             </div>
           </div>
         </div>

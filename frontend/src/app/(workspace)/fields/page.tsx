@@ -22,7 +22,7 @@ export default function FieldsPage() {
   const router = useRouter();
   const { user } = useAuth();
   const [filter, setFilter] = useState<
-    "all" | "idle" | "planted" | "growing" | "harvesting" | "harvested"
+    "all" | "idle" | "planted" | "growing" | "harvested"
   >("all");
   const [showFilterMenu, setShowFilterMenu] = useState(false);
   const [showAddFieldModal, setShowAddFieldModal] = useState(false);
@@ -41,7 +41,7 @@ export default function FieldsPage() {
       if (isWorker) {
         data = await fieldService.getWorkerFields();
       } else {
-        const response = await fieldService.getAll(1, 100); // Fetch up to 100 fields
+        const response = await fieldService.getAll(1); // Fetch all fields (large limit)
         data = response.data;
       }
 
@@ -100,7 +100,6 @@ export default function FieldsPage() {
       idle: { bg: "#F8D7DA", text: "#721C24" },
       planted: { bg: "#CCE5FF", text: "#004085" },
       growing: { bg: "#D4EDDA", text: "#155724" },
-      harvesting: { bg: "#FFF3CD", text: "#856404" },
       harvested: { bg: "#E2E3E5", text: "#383D41" },
     };
     return colors[status] || colors.idle;
@@ -163,7 +162,7 @@ export default function FieldsPage() {
               {/* Filter Menu */}
               {showFilterMenu && (
                 <div className="absolute right-0 mt-2 w-52 bg-white border border-[#E5E7EB] rounded-xl shadow-xl z-50 py-1 overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200">
-                  {["all", "idle", "planted", "growing", "harvesting", "harvested"].map((status) => {
+                  {["all", "idle", "planted", "growing", "harvested"].map((status) => {
                     const statusColor = status !== "all" ? getStatusColor(status) : null;
                     return (
                       <button
@@ -235,7 +234,9 @@ export default function FieldsPage() {
         </div>
       ) : (
         <div className="grid grid-cols-3 gap-8">
-          {fields.map((field) => {
+          {fields
+            .filter((f) => filter === "all" || f.status === filter)
+            .map((field) => {
             const statusColor = getStatusColor(field.status);
             return (
               <div

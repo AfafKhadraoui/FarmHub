@@ -70,3 +70,9 @@ export async function deleteTask(id: number) {
   const res = await api.delete(`/tasks/${id}`);
   return res.data;
 }
+
+/** Update task status */
+export async function updateTaskStatus(id: number, status: string, notes?: string) {
+  const res = await api.patch(`/tasks/${id}/status`, { status, notes });
+  return res.data;
+}

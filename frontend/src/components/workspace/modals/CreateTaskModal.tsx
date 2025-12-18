@@ -1,3 +1,5 @@
+"use client";
+
 import React, { useState, useEffect } from "react";
 import { Modal } from "./Modal";
 import { Clock, Loader2 } from "lucide-react";
@@ -16,7 +18,7 @@ export function CreateTaskModal({
   onClose,
   fieldName = "Field A",
   fieldId,
-}: CreateTaskModalProps) {
+}: CreateTaskModalProps): React.JSX.Element {
   const [formData, setFormData] = useState({
     title: "",
     description: "",
@@ -26,7 +28,7 @@ export function CreateTaskModal({
     workers: [] as number[],
     category: "irrigation",
   });
-
+  const [errors, setErrors] = useState<Record<string, string>>({});
   const [isLoading, setIsLoading] = useState(false);
   const [isFetchingWorkers, setIsFetchingWorkers] = useState(false);
   const [availableWorkers, setAvailableWorkers] = useState<any[]>([]);
@@ -61,6 +63,28 @@ export function CreateTaskModal({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Validation
+    const newErrors: Record<string, string> = {};
+    const now = new Date();
+    const selectedDate = new Date(`${formData.dueDate}T${formData.dueTime || "00:00"}:00`);
+    
+    // Set now's time to 0 to only compare dates if needed, or keep for full precision
+    // The user said "due dates cant be in the past"
+    if (selectedDate < now) {
+      newErrors.dueDate = "Due date and time cannot be in the past";
+    }
+
+    if (formData.workers.length === 0) {
+      newErrors.workers = "Please assign at least one worker";
+    }
+
+    if (Object.keys(newErrors).length > 0) {
+      setErrors(newErrors);
+      return;
+    }
+
+    setErrors({});
     setIsLoading(true);
 
     try {
@@ -233,8 +257,11 @@ export function CreateTaskModal({
                 onChange={(e) =>
                   setFormData({ ...formData, dueDate: e.target.value })
                 }
-                className="w-full h-11 px-4 border border-[#D1D5DB] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#4CAF50] focus:border-transparent"
+                className={`w-full h-11 px-4 border ${errors.dueDate ? "border-red-500" : "border-[#D1D5DB]"} rounded-lg focus:outline-none focus:ring-2 focus:ring-[#4CAF50] focus:border-transparent`}
               />
+              {errors.dueDate && (
+                <p className="mt-1 text-xs text-red-500">{errors.dueDate}</p>
+              )}
             </div>
 
             <div>
@@ -296,6 +323,9 @@ export function CreateTaskModal({
                 {formData.workers.length} worker
                 {formData.workers.length > 1 ? "s" : ""} selected
               </p>
+            )}
+            {errors.workers && (
+              <p className="mt-1 text-xs text-red-500">{errors.workers}</p>
             )}
           </div>
         </div>

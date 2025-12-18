@@ -1,3 +1,5 @@
+"use client";
+
 import React, { useState } from "react";
 import { Modal } from "./Modal";
 import { fieldService } from "@/services/field.service";
@@ -23,37 +25,59 @@ export function EditFieldModal({
   onClose,
   fieldId,
   fieldData,
-}: EditFieldModalProps) {
+}: EditFieldModalProps): React.JSX.Element {
   const [formData, setFormData] = useState({
     fieldName: fieldData?.name || "",
     size: fieldData?.size || "",
     location: fieldData?.location || "",
     cropType: fieldData?.cropType || "",
-    status: fieldData?.status || "idle",
+    status: (fieldData?.status === "harvesting" ? "harvested" : fieldData?.status) || "idle",
     customCrop: "",
     plantingDate: fieldData?.plantingDate || "",
     harvestDate: fieldData?.harvestDate || "",
     description: fieldData?.description || "",
   });
-
+  const [errors, setErrors] = useState<Record<string, string>>({});
   const [isLoading, setIsLoading] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Validation
+    const newErrors: Record<string, string> = {};
+    if (formData.plantingDate && formData.harvestDate) {
+      if (new Date(formData.harvestDate) < new Date(formData.plantingDate)) {
+        newErrors.harvestDate = "Harvest date cannot be before planting date";
+      }
+    }
+    
+    if (Object.keys(newErrors).length > 0) {
+      setErrors(newErrors);
+      return;
+    }
+
+    setErrors({});
     setIsLoading(true);
 
     try {
       const crop = formData.cropType === "other" ? formData.customCrop : formData.cropType;
       
-      await fieldService.update(fieldId, {
+      const response = await fieldService.update(fieldId, {
         name: formData.fieldName,
         size: parseFloat(formData.size),
         cropType: crop,
         status: formData.status,
         plantedDate: formData.plantingDate ? new Date(formData.plantingDate) : null,
         harvestDate: formData.harvestDate ? new Date(formData.harvestDate) : null,
-        // Backend doesn't support location/description yet but we can add them to metadata if we want
       });
+
+      // If the field was versioned (ID changed), redirect to the new ID
+      if (response.field && response.field.id && response.field.id !== fieldId) {
+        onClose();
+        (window as any).showToast?.("New crop season started!", "success");
+        window.location.href = `/fields/${response.field.id}`;
+        return;
+      }
 
       onClose();
       (window as any).showToast?.("Field updated successfully!", "success");
@@ -255,14 +279,14 @@ export function EditFieldModal({
               <input
                 type="radio"
                 name="status"
-                value="harvesting"
-                checked={formData.status === "harvesting"}
+                value="harvested"
+                checked={formData.status === "harvested"}
                 onChange={(e) =>
                   setFormData({ ...formData, status: e.target.value })
                 }
                 className="w-4 h-4 text-[#4CAF50] focus:ring-[#4CAF50]"
               />
-              <span className="text-[#374151]">Harvesting</span>
+              <span className="text-[#374151]">Harvested</span>
             </label>
           </div>
         </div>
@@ -298,8 +322,11 @@ export function EditFieldModal({
                 onChange={(e) =>
                   setFormData({ ...formData, harvestDate: e.target.value })
                 }
-                className="w-full h-11 px-4 border border-[#D1D5DB] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#4CAF50] focus:border-transparent"
+                className={`w-full h-11 px-4 border ${errors.harvestDate ? "border-red-500" : "border-[#D1D5DB]"} rounded-lg focus:outline-none focus:ring-2 focus:ring-[#4CAF50] focus:border-transparent`}
               />
+              {errors.harvestDate && (
+                <p className="mt-1 text-xs text-red-500">{errors.harvestDate}</p>
+              )}
             </div>
           </div>
         </div>

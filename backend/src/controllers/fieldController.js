@@ -144,7 +144,8 @@ exports.updateField = async (req, res) => {
       return res.status(404).json({ error: "Field not found" });
     }
 
-    const isNewSeason = cropType && cropType !== currentField.cropType;
+    // Only version if explicitly requested by a flag
+    const isNewSeason = req.body.startNewSeason === true;
 
     if (isNewSeason) {
       const result = await prisma.$transaction(async (tx) => {
@@ -186,6 +187,7 @@ exports.updateField = async (req, res) => {
       data: {
         name,
         size,
+        cropType,
         status,
         active: active !== undefined ? active : currentField.active,
         plantedDate: plantedDate ? new Date(plantedDate) : currentField.plantedDate,
