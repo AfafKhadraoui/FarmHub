@@ -57,7 +57,6 @@ export function ProfileDropdown({
   }, [isOpen, onClose, triggerRef]);
 
   const handleLogout = () => {
-    onClose();
     setShowLogoutModal(true);
   };
 

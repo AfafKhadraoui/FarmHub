@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { adminProfileService } from '../../../services/profile.services';
+import { adminProfileService } from '../../../services/admin.profile.services';
 import {
   User,
   Mail,
