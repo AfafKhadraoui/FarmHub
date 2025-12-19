@@ -668,3 +668,114 @@ exports.getFieldHistorySummary = async (req, res) => {
   };
   return exports.getFieldHistory(req, res);
 };
+
+// DELETE /fields/:id/permanent - Permanently delete archived field
+exports.permanentDeleteField = async (req, res) => {
+  const { id } = req.params;
+  const { farmId } = req.user;
+
+  try {
+    const field = await prisma.field.findUnique({
+      where: { id: parseInt(id) },
+    });
+
+    if (!field || field.farmId !== farmId) {
+      return res.status(404).json({ error: "Field not found" });
+    }
+
+    // Check if field is archived first (extra safety)
+    if (field.active === true) {
+      return res.status(400).json({ 
+        error: "Cannot permanently delete active field. Archive it first." 
+      });
+    }
+
+    // Delete related tasks first (if any)
+    await prisma.task.deleteMany({
+      where: { fieldId: parseInt(id) },
+    });
+
+    // Delete the field permanently
+    await prisma.field.delete({
+      where: { id: parseInt(id) },
+    });
+
+    res.json({ 
+      success: true,
+      message: "Field permanently deleted" 
+    });
+  } catch (error) {
+    console.error("Error deleting field:", error);
+    res.status(500).json({ 
+      success: false,
+      error: "Failed to delete field permanently" 
+    });
+  }
+};
+// POST /fields/:id/restore - Simple restore endpoint
+exports.restoreField = async (req, res) => {
+  const { id } = req.params;
+  const { farmId } = req.user;
+
+  try {
+    // Find the field
+    const field = await prisma.field.findUnique({
+      where: { id: parseInt(id) },
+    });
+
+    // Check if field exists and belongs to user's farm
+    if (!field || field.farmId !== farmId) {
+      return res.status(404).json({ 
+        success: false,
+        error: "Field not found" 
+      });
+    }
+
+    // Check if field is already active
+    if (field.active === true) {
+      return res.status(400).json({ 
+        success: false,
+        error: "Field is already active" 
+      });
+    }
+
+    // Simply update active to true
+    const restoredField = await prisma.field.update({
+      where: { id: parseInt(id) },
+      data: { 
+        active: true,
+        lastUpdatedBy: req.user.name || "System",
+        status: field.status === "harvested" ? "active" : field.status
+      },
+    });
+
+    // Log activity
+    await prisma.activity.create({
+      data: {
+        id: `act_field_restore_${Date.now()}`,
+        type: "field_restored",
+        title: "Field Restored",
+        message: `Field "${field.name}" was restored from archive.`,
+        timestamp: new Date(),
+        metadata: {
+          fieldId: field.id,
+          authorName: req.user.name || "System",
+          action: "restore",
+          farmId
+        }
+      }
+    });
+
+    res.json({
+      success: true,
+      message: "Field restored successfully",
+      data: restoredField,
+    });
+  } catch (error) {
+    console.error("Error restoring field:", error);
+    res.status(500).json({ 
+      success: false,
+      error: "Failed to restore field" 
+    });
+  }
+};

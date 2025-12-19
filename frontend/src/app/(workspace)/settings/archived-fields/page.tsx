@@ -1,7 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
-
+import React, { useState, useEffect } from "react";
 import {
   ArrowLeft,
   Archive,
@@ -11,80 +10,155 @@ import {
   Leaf,
   Search,
   Trash2,
+  AlertCircle,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/hooks/useAuth";
-
-// Mock data for archived fields
-const archivedFieldsData = [
-  {
-    id: "field-001",
-    name: "Field A",
-    size: "12 hectares",
-    location: "North Plot",
-    lastCrop: "Wheat",
-    archivedDate: "Jan 15, 2025",
-    reason: "Seasonal rotation completed",
-  },
-  {
-    id: "field-002",
-    name: "Field C",
-    size: "8 hectares",
-    location: "East Section",
-    lastCrop: "Corn",
-    archivedDate: "Jan 10, 2025",
-    reason: "Field maintenance required",
-  },
-  {
-    id: "field-003",
-    name: "South Field",
-    size: "15 hectares",
-    location: "South Plot",
-    lastCrop: "Barley",
-    archivedDate: "Jan 5, 2025",
-    reason: "Soil regeneration period",
-  },
-  {
-    id: "field-004",
-    name: "West Field B",
-    size: "10 hectares",
-    location: "West Section",
-    lastCrop: "Rice",
-    archivedDate: "Dec 28, 2024",
-    reason: "Irrigation system upgrade",
-  },
-];
+import { useArchivedFields } from "@/hooks/useArchivedFields";
+import { CustomAlert } from "@/components/workspace/CustomAlert";
+import { CustomConfirm } from "@/components/workspace/CustomConfirm";
 
 export default function ArchivedFieldsPage() {
   const router = useRouter();
   const { user } = useAuth();
   const [searchQuery, setSearchQuery] = useState("");
-  const [fields, setFields] = useState(archivedFieldsData);
+
+  const {
+    fields,
+    loading,
+    error,
+    fetchArchivedFields,
+    restoreField,
+    permanentDeleteField
+  } = useArchivedFields();
+
+  // Alert state
+  const [alert, setAlert] = useState<{
+    isOpen: boolean;
+    type: "success" | "error";
+    message: string;
+  }>({
+    isOpen: false,
+    type: "success",
+    message: ""
+  });
+
+  // Confirmation state
+  const [confirmation, setConfirmation] = useState<{
+    isOpen: boolean;
+    type: "restore" | "delete";
+    fieldId: string;
+    fieldName: string;
+  }>({
+    isOpen: false,
+    type: "restore",
+    fieldId: "",
+    fieldName: ""
+  });
 
   const isAdmin = user?.role === "admin";
 
-  // Filter fields based on search
+  // Fetch data on mount
+  useEffect(() => {
+    fetchArchivedFields();
+  }, [fetchArchivedFields]);
+
+  // Filter fields
   const filteredFields = fields.filter((field) =>
     field.name.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  const handleRestore = (fieldId: string) => {
-    // In a real app, this would make an API call
-    setFields(fields.filter((f) => f.id !== fieldId));
-    // Show success message or notification
-    alert("Field restored successfully!");
+  const showAlert = (type: "success" | "error", message: string) => {
+    setAlert({ isOpen: true, type, message });
   };
 
-  const handlePermanentDelete = (fieldId: string) => {
-    if (
-      confirm(
-        "Are you sure you want to permanently delete this field? This action cannot be undone."
-      )
-    ) {
-      setFields(fields.filter((f) => f.id !== fieldId));
-      alert("Field permanently deleted!");
+  const closeAlert = () => {
+    setAlert(prev => ({ ...prev, isOpen: false }));
+  };
+
+  const showConfirmation = (type: "restore" | "delete", fieldId: string, fieldName: string) => {
+    setConfirmation({
+      isOpen: true,
+      type,
+      fieldId,
+      fieldName
+    });
+  };
+
+  const closeConfirmation = () => {
+    setConfirmation(prev => ({ ...prev, isOpen: false }));
+  };
+
+  const handleRestoreClick = (fieldId: string, fieldName: string) => {
+    if (!isAdmin) {
+      showAlert("error", "Only admins can restore fields");
+      return;
+    }
+    showConfirmation("restore", fieldId, fieldName);
+  };
+
+  const handleDeleteClick = (fieldId: string, fieldName: string) => {
+    if (!isAdmin) {
+      showAlert("error", "Only admins can delete fields");
+      return;
+    }
+    showConfirmation("delete", fieldId, fieldName);
+  };
+
+  const handleRestoreConfirm = async () => {
+    try {
+      await restoreField(confirmation.fieldId);
+      showAlert("success", `"${confirmation.fieldName}" restored successfully!`);
+      closeConfirmation();
+    } catch (error) {
+      showAlert("error", "Failed to restore field. Please try again.");
     }
   };
+
+  const handleDeleteConfirm = async () => {
+    try {
+      await permanentDeleteField(confirmation.fieldId);
+      showAlert("success", `"${confirmation.fieldName}" permanently deleted!`);
+      closeConfirmation();
+    } catch (error) {
+      showAlert("error", "Failed to delete field. Please try again.");
+    }
+  };
+
+  // Loading state
+  if (loading && fields.length === 0) {
+    return (
+      <div className="p-6">
+        <div className="flex items-center justify-center min-h-[400px]">
+          <div className="animate-spin rounded-full h-12 w-12 border-2 border-gray-300 border-t-blue-600" />
+        </div>
+      </div>
+    );
+  }
+
+  // Error state
+  if (error && fields.length === 0) {
+    return (
+      <div className="p-6">
+        <div className="rounded-lg border border-red-200 bg-red-50 p-4">
+          <div className="flex items-center gap-3">
+            <AlertCircle className="h-5 w-5 text-red-600" />
+            <div className="flex-1">
+              <p className="text-sm font-medium text-red-800">Error loading archived fields</p>
+              <p className="text-sm text-red-700 mt-1">{error}</p>
+            </div>
+            <button
+              onClick={fetchArchivedFields}
+              className="h-9 px-4 bg-white border border-gray-300 text-gray-700 rounded-lg font-semibold hover:bg-gray-50 transition-all cursor-pointer text-sm flex items-center gap-2"
+            >
+              <RefreshCw className="h-4 w-4" />
+              Retry
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <>
@@ -106,10 +180,7 @@ export default function ArchivedFieldsPage() {
             <Archive size={24} className="text-[#F59E0B]" />
           </div>
           <div>
-            <h1
-              className="font-bold text-[#1F2937]"
-              style={{ fontFamily: "Poppins, sans-serif", fontSize: "32px" }}
-            >
+            <h1 className="font-bold text-[#1F2937]" style={{ fontFamily: "Poppins, sans-serif", fontSize: "32px" }}>
               Archived Fields
             </h1>
           </div>
@@ -200,18 +271,20 @@ export default function ArchivedFieldsPage() {
                 {isAdmin && (
                   <div className="flex flex-col gap-2 ml-6">
                     <button
-                      onClick={() => handleRestore(field.id)}
-                      className="h-10 px-5 bg-[#4CAF50] text-white rounded-lg font-semibold hover:bg-[#388E3C] transition-all flex items-center gap-2 whitespace-nowrap"
+                      onClick={() => handleRestoreClick(field.id, field.name)}
+                      disabled={loading}
+                      className="h-10 px-5 bg-[#4CAF50] text-white rounded-lg font-semibold hover:bg-[#388E3C] transition-all flex items-center gap-2 whitespace-nowrap disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       <RefreshCw size={16} />
                       Restore
                     </button>
                     <button
-                      onClick={() => handlePermanentDelete(field.id)}
-                      className="h-10 px-5 bg-white border border-[#F44336] text-[#F44336] rounded-lg font-semibold hover:bg-[#FEE] transition-all flex items-center gap-2 whitespace-nowrap"
+                      onClick={() => handleDeleteClick(field.id, field.name)}
+                      disabled={loading}
+                      className="h-10 px-5 bg-white border border-[#F44336] text-[#F44336] rounded-lg font-semibold hover:bg-[#FEE] transition-all flex items-center gap-2 whitespace-nowrap disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       <Trash2 size={16} />
-                      Delete
+                      Delete Permanently
                     </button>
                   </div>
                 )}
@@ -226,15 +299,47 @@ export default function ArchivedFieldsPage() {
             <Archive size={32} className="text-[#9CA3AF]" />
           </div>
           <h3 className="font-semibold text-[#1F2937] text-[18px] mb-2">
-            No archived fields found
+            {searchQuery ? "No matching fields found" : "No archived fields"}
           </h3>
-          <p className="text-[#6B7280] text-[15px]">
+          <p className="text-[#6B7280] text-[15px] mb-4">
             {searchQuery
               ? "Try adjusting your search query"
               : "There are no archived fields at the moment"}
           </p>
+          {searchQuery && (
+            <button
+              onClick={() => setSearchQuery("")}
+              className="text-[#4CAF50] font-semibold text-[14px] hover:underline"
+            >
+              Clear search
+            </button>
+          )}
         </div>
       )}
+
+      {/* Custom Alert */}
+      <CustomAlert
+        isOpen={alert.isOpen}
+        onClose={closeAlert}
+        type={alert.type}
+        message={alert.message}
+      />
+
+      {/* Custom Confirmation Dialog */}
+      <CustomConfirm
+        isOpen={confirmation.isOpen}
+        onClose={closeConfirmation}
+        onConfirm={confirmation.type === "restore" ? handleRestoreConfirm : handleDeleteConfirm}
+        type={confirmation.type}
+        title={confirmation.type === "restore" ? "Restore Field" : "Delete Field"}
+        message={
+          confirmation.type === "restore"
+            ? `Are you sure you want to restore "${confirmation.fieldName}"? This field will become active again.`
+            : `Are you sure you want to permanently delete "${confirmation.fieldName}"? All related data will be lost.`
+        }
+        confirmText={confirmation.type === "restore" ? "Restore Field" : "Delete Permanently"}
+        loading={loading}
+      />
     </>
   );
 }

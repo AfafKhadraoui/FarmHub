@@ -344,7 +344,7 @@ export default function SettingsPage() {
               </p>
             </div>
             <button
-              onClick={() => router.push("/workspace/fields/archived")} // Updated route
+              onClick={() => router.push("/settings/archived-fields")} // Updated route
               className="h-11 px-8 bg-[#F59E0B] text-white rounded-lg font-semibold hover:bg-[#D97706] transition-all cursor-pointer flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
               disabled={loading}
             >

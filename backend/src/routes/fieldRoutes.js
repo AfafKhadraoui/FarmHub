@@ -17,4 +17,8 @@ router.put("/:id", fieldController.updateField); // PUT /fields/:id
 router.post("/:fieldId/unassign-worker/:workerId", fieldController.unassignWorkerFromField);
 router.delete("/:id", fieldController.deleteField); // DELETE /fields/:id
 
+// delete the field permenently from the setting archived fields section 
+router.delete("/:id/permanent", fieldController.permanentDeleteField); // DELETE /fields/:id/permanent
+router.patch("/:id/restore", fieldController.restoreField); // PATCH /fields/:id/restore
+
 module.exports = router;
