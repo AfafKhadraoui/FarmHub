@@ -38,8 +38,16 @@ exports.getCurrentWeather = async (req, res) => {
       return res.json(weatherService.formatForWorker(data, locationName));
     }
 
-    const { data } = await getFarmWeatherData(req.user.id);
-    return res.json(weatherService.formatForFarmerCurrent(data));
+    const { data, locationName, coords } = await getFarmWeatherData(
+      req.user.id
+    );
+    return res.json(
+      weatherService.formatForFarmerCurrent(data, {
+        name: locationName,
+        latitude: coords.latitude,
+        longitude: coords.longitude,
+      })
+    );
   } catch (error) {
     console.error("Weather Controller Error:", error);
     res.status(500).json({ error: "Failed to fetch weather data" });

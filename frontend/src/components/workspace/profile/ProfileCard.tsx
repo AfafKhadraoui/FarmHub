@@ -166,16 +166,6 @@ export const ProfileCard = ({
             </p>
           </div>
 
-          {isAdmin && profile.farmId && (
-            <div>
-              <label className="flex items-center gap-2 text-[#6B7280] font-semibold mb-2 text-[14px]">
-                <MapPin size={16} />
-                Farm ID
-              </label>
-              <p className="text-[#1F2937] text-[15px]">{profile.farmId}</p>
-            </div>
-          )}
-
           {isWorker && profile.assignedFarms && profile.assignedFarms.length > 0 && (
             <div className="col-span-2">
               <label className="flex items-center gap-2 text-[#6B7280] font-semibold mb-2 text-[14px]">

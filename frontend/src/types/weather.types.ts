@@ -10,6 +10,12 @@ export interface CurrentWeather {
   windSpeedKmh: number;
   windDirection?: string;
   timestamp: string;
+  // For farmer/admin responses we may include a top-level location
+  location?: {
+    name: string;
+    latitude: number;
+    longitude: number;
+  };
 }
 
 // Worker specific response (includes location + forecast)

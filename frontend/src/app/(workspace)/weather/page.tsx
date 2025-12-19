@@ -3,7 +3,7 @@
 import { MapPin, CheckCircle, AlertCircle, Calendar } from "lucide-react";
 import React from "react";
 import { useWeather } from "@/hooks/useWeather";
-import { CurrentWeather } from "@/types/weather.types";
+import { CurrentWeather, WorkerWeatherResponse } from "@/types/weather.types";
 
 export default function WeatherPage() {
   // Fetch all weather data using the combined hook
@@ -37,21 +37,27 @@ export default function WeatherPage() {
     );
   }
 
-  // Type guard to check if current is farmer format (just temperature field)
-  const isFarmerWeather = (
-    weather: any
-  ): weather is CurrentWeather => {
-    return weather && 'temperature' in weather && !('location' in weather);
+  // Worker responses include a nested `current` and a top-level `location`.
+  // Farmer/admin responses return the current fields at the top-level (may also include a top-level `location`).
+  const isWorkerWeather = (weather: any): weather is WorkerWeatherResponse => {
+    return (
+      weather &&
+      typeof weather === "object" &&
+      "current" in weather &&
+      "location" in weather
+    );
   };
 
   // Extract current weather data (handle both worker and farmer formats)
-  const currentWeather = isFarmerWeather(current)
-    ? current
-    : current?.current || null;
+  const currentWeather = isWorkerWeather(current)
+    ? current.current
+    : (current as CurrentWeather | null);
 
-  // Get location name (only for worker format)
-  const locationName = !isFarmerWeather(current) && current?.location
+  // Get location name (prefer worker.location, else farmer top-level location)
+  const locationName = isWorkerWeather(current)
     ? current.location.name
+    : current && (current as any).location
+    ? (current as any).location.name
     : "Farm Location";
 
   // Get weather icon emoji
@@ -132,7 +138,7 @@ export default function WeatherPage() {
       </div>
 
       {/* Current Weather Card */}
-      <div className="mb-8 bg-white border border-[#E5E7EB] rounded-2xl p-12 shadow-sm text-center">
+      <div className="mb-8 bg-white border border-[#E5E7EB] rounded-2xl p-12 shadow-sm  text-center ">
         <div className="text-[120px] mb-6">
           {getWeatherIcon(currentWeather.icon)}
         </div>
@@ -152,7 +158,7 @@ export default function WeatherPage() {
           {currentWeather.condition}
         </div>
 
-        <div className="grid grid-cols-4 gap-8 max-w-4xl mx-auto">
+        <div className="grid grid-cols-3 gap-8 max-w-4xl mx-auto">
           <div>
             <div className="text-[#9CA3AF] mb-1">Feels like:</div>
             <div className="text-[#1F2937] font-semibold">

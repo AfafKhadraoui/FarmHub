@@ -97,11 +97,18 @@ const weatherService = {
   },
 
   // For Farmer (Current)
-  formatForFarmerCurrent(data) {
+  formatForFarmerCurrent(data, location) {
     const current = data.current;
     const wmo = mapWmoCode(current.weather_code);
 
     return {
+      location: location
+        ? {
+            name: location.name,
+            latitude: location.latitude,
+            longitude: location.longitude,
+          }
+        : undefined,
       temperature: Math.round(current.temperature_2m),
       condition: wmo.condition,
       icon: wmo.icon,
