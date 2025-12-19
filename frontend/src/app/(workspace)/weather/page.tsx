@@ -185,7 +185,7 @@ export default function WeatherPage() {
         </h2>
 
         <div className="bg-white border border-[#E5E7EB] rounded-2xl p-6 shadow-sm">
-          <div className="flex gap-4 overflow-x-auto">
+          <div className="flex justify-center gap-4 overflow-x-auto">
             {daily.days.map((day, index) => (
               <DayCard
                 key={index}
