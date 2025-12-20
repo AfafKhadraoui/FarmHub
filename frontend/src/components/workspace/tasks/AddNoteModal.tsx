@@ -4,6 +4,7 @@ import React, { useState } from "react";
 import { Modal } from "../modals/Modal";
 import { Button } from "@/components/ui/button";
 import api from "@/lib/api";
+import { authService } from '@/services/auth.service';
 import { useRouter } from "next/navigation";
 
 interface AddNoteModalProps {
@@ -11,6 +12,7 @@ interface AddNoteModalProps {
   onClose: () => void;
   taskId: number;
   taskTitle: string;
+  currentStatus?: string;
   onSuccess?: () => void;
 }
 
@@ -20,6 +22,7 @@ export function AddNoteModal({
   taskId,
   taskTitle,
   onSuccess,
+  currentStatus,
 }: AddNoteModalProps) {
   const router = useRouter();
   const [note, setNote] = useState("");
@@ -33,14 +36,32 @@ export function AddNoteModal({
 
     setIsLoading(true);
     try {
-      await api.patch(`/tasks/${taskId}`, { notes: note });
+      // Fetch existing task to preserve/append notes
+      const tRes = await api.get(`/tasks/${taskId}`);
+      const taskData = tRes.data?.data ?? tRes.data ?? {};
+      const existingNotes = taskData.notes ?? '';
+
+      // Fetch current user for attribution (if available)
+      let author = 'Unknown';
+      try {
+        const profile = await authService.fetchProfile();
+        author = profile?.name ?? profile?.email ?? 'Unknown';
+      } catch (e) {
+        // ignore, use Unknown
+      }
+
+      const timestamp = new Date().toLocaleString();
+      const appended = `${existingNotes ? existingNotes + "\n\n" : ''}[${timestamp}] ${author}: ${note}`;
+
+      // Use PATCH /tasks/:id/status so workers can add notes without requiring admin PUT permission.
+      // We pass the current status to avoid changing it and send appended notes.
+      await api.patch(`/tasks/${taskId}/status`, { status: currentStatus ?? 'in_progress', notes: appended });
       onSuccess?.();
-      router.refresh();
       setNote("");
       onClose();
-    } catch (error) {
+    } catch (error: any) {
       console.error("Failed to add note:", error);
-      alert("Failed to add note. Please try again.");
+      alert(error?.response?.data?.message || "Failed to add note. Please try again.");
     } finally {
       setIsLoading(false);
     }
@@ -48,17 +69,27 @@ export function AddNoteModal({
 
   const footer = (
     <>
-      <Button variant="outline" onClick={onClose} disabled={isLoading}>
+      <button
+        type="button"
+        onClick={onClose}
+        disabled={isLoading}
+        className="h-11 px-6 bg-white border rounded-lg font-semibold hover:bg-[#F9FAFB] transition-all disabled:opacity-50"
+        style={{ 
+          borderColor: 'var(--admin-border)',
+          color: 'var(--admin-text-dark)'
+        }}
+      >
         Cancel
-      </Button>
-      <Button
+      </button>
+      <button
+        type="button"
         onClick={handleSubmit}
         disabled={isLoading || !note.trim()}
+        className="h-11 px-6 rounded-lg font-semibold hover:opacity-90 transition-all disabled:opacity-50 text-white"
         style={{ backgroundColor: "var(--admin-primary)" }}
-        className="hover:opacity-90"
       >
         {isLoading ? "Adding..." : "Add Note"}
-      </Button>
+      </button>
     </>
   );
 
@@ -66,10 +97,10 @@ export function AddNoteModal({
     <Modal isOpen={isOpen} onClose={onClose} title="Add Note" footer={footer}>
       <div className="space-y-4">
         <div>
-          <p className="text-sm text-gray-600 mb-2">Task: {taskTitle}</p>
+          <p className="text-sm mb-2" style={{ color: 'var(--admin-text-muted)' }}>Task: {taskTitle}</p>
         </div>
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
+          <label className="block text-sm font-medium mb-2" style={{ color: 'var(--admin-text-dark)' }}>
             Note
           </label>
           <textarea
@@ -77,7 +108,13 @@ export function AddNoteModal({
             onChange={(e) => setNote(e.target.value)}
             placeholder="Enter your note here..."
             rows={6}
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--admin-primary)] resize-none"
+            className="w-full px-4 py-2 rounded-lg focus:outline-none focus:ring-2 resize-none transition-all"
+            style={{ 
+              borderColor: 'var(--admin-border)',
+              color: 'var(--admin-text-dark)',
+              backgroundColor: 'white',
+              '--tw-ring-color': 'var(--admin-primary)'
+            } as React.CSSProperties}
             disabled={isLoading}
           />
         </div>

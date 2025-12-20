@@ -5,8 +5,10 @@ import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import  api  from '@/lib/api';
 import { Button } from '@/components/ui/button';
+import { AddNoteModal } from '@/components/workspace/tasks/AddNoteModal';
 import { TaskStatusBadge } from '@/components/workspace/tasks/TaskStatusBadge';
 import { PriorityBadge } from '@/components/workspace/tasks/PriorityBadge';
+import { loadWorkersCache, getWorkerFromCache } from '@/services/worker.service';
 
 // Dummy task data for fallback
 const getDummyTask = (id: string) => {
@@ -114,12 +116,19 @@ export default function TaskDetailsPage() {
   const router = useRouter();
   const [task, setTask] = useState<any | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [showAddNote, setShowAddNote] = useState(false);
 
   useEffect(() => {
     const load = async () => {
       try {
         const res = await api.get(`/tasks/${id}`);
-        setTask(res.data);
+        // Normalize possible controller wrapper { success, data }
+        const payload = (res.data as any)?.data ?? res.data;
+        setTask(payload);
+        // Ensure worker cache is populated so assignedWorkerIds can be resolved
+        if ((payload?.assignedWorkerIds && payload.assignedWorkerIds.length > 0)) {
+          await loadWorkersCache();
+        }
       } catch (error: any) {
         // If backend is not available, use dummy data
         if (error?.response?.status === 404 || error?.response?.status >= 500) {
@@ -130,6 +139,8 @@ export default function TaskDetailsPage() {
           }
         } else {
           console.error('Error loading task:', error);
+          // load worker cache to resolve assignedWorkerIds
+          loadWorkersCache();
         }
       } finally {
         setIsLoading(false);
@@ -247,55 +258,165 @@ export default function TaskDetailsPage() {
         {/* Progress removed from view per design */}
 
         {/* Assigned Workers Section */}
-        {task.assignedWorkers && task.assignedWorkers.length > 0 && (
+        {((task.assignedWorkers && task.assignedWorkers.length > 0) || (task.assignedWorkerIds && task.assignedWorkerIds.length > 0) || (task.taskAssignments && task.taskAssignments.length > 0)) && (
           <div className="pb-6 border-b" style={{ borderColor: 'var(--admin-border)' }}>
             <p className="text-base font-semibold mb-3" style={{ color: 'var(--admin-text-dark)' }}>
               Assigned Workers
             </p>
             <div className="flex flex-wrap gap-2">
-              {task.assignedWorkers.map((w: any) => (
-                <span
-                  key={w.id}
-                  className="inline-flex items-center rounded-full px-4 py-2 text-sm font-semibold text-white shadow-sm"
-                  style={{ backgroundColor: 'var(--admin-primary)' }}
-                >
-                  {w.name || w.initials}
-                </span>
-              ))}
+              {task.assignedWorkers && task.assignedWorkers.length > 0 ? (
+                task.assignedWorkers.map((w: any) => (
+                  <span
+                    key={w.id}
+                    className="inline-flex items-center rounded-full px-4 py-2 text-sm font-semibold text-white shadow-sm"
+                    style={{ backgroundColor: 'var(--admin-primary)' }}
+                  >
+                    {w.name || w.initials || String(w.id)}
+                  </span>
+                ))
+              ) : task.taskAssignments && task.taskAssignments.length > 0 ? (
+                task.taskAssignments.map((ta: any, i: number) => {
+                  const w = ta.worker ?? ta.Worker ?? null;
+                  const wid = w?.id ?? ta.workerId ?? ta.WorkerId ?? ta.worker_id;
+                  const cached = wid ? getWorkerFromCache(Number(wid)) : null;
+                  const displayName = w?.name || cached?.name || `Worker ${wid}`;
+                  const initials = w?.initials || cached?.avatarInitials || String(wid).slice(-2);
+                  return (
+                    <span
+                      key={wid ?? i}
+                      className="inline-flex items-center rounded-full px-4 py-2 text-sm font-semibold text-white shadow-sm"
+                      style={{ backgroundColor: 'var(--admin-primary)' }}
+                    >
+                      {displayName}
+                    </span>
+                  );
+                })
+              ) : (
+                (task.assignedWorkerIds || []).map((wid: any) => {
+                  const w = getWorkerFromCache(Number(wid));
+                  return (
+                    <span
+                      key={wid}
+                      className="inline-flex items-center rounded-full px-4 py-2 text-sm font-semibold text-white shadow-sm"
+                      style={{ backgroundColor: 'var(--admin-primary)' }}
+                    >
+                      {w ? (w.name || w.avatarInitials) : `Worker ${wid}`}
+                    </span>
+                  );
+                })
+              )}
             </div>
           </div>
         )}
 
         {/* Field Section */}
-        {task.field && !task.fieldName && (
+        {((task.field && Object.keys(task.field).length > 0) || task.fieldName || task.fieldId) && (
           <div className="pb-6 border-b" style={{ borderColor: 'var(--admin-border)' }}>
             <p className="text-xs font-semibold uppercase tracking-wide mb-2" style={{ color: 'var(--admin-text-muted)' }}>
               Field
             </p>
-            <p className="text-[15px] font-medium" style={{ color: 'var(--admin-text-dark)' }}>
-              {task.field.name}
-            </p>
+            <div className="text-[15px] font-medium" style={{ color: 'var(--admin-text-dark)' }}>
+              {task.field?.name ?? task.fieldName ?? `Field ID: ${task.fieldId ?? 'N/A'}`}
+              {task.field?.area && (
+                <div className="text-sm text-[13px] mt-1" style={{ color: 'var(--admin-text-muted)' }}>
+                  Area: {task.field.area}
+                </div>
+              )}
+            </div>
           </div>
         )}
 
-        {/* Notes Section */}
-        {task.notes && (
-          <div>
-            <p className="text-base font-semibold mb-3" style={{ color: 'var(--admin-text-dark)' }}>
-              Notes
-            </p>
-            <div 
-              className="p-4 rounded-xl border" 
-              style={{ 
-                backgroundColor: 'var(--admin-bg-gray)',
-                borderColor: 'var(--admin-border)'
-              }}
-            >
-              <p className="text-[15px] leading-relaxed whitespace-pre-wrap" style={{ color: 'var(--admin-text-dark)' }}>
-                {task.notes}
-              </p>
+        {/* Additional Details: attachments, checklist/subtasks, comments, times */}
+        {(task.attachments && task.attachments.length > 0) && (
+          <div className="pb-6 border-b" style={{ borderColor: 'var(--admin-border)' }}>
+            <p className="text-base font-semibold mb-3" style={{ color: 'var(--admin-text-dark)' }}>Attachments</p>
+            <ul className="list-disc pl-5">
+              {task.attachments.map((a: any, idx: number) => (
+                <li key={idx} className="text-[15px]" style={{ color: 'var(--admin-text-dark)' }}>
+                  {a.filename ?? a.name ?? String(a)} {a.url && (<a className="ml-2 text-sm text-blue-600" href={a.url} target="_blank" rel="noreferrer">View</a>)}
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+
+        {(task.checklist && task.checklist.length > 0) && (
+          <div className="pb-6 border-b" style={{ borderColor: 'var(--admin-border)' }}>
+            <p className="text-base font-semibold mb-3" style={{ color: 'var(--admin-text-dark)' }}>Checklist / Subtasks</p>
+            <ul className="space-y-2">
+              {task.checklist.map((c: any, i: number) => (
+                <li key={i} className="flex items-start gap-3">
+                  <input type="checkbox" checked={!!c.done} readOnly />
+                  <div>
+                    <div className="font-medium" style={{ color: 'var(--admin-text-dark)' }}>{c.title ?? c.name}</div>
+                    {c.note && <div className="text-sm text-[13px]" style={{ color: 'var(--admin-text-muted)' }}>{c.note}</div>}
+                  </div>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+
+        {(task.comments && task.comments.length > 0) && (
+          <div className="pb-6 border-b" style={{ borderColor: 'var(--admin-border)' }}>
+            <p className="text-base font-semibold mb-3" style={{ color: 'var(--admin-text-dark)' }}>Comments</p>
+            <div className="space-y-3">
+              {task.comments.map((c: any, i: number) => (
+                <div key={i} className="p-3 rounded-md border" style={{ borderColor: 'var(--admin-border)' }}>
+                  <div className="text-sm font-semibold" style={{ color: 'var(--admin-text-dark)' }}>{c.authorName ?? c.author ?? 'User'}</div>
+                  <div className="text-sm text-[13px]" style={{ color: 'var(--admin-text-muted)' }}>{new Date(c.createdAt ?? c.date).toLocaleString()}</div>
+                  <div className="mt-2" style={{ color: 'var(--admin-text-dark)' }}>{c.text ?? c.body}</div>
+                </div>
+              ))}
             </div>
           </div>
+        )}
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          {task.estimatedDuration !== undefined && (
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-wide mb-2" style={{ color: 'var(--admin-text-muted)' }}>Estimated Time</p>
+              <p className="text-[15px] font-medium" style={{ color: 'var(--admin-text-dark)' }}>{String(task.estimatedDuration)}</p>
+            </div>
+          )}
+          {task.actualDuration !== undefined && (
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-wide mb-2" style={{ color: 'var(--admin-text-muted)' }}>Actual Time</p>
+              <p className="text-[15px] font-medium" style={{ color: 'var(--admin-text-dark)' }}>{String(task.actualDuration)}</p>
+            </div>
+          )}
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-wide mb-2" style={{ color: 'var(--admin-text-muted)' }}>Timestamps</p>
+            <div className="text-[13px] text-[15px] font-medium" style={{ color: 'var(--admin-text-dark)' }}>
+              Created: {task.createdAt ? new Date(task.createdAt).toLocaleString() : 'N/A'}
+              <br />
+              Updated: {task.updatedAt ? new Date(task.updatedAt).toLocaleString() : 'N/A'}
+            </div>
+          </div>
+        </div>
+
+        {/* Notes Section */}
+        <div className="flex items-center justify-between">
+          <p className="text-base font-semibold mb-3" style={{ color: 'var(--admin-text-dark)' }}>Notes</p>
+          <div>
+              <Button
+                onClick={() => setShowAddNote(true)}
+                className="h-9 rounded-lg text-white px-4 font-semibold"
+                style={{ backgroundColor: 'var(--admin-primary)' }}
+              >
+                Add Note
+              </Button>
+            </div>
+        </div>
+
+        {task.notes ? (
+          <div className="p-4 rounded-xl border" style={{ backgroundColor: 'var(--admin-bg-gray)', borderColor: 'var(--admin-border)' }}>
+            <p className="text-[15px] leading-relaxed whitespace-pre-wrap" style={{ color: 'var(--admin-text-dark)' }}>
+              {task.notes}
+            </p>
+          </div>
+        ) : (
+          <p className="text-sm text-[13px]" style={{ color: 'var(--admin-text-muted)' }}>No notes yet</p>
         )}
       </div>
 
@@ -313,6 +434,23 @@ export default function TaskDetailsPage() {
           Back to Tasks
         </Button>
       </div>
+      <AddNoteModal
+        isOpen={showAddNote}
+        onClose={() => setShowAddNote(false)}
+        taskId={Number(id)}
+        taskTitle={task.title}
+        currentStatus={task.status}
+        onSuccess={async () => {
+          // reload task after note added
+          try {
+            const res = await api.get(`/tasks/${id}`);
+            const payload = (res.data as any)?.data ?? res.data;
+            setTask(payload);
+          } catch (err) {
+            console.error('Failed to reload task after adding note', err);
+          }
+        }}
+      />
     </div>
   );
 }

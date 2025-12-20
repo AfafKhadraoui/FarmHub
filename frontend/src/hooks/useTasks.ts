@@ -1,9 +1,10 @@
 // src/hooks/useTasks.ts
-'use client';
+"use client";
 
 import { useEffect, useState } from 'react';
 import { useAuth } from './useAuth';
 import { TaskStatus, TaskPriority } from '@/types/task.types';
+import api from '@/lib/api';
 
 type AdminTask = {
   id: number;
@@ -33,127 +34,107 @@ export function useTasks() {
   const { user } = useAuth();
   const [allAdminTasks, setAllAdminTasks] = useState<AdminTask[]>([]);
   const [allWorkerTasks, setAllWorkerTasks] = useState<WorkerTask[]>([]);
-  const [adminFilters, setAdminFiltersState] = useState<{ status?: string; page?: number }>({});
-  const [workerFilters, setWorkerFiltersState] = useState<{ status?: string; page?: number }>({});
+  const [adminFilters, setAdminFiltersState] = useState<{ status?: string; page?: number; limit?: number; sortBy?: string; sortOrder?: string }>({});
+  const [workerFilters, setWorkerFiltersState] = useState<{ status?: string; page?: number; limit?: number; sortBy?: string; sortOrder?: string }>({});
   const [isLoading, setIsLoading] = useState(true);
+  const [statsFromApi, setStatsFromApi] = useState<any>(null);
 
   useEffect(() => {
     if (!user) return;
 
-    // dummy data matching the design
-    const now = new Date();
-    const today17 = new Date(now);
-    today17.setHours(17, 0, 0, 0);
+    const controller = new AbortController();
 
-    const adminDummy: AdminTask[] = [
-      {
-        id: 501,
-        title: 'Water irrigation system - Field A',
-        description: 'Check irrigation lines and run for 2 hours',
-        status: 'inprogress',
-        priority: 'high',
-        dueDate: today17.toISOString(),
-        fieldId: 1,
-        fieldName: 'Field A',
-        assignedWorkers: [
-          { id: 3, name: 'Ahmed Khalil', initials: 'AK' },
-          { id: 5, name: 'Sara Mansouri', initials: 'SM' },
-        ],
-        progressPercent: 60,
-      },
-      {
-        id: 510,
-        title: 'Apply fertilizer - Field B',
-        description: 'Apply organic fertilizer',
-        status: 'pending',
-        priority: 'medium',
-        dueDate: new Date(now.getTime() + 24 * 3600 * 1000).toISOString(),
-        fieldId: 2,
-        fieldName: 'Field B',
-        assignedWorkers: [{ id: 4, name: 'Ali Belkacem', initials: 'AB' }],
-        progressPercent: 0,
-      },
-      {
-        id: 515,
-        title: 'Harvest wheat - Field C',
-        description: 'Complete harvest of wheat crop',
-        status: 'completed',
-        priority: 'high',
-        dueDate: new Date(now.getTime() - 24 * 3600 * 1000).toISOString(),
-        fieldId: 3,
-        fieldName: 'Field C',
-        assignedWorkers: [
-          { id: 3, name: 'Ahmed Khalil', initials: 'AK' },
-        ],
-        progressPercent: 100,
-      },
-    ];
+    const fetchStatsAndTasks = async () => {
+      setIsLoading(true);
+      try {
+        // --- 1) Statistics: backend response is wrapped as { success, data }
+        const statsRes = await api.get('/tasks/statistics', { signal: controller.signal });
+        const statsPayload = statsRes.data?.data ?? statsRes.data;
+        setStatsFromApi(statsPayload);
 
-    const workerDummy: WorkerTask[] = [
-      {
-        id: 'task_123',
-        title: 'Water irrigation system - Field A',
-        description: 'Check and maintain irrigation system',
-        status: 'INPROGRESS',
-        priority: 'HIGH',
-        dueDate: today17.toISOString(),
-        field: { id: 'field_001', name: 'Field A' },
-        progress: 60,
-      },
-      {
-        id: 'task_124',
-        title: 'Check soil moisture - Field A',
-        description: 'Measure moisture and record values',
-        status: 'PENDING',
-        priority: 'MEDIUM',
-        dueDate: today17.toISOString(),
-        field: { id: 'field_001', name: 'Field A' },
-        progress: 0,
-      },
-      {
-        id: 'task_125',
-        title: 'Prune trees - Orchard',
-        description: 'Prune all fruit trees in orchard',
-        status: 'COMPLETED',
-        priority: 'LOW',
-        dueDate: new Date(now.getTime() - 24 * 3600 * 1000).toISOString(),
-        field: { id: 'field_002', name: 'Orchard' },
-        progress: 100,
-      },
-    ];
+        // --- 2) Tasks list – match backend pagination contract
+        // Controller maps: pageSize <- query.limit | query.pageSize
+        // Service returns: { data: tasks[], meta: {...} }
+        const buildStatusParam = (statusValue?: string) => {
+          if (!statusValue) return undefined;
+          const normalized = statusValue.toLowerCase().trim();
+          if (normalized === 'pending' || normalized === 'all') return 'pending';
+          if (normalized === 'inprogress' || normalized === 'in_progress') return 'in_progress';
+          if (normalized === 'completed' || normalized === 'done') return 'completed';
+          return undefined;
+        };
 
-    setIsLoading(false);
-    if (user.role === 'admin') {
-      setAllAdminTasks(adminDummy);
-    } else {
-      setAllWorkerTasks(workerDummy);
-    }
-  }, [user]);
+        if (user.role === 'admin') {
+          const params: any = {
+            page: adminFilters.page ?? 1,
+            limit: adminFilters.limit ?? 10,
+            status: buildStatusParam(adminFilters.status),
+            // backend accepts orderBy/sortBy & order/sortOrder – we use orderBy/order
+            orderBy: adminFilters.sortBy ?? undefined,
+            order: adminFilters.sortOrder ?? undefined,
+          };
 
-  // Filter tasks based on status
+          const tasksRes = await api.get('/tasks', { params, signal: controller.signal });
+          const wrapper = tasksRes.data?.data ?? tasksRes.data;
+          const tasksData = wrapper?.data ?? wrapper ?? [];
+          setAllAdminTasks(tasksData);
+        } else {
+          const params: any = {
+            page: workerFilters.page ?? 1,
+            limit: workerFilters.limit ?? 10,
+            status: buildStatusParam(workerFilters.status),
+            orderBy: workerFilters.sortBy ?? undefined,
+            order: workerFilters.sortOrder ?? undefined,
+          };
+
+          const tasksRes = await api.get('/tasks', { params, signal: controller.signal });
+          const wrapper = tasksRes.data?.data ?? tasksRes.data;
+          const tasksData = wrapper?.data ?? wrapper ?? [];
+          setAllWorkerTasks(tasksData);
+        }
+      } catch (err: any) {
+        // Ignore abort errors (component unmounted or filters changed)
+        if (err?.name === 'AbortError' || err?.code === 'ERR_CANCELED' || err?.message?.includes('canceled')) {
+          return;
+        }
+        console.error('Failed to load tasks or stats', err);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchStatsAndTasks();
+
+    return () => controller.abort();
+  }, [user, adminFilters, workerFilters]);
+
+  // Filter tasks based on status (client side fallback, but backend should handle most filtering)
   const getFilteredAdminTasks = () => {
-    if (!adminFilters.status || adminFilters.status === 'ALL' || adminFilters.status === 'all') {
+    // Backend already filters by status, so we mainly return what backend sent
+    // But we do a client-side check as a safety net
+    if (!adminFilters.status || adminFilters.status === 'ALL' || adminFilters.status === 'all' || adminFilters.status === '') {
       return allAdminTasks;
     }
-    const statusLower = adminFilters.status.toLowerCase();
+    const statusLower = adminFilters.status.toLowerCase().trim();
     return allAdminTasks.filter(task => {
-      const taskStatus = task.status.toLowerCase();
-      if (statusLower === 'pending' || statusLower === 'PENDING') return taskStatus === 'pending';
-      if (statusLower === 'inprogress' || statusLower === 'INPROGRESS' || statusLower === 'in_progress') return taskStatus === 'inprogress';
-      if (statusLower === 'completed' || statusLower === 'COMPLETED') return taskStatus === 'completed';
+      const taskStatus = task.status.toLowerCase().trim();
+      if (statusLower === 'pending') return taskStatus === 'pending';
+      if (statusLower === 'inprogress' || statusLower === 'in_progress') return taskStatus === 'inprogress' || taskStatus === 'in_progress';
+      if (statusLower === 'completed') return taskStatus === 'completed';
       return true;
     });
   };
 
   const getFilteredWorkerTasks = () => {
-    if (!workerFilters.status || workerFilters.status === 'ALL' || workerFilters.status === 'all') {
+    if (!workerFilters.status || workerFilters.status === 'ALL' || workerFilters.status === 'all' || workerFilters.status === '') {
       return allWorkerTasks;
     }
-    const statusUpper = workerFilters.status.toUpperCase();
+    const statusUpper = workerFilters.status.toUpperCase().trim();
     return allWorkerTasks.filter(task => {
-      if (statusUpper === 'PENDING') return task.status === 'PENDING';
-      if (statusUpper === 'INPROGRESS' || statusUpper === 'IN_PROGRESS') return task.status === 'INPROGRESS';
-      if (statusUpper === 'COMPLETED') return task.status === 'COMPLETED';
+      const taskStatus = task.status.toUpperCase().trim();
+      if (statusUpper === 'PENDING') return taskStatus === 'PENDING';
+      if (statusUpper === 'INPROGRESS' || statusUpper === 'IN_PROGRESS') return taskStatus === 'INPROGRESS' || taskStatus === 'IN_PROGRESS';
+      if (statusUpper === 'COMPLETED') return taskStatus === 'COMPLETED';
       return true;
     });
   };
@@ -161,18 +142,47 @@ export function useTasks() {
   const adminTasks = getFilteredAdminTasks();
   const workerTasks = getFilteredWorkerTasks();
 
-  // Calculate stats based on user role
-  const stats = user?.role === 'admin'
-    ? {
-        pending: { count: allAdminTasks.filter(t => t.status === 'pending').length, increaseToday: 1 },
-        inprogress: { count: allAdminTasks.filter(t => t.status === 'inprogress').length, dueToday: 1 },
-        completed: { count: allAdminTasks.filter(t => t.status === 'completed').length },
-      }
-    : {
-        pending: { count: allWorkerTasks.filter(t => t.status === 'PENDING').length, increaseToday: 1 },
-        inprogress: { count: allWorkerTasks.filter(t => t.status === 'INPROGRESS').length, dueToday: 1 },
-        completed: { count: allWorkerTasks.filter(t => t.status === 'COMPLETED').length },
-      };
+  // Prefer backend-provided stats when available, fall back to client-calculated
+  let stats;
+  if (statsFromApi) {
+    // Backend statistics: see backend/src/services/taskService.js:getTaskStatistics
+    // {
+    //   totalTasks,
+    //   completedTasks,
+    //   inProgressTasks,
+    //   pendingTasks,
+    //   dueTodayTasks,
+    //   newTasksToday,
+    //   in_progressToday,
+    //   comleted_today
+    // }
+    stats = {
+      pending: {
+        count: statsFromApi.pendingTasks ?? 0,
+        increaseToday: statsFromApi.newTasksToday ?? 0,
+      },
+      inprogress: {
+        count: statsFromApi.inProgressTasks ?? 0,
+        dueToday: statsFromApi.dueTodayTasks ?? 0,
+      },
+      completed: {
+        count: statsFromApi.completedTasks ?? 0,
+        today: statsFromApi.comleted_today ?? 0,
+      },
+    };
+  } else {
+    stats = user?.role === 'admin'
+      ? {
+          pending: { count: allAdminTasks.filter(t => t.status === 'pending').length, increaseToday: 1 },
+          inprogress: { count: allAdminTasks.filter(t => t.status === 'inprogress').length, dueToday: 1 },
+          completed: { count: allAdminTasks.filter(t => t.status === 'completed').length },
+        }
+      : {
+          pending: { count: allWorkerTasks.filter(t => t.status === 'PENDING').length, increaseToday: 1 },
+          inprogress: { count: allWorkerTasks.filter(t => t.status === 'INPROGRESS').length, dueToday: 1 },
+          completed: { count: allWorkerTasks.filter(t => t.status === 'COMPLETED').length },
+        };
+  }
 
   return {
     stats,

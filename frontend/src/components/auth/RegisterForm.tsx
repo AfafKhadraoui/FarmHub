@@ -388,6 +388,7 @@ export function RegisterForm() {
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
                     className="absolute right-4 top-1/2 -translate-y-1/2 text-[#999999] hover:text-[#333333]"
+                    aria-label={showPassword ? 'Hide password' : 'Show password'}
                   >
                     {showPassword ? (
                       <Eye className="w-5 h-5" />
@@ -431,8 +432,9 @@ export function RegisterForm() {
                       setShowConfirmPassword(!showConfirmPassword)
                     }
                     className="absolute right-4 top-1/2 -translate-y-1/2 text-[#999999] hover:text-[#333333]"
+                    aria-label={showConfirmPassword ? 'Hide confirm password' : 'Show confirm password'}
                   >
-                    {showPassword ? (
+                    {showConfirmPassword ? (
                       <Eye className="w-5 h-5" />
                     ) : (
                       <EyeOff className="w-5 h-5" />

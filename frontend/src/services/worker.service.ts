@@ -80,6 +80,46 @@ export async function getWorkerById(id: number) {
   return res.data?.data;
 }
 
+// --- Simple in-memory worker cache to resolve assignedWorkerIds without multiple requests ---
+let _workerCache: Map<number, WorkerListItem> | null = null;
+let _workerCacheLoading = false;
+
+export async function loadWorkersCache(limit = 200) {
+  if (_workerCache || _workerCacheLoading) return;
+  _workerCacheLoading = true;
+  try {
+    const res = await api.get('/workers', { params: { page: 1, limit } }).catch(() => ({ data: { items: [] } }));
+    const wrapper = (res.data as any)?.data ?? res.data;
+    const items = wrapper?.items ?? wrapper ?? [];
+
+    const map = new Map<number, WorkerListItem>();
+    (items as any[]).forEach((w) => {
+      map.set(w.id, {
+        id: w.id,
+        name: w.name,
+        email: w.email,
+        role: w.role,
+        status: w.status || 'active',
+        assignedTasks: w.assignedTasks || 0,
+        completedTasks: w.completedTasks || 0,
+        performancePercent: w.performancePercent || 0,
+        avatarInitials: w.avatarInitials || (w.name ? w.name.split(' ').map((p: string) => p[0]).join('').slice(0,2).toUpperCase() : ''),
+      });
+    });
+
+    _workerCache = map;
+  } catch (e) {
+    console.warn('Failed to load workers cache', e);
+  } finally {
+    _workerCacheLoading = false;
+  }
+}
+
+export function getWorkerFromCache(id: number): WorkerListItem | null {
+  if (!_workerCache) return null;
+  return _workerCache.get(id) ?? null;
+}
+
 // PUT /workers/:id
 export async function updateWorker(
   id: number,
@@ -99,6 +139,15 @@ export async function deleteWorker(id: number) {
 export async function assignTaskToWorker(workerId: number, taskId: number) {
   const res = await api.post<{ message: string }>(
     `/workers/${workerId}/assign-task`,
+    { taskId },
+  );
+  return res.data;
+}
+
+// POST /workers/:id/c  (unassign task from worker)
+export async function unassignTaskFromWorker(workerId: number, taskId: number) {
+  const res = await api.post<{ message: string }>(
+    `/workers/${workerId}/c`,
     { taskId },
   );
   return res.data;
