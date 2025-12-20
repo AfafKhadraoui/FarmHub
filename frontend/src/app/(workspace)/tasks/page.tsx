@@ -37,6 +37,16 @@ export default function TasksPage() {
   const isAdmin = user.role === 'admin';
   const tasks = isAdmin ? adminTasks : workerTasks;
 
+  // Determine whether the current filter explicitly requests completed tasks
+  const rawStatusValue = isAdmin ? adminFilters?.status : workerFilters?.status;
+  const filteringCompleted = rawStatusValue && rawStatusValue.toString().toLowerCase().includes('completed');
+
+  // By default (when not filtering for completed), hide completed tasks from active lists
+  const tasksToShow = filteringCompleted ? tasks : (tasks || []).filter((t: any) => {
+    const s = (t?.status || '').toString().toLowerCase();
+    return s !== 'completed' && s !== 'done';
+  });
+
   const pending = stats?.pending?.count ?? 0;
   const inProgress = stats?.inprogress?.count ?? 0;
   const completed = stats?.completed?.count ?? 0;
@@ -308,7 +318,20 @@ export default function TasksPage() {
       {error && <p className="text-sm" style={{ color: 'var(--admin-red)' }}>{error}</p>}
       {isLoading && <p className="text-sm" style={{ color: 'var(--admin-text-muted)' }}>Loading tasks...</p>}
 
-      {!isLoading && <TaskList mode={isAdmin ? 'admin' : 'worker'} tasks={tasks} />}
+      {!isLoading && (
+        <TaskList
+          mode={isAdmin ? 'admin' : 'worker'}
+          tasks={tasksToShow}
+          onUpdateStatus={() => {
+            if (isAdmin && setAdminFilters) {
+              setAdminFilters((prev: any) => ({ ...prev, _reload: Date.now() }));
+            }
+            if (!isAdmin && setWorkerFilters) {
+              setWorkerFilters((prev: any) => ({ ...prev, _reload: Date.now() }));
+            }
+          }}
+        />
+      )}
 
       {/* Task Form Modal */}
       {isAdmin && (
@@ -321,8 +344,9 @@ export default function TasksPage() {
           onSuccess={() => {
             setShowTaskModal(false);
             setEditingTask(null);
-            // Reload tasks
-            window.location.reload();
+            // Refresh tasks by nudging filters
+            if (isAdmin && setAdminFilters) setAdminFilters((prev: any) => ({ ...prev, _reload: Date.now() }));
+            if (!isAdmin && setWorkerFilters) setWorkerFilters((prev: any) => ({ ...prev, _reload: Date.now() }));
           }}
           initialData={editingTask}
         />

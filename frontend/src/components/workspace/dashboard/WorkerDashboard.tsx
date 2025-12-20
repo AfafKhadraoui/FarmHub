@@ -309,7 +309,12 @@ export function WorkerDashboard() {
 
         <div className="space-y-4">
           {dashboardData.todayTasks.map((task) => (
-            <TaskCard key={task.id} mode="worker" task={mapDashboardTaskToTaskCard(task)} />
+            <TaskCard
+              key={task.id}
+              mode="worker"
+              task={mapDashboardTaskToTaskCard(task)}
+              onUpdateStatus={() => refreshStats()}
+            />
           ))}
         </div>
 

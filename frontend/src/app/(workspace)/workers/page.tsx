@@ -154,80 +154,84 @@ export default function WorkersPage() {
   const router = useRouter();
 
   useEffect(() => {
-    const load = async () => {
-      try {
-        // Fetch statistics and workers in parallel; fetch farm settings separately
-        const [statsRes, listRes] = await Promise.all([
-          api.get('/workers/statistics').catch(() => ({ data: dummyStats })),
-          api.get('/workers', { params: { page: 1, limit: 20 } }).catch(() => ({ data: { items: dummyWorkers } })),
-        ]);
-
-        // --- Statistics shape: controller wraps service result as { success, data }
-        const statsPayload = (statsRes.data as any)?.data ?? statsRes.data;
-        setStats({
-          totalWorkers: statsPayload.totalWorkers ?? dummyStats.totalWorkers,
-          activeToday: statsPayload.activeWorkersToday ?? dummyStats.activeToday,
-          tasksDoneThisWeek: statsPayload.totalCompletedTasks ?? dummyStats.tasksDoneThisWeek,
-        });
-
-        // --- Workers list: controller returns { success, data: { items, pagination } }
-        const listWrapper = (listRes.data as any)?.data ?? listRes.data;
-        const rawItems = listWrapper?.items ?? dummyWorkers;
-        const items = rawItems.map((w: any) => ({
-          id: w.id,
-          name: w.name,
-          email: w.email,
-          phone: w.phone ?? '',
-          role: w.role ?? 'worker',
-          status: (w.status as 'active' | 'inactive') ?? 'active',
-          assignedTasks: Number(w.assignedTasks ?? 0),
-          completedTasks: Number(w.completedTasks ?? 0),
-          performancePercent: Number(w.performancePercent ?? 0),
-          avatarInitials: w.avatarInitials ?? (w.name ? w.name.split(' ').map((s: string) => s[0]).join('').slice(0,2) : ''),
-        }));
-
-        setWorkers(items);
-
-        // Fetch farm settings separately so we can handle auth issues explicitly
-        try {
-          const farmRes = await api.get('/api/settings/farm');
-          const farmPayload = (farmRes.data as any)?.data ?? farmRes.data ?? {};
-          const realJoinCode = farmPayload.joinCode ?? farmPayload.join_code ?? null;
-          if (realJoinCode) {
-            setFarmCode(realJoinCode);
-            setFarmError(null);
-          } else {
-            console.warn('Farm settings returned without a join code:', farmPayload);
-            setFarmCode(null);
-            setFarmError('No join code available for this farm.');
-          }
-        } catch (farmErr: any) {
-          // Provide a friendly error message for common cases (no farm, unauthenticated, etc.)
-          console.error('Failed to fetch farm settings (join code):', farmErr);
-          const status = farmErr?.response?.status;
-          const serverMsg = farmErr?.response?.data?.error ?? farmErr?.message ?? 'Failed to load farm settings';
-          if (status === 404) {
-            setFarmError(serverMsg || 'No farm associated with this account');
-          } else if (status === 401 || status === 403) {
-            setFarmError('Authentication required to view farm join code');
-          } else {
-            setFarmError('Unable to load farm join code');
-          }
-          setFarmCode(null);
-        }
-      } catch (err) {
-        // keep dummy fallbacks if any error
-        console.error('Failed to load workers/stats', err);
-        setStats(dummyStats);
-        setWorkers(dummyWorkers);
-        setFarmCode(null);
-      } finally {
-        setIsLoading(false);
-      }
-    };
+    const load = async () => await loadData();
 
     load();
   }, []);
+
+  // Extract load logic so other handlers can refresh without full page reload
+  async function loadData() {
+    try {
+      setIsLoading(true);
+      // Fetch statistics and workers in parallel; fetch farm settings separately
+      const [statsRes, listRes] = await Promise.all([
+        api.get('/workers/statistics').catch(() => ({ data: dummyStats })),
+        api.get('/workers', { params: { page: 1, limit: 20 } }).catch(() => ({ data: { items: dummyWorkers } })),
+      ]);
+
+      // --- Statistics shape: controller wraps service result as { success, data }
+      const statsPayload = (statsRes.data as any)?.data ?? statsRes.data;
+      setStats({
+        totalWorkers: statsPayload.totalWorkers ?? dummyStats.totalWorkers,
+        activeToday: statsPayload.activeWorkersToday ?? dummyStats.activeToday,
+        tasksDoneThisWeek: statsPayload.totalCompletedTasks ?? dummyStats.tasksDoneThisWeek,
+      });
+
+      // --- Workers list: controller returns { success, data: { items, pagination } }
+      const listWrapper = (listRes.data as any)?.data ?? listRes.data;
+      const rawItems = listWrapper?.items ?? dummyWorkers;
+      const items = rawItems.map((w: any) => ({
+        id: w.id,
+        name: w.name,
+        email: w.email,
+        phone: w.phone ?? '',
+        role: w.role ?? 'worker',
+        status: (w.status as 'active' | 'inactive') ?? 'active',
+        assignedTasks: Number(w.assignedTasks ?? 0),
+        completedTasks: Number(w.completedTasks ?? 0),
+        performancePercent: Number(w.performancePercent ?? 0),
+        avatarInitials: w.avatarInitials ?? (w.name ? w.name.split(' ').map((s: string) => s[0]).join('').slice(0,2) : ''),
+      }));
+
+      setWorkers(items);
+
+      // Fetch farm settings separately so we can handle auth issues explicitly
+      try {
+        const farmRes = await api.get('/api/settings/farm');
+        const farmPayload = (farmRes.data as any)?.data ?? farmRes.data ?? {};
+        const realJoinCode = farmPayload.joinCode ?? farmPayload.join_code ?? null;
+        if (realJoinCode) {
+          setFarmCode(realJoinCode);
+          setFarmError(null);
+        } else {
+          console.warn('Farm settings returned without a join code:', farmPayload);
+          setFarmCode(null);
+          setFarmError('No join code available for this farm.');
+        }
+      } catch (farmErr: any) {
+        // Provide a friendly error message for common cases (no farm, unauthenticated, etc.)
+        console.error('Failed to fetch farm settings (join code):', farmErr);
+        const status = farmErr?.response?.status;
+        const serverMsg = farmErr?.response?.data?.error ?? farmErr?.message ?? 'Failed to load farm settings';
+        if (status === 404) {
+          setFarmError(serverMsg || 'No farm associated with this account');
+        } else if (status === 401 || status === 403) {
+          setFarmError('Authentication required to view farm join code');
+        } else {
+          setFarmError('Unable to load farm join code');
+        }
+        setFarmCode(null);
+      }
+    } catch (err) {
+      // keep dummy fallbacks if any error
+      console.error('Failed to load workers/stats', err);
+      setStats(dummyStats);
+      setWorkers(dummyWorkers);
+      setFarmCode(null);
+    } finally {
+      setIsLoading(false);
+    }
+  }
 
   const filteredWorkers = workers.filter(w =>
     [w.name, w.email].join(' ').toLowerCase().includes(search.toLowerCase()),
@@ -382,7 +386,8 @@ export default function WorkersPage() {
         onSuccess={() => {
           setShowTaskModal(false);
           setAssigningToWorker(null);
-          window.location.reload();
+          // Refresh workers list without full reload
+          loadData();
         }}
         initialData={
           assigningToWorker
@@ -398,7 +403,7 @@ export default function WorkersPage() {
           isOpen={showAssignModal}
           onClose={() => { setShowAssignModal(false); setAssigningToWorker(null); }}
           worker={assigningToWorker}
-          onAssigned={() => { setShowAssignModal(false); setAssigningToWorker(null); window.location.reload(); }}
+          onAssigned={() => { setShowAssignModal(false); setAssigningToWorker(null); loadData(); }}
         />
       )}
     </div>

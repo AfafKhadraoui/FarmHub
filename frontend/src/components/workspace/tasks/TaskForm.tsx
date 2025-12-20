@@ -161,6 +161,12 @@ export function TaskForm({ onSubmit, initialData, submitText = 'Create Task' }: 
       return;
     }
 
+    // Field is required now
+    if (!fieldId) {
+      setErrors({ fieldId: 'Please select a field for this task' });
+      return;
+    }
+
     setErrors({});
     setIsSubmitting(true);
     await onSubmit({
@@ -309,11 +315,11 @@ export function TaskForm({ onSubmit, initialData, submitText = 'Create Task' }: 
       {/* Field selection panel */}
       <div>
         <Label 
-          className="text-sm font-semibold mb-2 block"
-          style={{ color: 'var(--admin-text-dark)' }}
-        >
-          Field (optional)
-        </Label>
+            className="text-sm font-semibold mb-2 block"
+            style={{ color: 'var(--admin-text-dark)' }}
+          >
+            Field <span className="text-red-500">*</span>
+          </Label>
         {isLoadingFields && (
           <p className="text-sm text-[#6B7280]">Loading fields...</p>
         )}
@@ -340,6 +346,9 @@ export function TaskForm({ onSubmit, initialData, submitText = 'Create Task' }: 
               </button>
             ))}
           </div>
+        )}
+        {errors.fieldId && (
+          <p className="mt-1 text-xs text-red-500">{errors.fieldId}</p>
         )}
       </div>
 
@@ -504,7 +513,7 @@ export function TaskForm({ onSubmit, initialData, submitText = 'Create Task' }: 
           type="submit"
           className="w-full h-12 text-white font-semibold rounded-xl hover:opacity-90 transition-opacity"
           style={{ backgroundColor: 'var(--admin-primary)' }}
-          disabled={isSubmitting || !title || !dueDate}
+          disabled={isSubmitting || !title || !dueDate || !fieldId}
         >
           {isSubmitting ? 'Saving...' : submitText}
         </Button>

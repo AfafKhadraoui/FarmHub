@@ -38,6 +38,7 @@ export function useTasks() {
   const [workerFilters, setWorkerFiltersState] = useState<{ status?: string; page?: number; limit?: number; sortBy?: string; sortOrder?: string }>({});
   const [isLoading, setIsLoading] = useState(true);
   const [statsFromApi, setStatsFromApi] = useState<any>(null);
+  const [reloadTick, setReloadTick] = useState(0);
 
   useEffect(() => {
     if (!user) return;
@@ -106,7 +107,14 @@ export function useTasks() {
     fetchStatsAndTasks();
 
     return () => controller.abort();
-  }, [user, adminFilters, workerFilters]);
+  }, [user, adminFilters, workerFilters, reloadTick]);
+
+  // When a task is updated elsewhere in the app, bump reloadTick to refresh data
+  useEffect(() => {
+    const handler = (_e: any) => setReloadTick((t) => t + 1);
+    window.addEventListener('task:updated', handler as EventListener);
+    return () => window.removeEventListener('task:updated', handler as EventListener);
+  }, []);
 
   // Filter tasks based on status (client side fallback, but backend should handle most filtering)
   const getFilteredAdminTasks = () => {
@@ -195,8 +203,26 @@ export function useTasks() {
     workerFilters,
     setWorkerFilters: setWorkerFiltersState,
     reload: () => {
-      // Could refresh data here if needed
-      window.location.reload();
+      // Soft refresh: update filter state to trigger effect
+      setWorkerFiltersState((f) => ({ ...f }));
+      setAdminFiltersState((f) => ({ ...f }));
     },
   };
+}
+
+// Listen globally for task updates and trigger a reload by bumping filters
+// This file exports a hook; attach a global listener so other parts of the app
+// that rely on useTasks will pick up fresh data when a task changes.
+if (typeof window !== 'undefined') {
+  const handler = () => {
+    // No-op here; callers can call the returned `reload` to refresh.
+    // But we can nudge filters in case some components use this hook directly.
+    try {
+      // Attempt to find React-rooted hooks by dispatching a simple custom event
+      window.dispatchEvent(new CustomEvent('farmhub:tasks:refresh'));
+    } catch (e) {
+      // ignore
+    }
+  };
+  window.addEventListener('task:updated', handler as EventListener);
 }

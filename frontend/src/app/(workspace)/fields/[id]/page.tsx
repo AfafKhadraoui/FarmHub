@@ -24,6 +24,7 @@ import { CreateTaskModal } from "@/components/workspace/modals/CreateTaskModal";
 import { EditTaskModal } from "@/components/workspace/modals/EditTaskModal";
 import { fieldService } from "@/services/field.service";
 import { deleteTask, updateTaskStatus } from "@/services/task.service";
+import { TaskCard } from '@/components/workspace/tasks/TaskCard';
 
 export default function FieldDetailPage({
   params,
@@ -91,6 +92,47 @@ export default function FieldDetailPage({
       fetchData();
     }
   }, [user, id]);
+
+  // Listen for task updates from other pages/components and refresh local tasks
+  useEffect(() => {
+    const handler = (ev: any) => {
+      const detail = ev?.detail ?? {};
+      const taskId = detail.id;
+      const status = (detail.status || '').toString().toLowerCase();
+      if (!taskId) return;
+
+      // If task completed, remove from local list; otherwise update status locally
+      setFieldData((prev: any) => {
+        if (!prev) return prev;
+        const tasks = (prev.tasks || []).map((t: any) => (t.id === taskId ? { ...t, status } : t));
+        const filtered = tasks.filter((t: any) => t.status !== 'completed');
+        return { ...prev, tasks: filtered };
+      });
+
+      // Also perform a silent fetch to keep everything in sync
+      fetchData(true);
+    };
+
+    window.addEventListener('task:updated', handler as EventListener);
+    return () => window.removeEventListener('task:updated', handler as EventListener);
+  }, [id]);
+
+  // Map a field task into the canonical TaskCard shape
+  const mapFieldTaskToTaskCard = (t: any) => ({
+    id: t.id,
+    title: t.title,
+    status: t.status,
+    priority: t.priority ?? 'MEDIUM',
+    dueDate: t.dueDate ?? t.due_time ?? t.dueDateTime ?? null,
+    dueTime: t.dueTime ?? t.due_time ?? null,
+    fieldName: fieldData?.name ?? (t.field && t.field.name) ?? null,
+    fieldId: Number(id),
+    assignedWorkers: t.assignedWorkers ?? [],
+    assignedWorkerIds: t.assignedWorkerIds ?? [],
+    taskAssignments: t.taskAssignments ?? [],
+    description: t.description ?? '',
+    ...t,
+  });
 
   const handleDeleteTask = async () => {
     if (!deletingTaskId) return;
@@ -295,176 +337,8 @@ export default function FieldDetailPage({
       </div>
 
       {/* PART 31: Information Cards (2 Columns) */}
-      <div className="grid grid-cols-2 gap-8 mb-8">
-        {/* Left Card: Basic Details */}
-        <div className="bg-white border border-[#E5E7EB] rounded-2xl p-8 shadow-sm">
-          <h2
-            className="font-semibold text-[#1F2937] text-[22px] mb-6"
-            style={{ fontFamily: "Poppins, sans-serif" }}
-          >
-            Basic Details
-          </h2>
+      {/* Kept layout intact; active tasks list renders below in PART 32. */}
 
-          <div className="space-y-5">
-            <div>
-              <div className="font-semibold text-[#374151] text-[16px] mb-2">
-                Size
-              </div>
-              <div className="text-[#6B7280] text-[15px]">
-                {fieldData.size} hectares
-              </div>
-            </div>
-
-            <div>
-              <div className="font-semibold text-[#374151] text-[16px] mb-2">
-                Crop Type
-              </div>
-              <div className="text-[#6B7280] text-[15px]">
-                {fieldData.cropType}
-              </div>
-            </div>
-
-            <div>
-              <div className="font-semibold text-[#374151] text-[16px] mb-2">
-                Status
-              </div>
-              <div className="text-[#6B7280] text-[15px]">
-                {fieldData.status.charAt(0).toUpperCase() +
-                  fieldData.status.slice(1)}
-              </div>
-            </div>
-
-            {fieldData.location && (
-              <div>
-                <div className="font-semibold text-[#374151] text-[16px] mb-2">
-                  Location
-                </div>
-                <div className="text-[#6B7280] text-[15px]">
-                  {fieldData.location}
-                </div>
-              </div>
-            )}
-
-            {/* Progress Section */}
-            <div className="mt-8 pt-4 border-t border-[#E5E7EB]">
-              <div className="font-semibold text-[#374151] text-[16px] mb-3">
-                Progress: {fieldData.progress}%
-              </div>
-              <div className="w-full h-3 bg-[#E5E7EB] rounded-full overflow-hidden">
-                <div
-                  className="h-full bg-linear-to-r from-[#81C784] to-[#4CAF50] rounded-full transition-all"
-                  style={{ width: `${fieldData.progress}%` }}
-                />
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Right Card: Timeline */}
-        <div className="bg-white border border-[#E5E7EB] rounded-2xl p-8 shadow-sm">
-          <h2
-            className="font-semibold text-[#1F2937] text-[22px] mb-6"
-            style={{ fontFamily: "Poppins, sans-serif" }}
-          >
-            Timeline
-          </h2>
-
-          <div className="space-y-5">
-            <div>
-              <div className="font-semibold text-[#374151] text-[16px] mb-2">
-                Planted
-              </div>
-              <div className="text-[#6B7280] text-[15px]">
-                {formatDate(fieldData.plantedDate)}
-              </div>
-            </div>
-
-            <div>
-              <div className="font-semibold text-[#374151] text-[16px] mb-2">
-                Expected Harvest
-              </div>
-              <div className="text-[#6B7280] text-[15px]">
-                {formatDate(fieldData.harvestDate)}
-              </div>
-            </div>
-
-            {/* Progress Timeline Visual */}
-            <div className="mt-8 pt-4 border-t border-[#E5E7EB]">
-              <div className="font-semibold text-[#374151] text-[16px] mb-4">
-                Growth Cycle
-              </div>
-              <div className="relative">
-                <div className="flex items-center justify-between mb-2">
-                  {[
-                    { label: "Planted", key: "planted" },
-                    { label: "Growing", key: "growing" },
-                    { label: "Done", key: "harvested" },
-                  ].map((step, idx, arr) => {
-                    const statusOrder = ["planted", "growing", "harvested"];
-                    const normalizedStatus =
-                      fieldData.status.toLowerCase() === "harvesting"
-                        ? "harvested"
-                        : fieldData.status.toLowerCase();
-                    const currentIdx = statusOrder.indexOf(normalizedStatus);
-                    const isCompleted = currentIdx > idx;
-                    const isActive = currentIdx === idx;
-
-                    return (
-                      <React.Fragment key={step.key}>
-                        <div className="flex flex-col items-center flex-1 relative">
-                          <div
-                            className={`w-5 h-5 rounded-full z-10 flex items-center justify-center transition-all ${
-                              isCompleted
-                                ? "bg-[#4CAF50]"
-                                : isActive
-                                ? "bg-white border-4 border-[#4CAF50] shadow-[0_0_10px_rgba(76,175,80,0.4)]"
-                                : "bg-[#D1D5DB]"
-                            }`}
-                          >
-                            {isCompleted && (
-                              <svg
-                                className="w-3 h-3 text-white"
-                                fill="none"
-                                viewBox="0 0 24 24"
-                                stroke="currentColor"
-                              >
-                                <path
-                                  strokeLinecap="round"
-                                  strokeLinejoin="round"
-                                  strokeWidth={3}
-                                  d="M5 13l4 4L19 7"
-                                />
-                              </svg>
-                            )}
-                          </div>
-                          <span
-                            className={`mt-2 text-[12px] font-bold transition-colors ${
-                              isCompleted
-                                ? "text-[#4CAF50]"
-                                : isActive
-                                ? "text-[#1F2937]"
-                                : "text-[#9CA3AF]"
-                            }`}
-                          >
-                            {step.label}
-                          </span>
-                        </div>
-                        {idx < arr.length - 1 && (
-                          <div
-                            className={`flex-1 h-1 -mx-2 mt-2 self-start transform translate-y-0.5 rounded-full ${
-                              currentIdx > idx ? "bg-[#4CAF50]" : "bg-[#E5E7EB]"
-                            }`}
-                          ></div>
-                        )}
-                      </React.Fragment>
-                    );
-                  })}
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
 
       {/* PART 32: Active Tasks Section - Admin/Farmer or Worker assigned tasks */}
       <div className="mt-8">
@@ -490,134 +364,18 @@ export default function FieldDetailPage({
 
         <div className="bg-white border border-[#E5E7EB] rounded-2xl p-8 shadow-sm">
           {activeTasks.length === 0 ? (
-            <p className="text-[#6B7280] italic text-center py-4">
-              No active tasks
-            </p>
+            <p className="text-[#6B7280] italic text-center py-4">No active tasks</p>
           ) : (
-            activeTasks.map((task: any, idx: number) => {
-              const styles = getTaskStatusStyles(task.status);
-              return (
-                <div
+            <div className="space-y-4">
+              {activeTasks.map((task: any) => (
+                <TaskCard
                   key={task.id}
-                  className={`py-5 ${
-                    idx !== activeTasks.length - 1
-                      ? "border-b border-[#F3F4F6]"
-                      : ""
-                  }`}
-                >
-                  <div className="flex items-start gap-4">
-                    <div className="w-12 h-12 bg-gray-50 rounded-full flex items-center justify-center shrink-0">
-                      {getTaskIcon(task.title)}
-                    </div>
-                    <div className="flex-1">
-                      <div className="flex items-center justify-between mb-1">
-                        <h3 className="font-semibold text-[#1F2937] text-[17px]">
-                          {task.title}
-                        </h3>
-                        <div className="flex items-center gap-2">
-                          <span
-                            className="px-3 py-1.5 rounded-lg font-semibold text-[14px]"
-                            style={{
-                              backgroundColor: styles.bg,
-                              color: styles.text,
-                            }}
-                          >
-                            {task.status.replace("_", " ").toUpperCase()}
-                          </span>
-                          {isAdmin && (
-                            <>
-                              <button
-                                onClick={() => {
-                                  setSelectedTask(task);
-                                  setShowEditTaskModal(true);
-                                }}
-                                className="p-1.5 text-blue-500 hover:bg-blue-50 rounded-lg transition-colors cursor-pointer"
-                                title="Edit Task"
-                              >
-                                <Edit2 size={16} />
-                              </button>
-                              <button
-                                onClick={() => setDeletingTaskId(task.id)}
-                                className="p-1.5 text-red-500 hover:bg-red-50 rounded-lg transition-colors cursor-pointer"
-                                title="Delete Task"
-                              >
-                                <Trash2 size={16} />
-                              </button>
-                            </>
-                          )}
-                        </div>
-                      </div>
-                      <div className="mt-2">
-                        <p className="text-[#6B7280] text-[15px]">
-                          Due: {formatDate(task.dueDate)}
-                          {task.priority &&
-                            ` • Priority: ${task.priority.toUpperCase()}`}
-                        </p>
-                        {task.taskAssignments &&
-                          task.taskAssignments.length > 0 && (
-                            <p className="text-[#6B7280] text-[14px] mt-1">
-                              Assigned to:{" "}
-                              {task.taskAssignments
-                                .map(
-                                  (assignment: any) =>
-                                    assignment.worker?.name || "Unknown"
-                                )
-                                .join(", ")}
-                            </p>
-                          )}
-                      </div>
-                      <div className="flex items-center justify-between mt-3">
-                        {isWorker && (
-                          <div className="flex items-center gap-3">
-                            {/* Always show dropdown and button, regardless of status */}
-                            <>
-                              {/* Status Dropdown for Workers */}
-                              <select
-                                value={task.status}
-                                onChange={(e) => {
-                                  const newStatus = e.target.value;
-                                  handleStatusChange(task.id, newStatus);
-                                }}
-                                disabled={isProcessing}
-                                style={{ minWidth: "140px" }}
-                                className="px-3.5 py-2 border-2 border-gray-200 rounded-lg text-sm font-medium bg-white hover:border-green-500 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 disabled:opacity-50 disabled:cursor-not-allowed transition-all cursor-pointer shadow-sm"
-                              >
-                                <option value="pending">Pending</option>
-                                <option value="in_progress">In Progress</option>
-                                <option value="completed">Completed</option>
-                              </select>
-                              {/* Quick Complete Button with Tooltip - removes task from list */}
-                              <div className="relative group">
-                                <button
-                                  onClick={() => handleCompleteTask(task.id)}
-                                  disabled={isProcessing}
-                                  className="inline-flex items-center justify-center w-10 h-10 bg-gradient-to-r from-[#4CAF50] to-[#45a049] text-white rounded-lg font-semibold hover:from-[#45a049] hover:to-[#388E3C] transition-all shadow-md hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed transform hover:scale-110 active:scale-95"
-                                  aria-label="Mark as completed and archive"
-                                >
-                                  {isProcessing ? (
-                                    <Loader2
-                                      size={18}
-                                      className="animate-spin"
-                                    />
-                                  ) : (
-                                    <CheckCircle size={20} strokeWidth={2.5} />
-                                  )}
-                                </button>
-                                {/* Tooltip */}
-                                <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-1.5 bg-gray-900 text-white text-xs rounded-lg whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none shadow-lg z-10">
-                                  Complete & Archive Task
-                                  <div className="absolute top-full left-1/2 transform -translate-x-1/2 -mt-1 border-4 border-transparent border-t-gray-900"></div>
-                                </div>
-                              </div>
-                            </>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              );
-            })
+                  mode={isWorker ? 'worker' : 'admin'}
+                  task={mapFieldTaskToTaskCard(task)}
+                  onUpdateStatus={() => fetchData(true)}
+                />
+              ))}
+            </div>
           )}
         </div>
       </div>

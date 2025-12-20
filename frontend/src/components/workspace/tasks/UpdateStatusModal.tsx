@@ -60,6 +60,11 @@ export function UpdateStatusModal({
       });
 
       onSuccess?.();
+      try {
+        window.dispatchEvent(new CustomEvent('task:updated', { detail: { id: taskId, status } }));
+      } catch (e) {
+        // ignore
+      }
       setNote('');
       onClose();
     } catch (error: any) {

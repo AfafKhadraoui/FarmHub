@@ -23,6 +23,7 @@ import { UpdateStatusModal } from './UpdateStatusModal';
 import { AddNoteModal } from './AddNoteModal';
 import { TaskFormModal } from './TaskFormModal';
 import api from '@/lib/api';
+import { deleteTask as serviceDeleteTask } from '@/services/task.service';
 import { loadWorkersCache, getWorkerFromCache } from '@/services/worker.service';
 
 interface TaskCardProps {
@@ -150,24 +151,37 @@ export function TaskCard({
 
     setIsDeleting(true);
     try {
-      await api.delete(`/tasks/${id}`);
-      // Reload the page to refresh task list
-      window.location.reload();
+      // Use shared service which enforces any client-side contracts
+      await serviceDeleteTask(Number(id));
+
+      // Notify listeners and parent components
+      try {
+        window.dispatchEvent(new CustomEvent('task:updated', { detail: { id: Number(id), status: 'deleted' } }));
+      } catch (e) {
+        // ignore
+      }
+
+      onDelete?.();
+      // Soft refresh current route to update lists
+      router.refresh();
     } catch (error: any) {
       console.error('Failed to delete task:', error);
-      alert(error?.response?.data?.message || 'Failed to delete task. Please try again.');
+      const message = error?.response?.data?.message || error?.message || 'Failed to delete task. Please try again.';
+      alert(message);
     } finally {
       setIsDeleting(false);
     }
   };
 
   const handleSuccess = () => {
-    // Reload the page to refresh task list
-    window.location.reload();
+    // Soft-refresh the current route and call parent callback if provided
+    onUpdateStatus?.();
+    router.refresh();
   };
 
   const handleEditSuccess = () => {
     setShowEditModal(false);
+    onEdit?.();
     handleSuccess();
   };
 
