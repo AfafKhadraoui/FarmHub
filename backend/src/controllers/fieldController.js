@@ -46,7 +46,17 @@ exports.listFields = async (req, res) => {
       include: {
         tasks: {
           include: {
-            taskAssignments: true,
+            taskAssignments: {
+              include: {
+                worker: {
+                  select: {
+                    id: true,
+                    name: true,
+                    email: true,
+                  },
+                },
+              },
+            },
           },
         },
       },
@@ -422,13 +432,8 @@ exports.getFieldDetails = async (req, res) => {
 
     const uniqueWorkers = Array.from(workerMap.values());
 
-    const cleanedTasks = fieldData.tasks.map((task) => {
-      const { taskAssignments, ...taskDetails } = task;
-      return taskDetails;
-    });
-
-    const totalTasks = cleanedTasks.length;
-    const doneTasks = cleanedTasks.filter(
+    const totalTasks = fieldData.tasks.length;
+    const doneTasks = fieldData.tasks.filter(
       (t) => t.status === "completed"
     ).length;
     const progress =
@@ -436,7 +441,6 @@ exports.getFieldDetails = async (req, res) => {
 
     const response = {
       ...fieldData,
-      tasks: cleanedTasks,
       workers: uniqueWorkers,
       progress,
     };
@@ -508,7 +512,18 @@ exports.getWorkerFieldDetails = async (req, res) => {
             },
           },
           include: {
-            taskAssignments: true,
+            taskAssignments: {
+              include: {
+                worker: {
+                  select: {
+                    id: true,
+                    name: true,
+                    email: true,
+                    role: true,
+                  },
+                },
+              },
+            },
           },
         },
       },
@@ -685,8 +700,8 @@ exports.permanentDeleteField = async (req, res) => {
 
     // Check if field is archived first (extra safety)
     if (field.active === true) {
-      return res.status(400).json({ 
-        error: "Cannot permanently delete active field. Archive it first." 
+      return res.status(400).json({
+        error: "Cannot permanently delete active field. Archive it first."
       });
     }
 
@@ -700,15 +715,15 @@ exports.permanentDeleteField = async (req, res) => {
       where: { id: parseInt(id) },
     });
 
-    res.json({ 
+    res.json({
       success: true,
-      message: "Field permanently deleted" 
+      message: "Field permanently deleted"
     });
   } catch (error) {
     console.error("Error deleting field:", error);
-    res.status(500).json({ 
+    res.status(500).json({
       success: false,
-      error: "Failed to delete field permanently" 
+      error: "Failed to delete field permanently"
     });
   }
 };
@@ -725,24 +740,24 @@ exports.restoreField = async (req, res) => {
 
     // Check if field exists and belongs to user's farm
     if (!field || field.farmId !== farmId) {
-      return res.status(404).json({ 
+      return res.status(404).json({
         success: false,
-        error: "Field not found" 
+        error: "Field not found"
       });
     }
 
     // Check if field is already active
     if (field.active === true) {
-      return res.status(400).json({ 
+      return res.status(400).json({
         success: false,
-        error: "Field is already active" 
+        error: "Field is already active"
       });
     }
 
     // Simply update active to true
     const restoredField = await prisma.field.update({
       where: { id: parseInt(id) },
-      data: { 
+      data: {
         active: true,
         lastUpdatedBy: req.user.name || "System",
         status: field.status === "harvested" ? "active" : field.status
@@ -773,9 +788,9 @@ exports.restoreField = async (req, res) => {
     });
   } catch (error) {
     console.error("Error restoring field:", error);
-    res.status(500).json({ 
+    res.status(500).json({
       success: false,
-      error: "Failed to restore field" 
+      error: "Failed to restore field"
     });
   }
 };

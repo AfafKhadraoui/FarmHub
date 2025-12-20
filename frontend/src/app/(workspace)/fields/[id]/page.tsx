@@ -14,7 +14,6 @@ import {
   Loader2,
   AlertCircle,
   Trash2,
-  UserX,
   CheckCircle,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
@@ -22,6 +21,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { EditFieldModal } from "@/components/workspace/modals/EditFieldModal";
 import { ArchiveFieldModal } from "@/components/workspace/modals/ArchiveFieldModal";
 import { CreateTaskModal } from "@/components/workspace/modals/CreateTaskModal";
+import { EditTaskModal } from "@/components/workspace/modals/EditTaskModal";
 import { fieldService } from "@/services/field.service";
 import { deleteTask, updateTaskStatus } from "@/services/task.service";
 
@@ -37,10 +37,11 @@ export default function FieldDetailPage({
   const [showArchiveModal, setShowArchiveModal] = useState(false);
   const [showCreateTaskModal, setShowCreateTaskModal] = useState(false);
   const [showAssignWorkersModal, setShowAssignWorkersModal] = useState(false);
+  const [showEditTaskModal, setShowEditTaskModal] = useState(false);
+  const [selectedTask, setSelectedTask] = useState<any>(null);
 
   // Confirmation Modal States
   const [deletingTaskId, setDeletingTaskId] = useState<number | null>(null);
-  const [removingWorker, setRemovingWorker] = useState<any>(null);
   const [isProcessing, setIsProcessing] = useState(false);
 
   // Data state
@@ -53,9 +54,11 @@ export default function FieldDetailPage({
   const isAdmin = user?.role === "admin";
   const isWorker = user?.role === "worker";
 
-  const fetchData = async () => {
+  const fetchData = async (silent = false) => {
     try {
-      setIsLoading(true);
+      if (!silent) {
+        setIsLoading(true);
+      }
       setError(null);
       const fieldId = parseInt(id);
 
@@ -77,7 +80,9 @@ export default function FieldDetailPage({
       console.error("Failed to fetch field details:", err);
       setError(err.response?.data?.error || "Failed to load field details");
     } finally {
-      setIsLoading(false);
+      if (!silent) {
+        setIsLoading(false);
+      }
     }
   };
 
@@ -92,26 +97,11 @@ export default function FieldDetailPage({
     try {
       setIsProcessing(true);
       await deleteTask(deletingTaskId);
-      fetchData();
+      fetchData(true); // Silent refresh to prevent scroll
       setDeletingTaskId(null);
     } catch (err) {
       console.error("Failed to delete task:", err);
       alert("Failed to delete task. Please try again.");
-    } finally {
-      setIsProcessing(false);
-    }
-  };
-
-  const handleRemoveWorker = async () => {
-    if (!removingWorker || !fieldData?.id) return;
-    try {
-      setIsProcessing(true);
-      await fieldService.unassignWorker(fieldData.id, removingWorker.id);
-      fetchData();
-      setRemovingWorker(null);
-    } catch (err) {
-      console.error("Failed to remove worker:", err);
-      alert("Failed to remove worker. Please try again.");
     } finally {
       setIsProcessing(false);
     }
@@ -535,22 +525,48 @@ export default function FieldDetailPage({
                             {task.status.replace("_", " ").toUpperCase()}
                           </span>
                           {isAdmin && (
-                            <button
-                              onClick={() => setDeletingTaskId(task.id)}
-                              className="p-1.5 text-red-500 hover:bg-red-50 rounded-lg transition-colors cursor-pointer"
-                              title="Delete Task"
-                            >
-                              <Trash2 size={16} />
-                            </button>
+                            <>
+                              <button
+                                onClick={() => {
+                                  setSelectedTask(task);
+                                  setShowEditTaskModal(true);
+                                }}
+                                className="p-1.5 text-blue-500 hover:bg-blue-50 rounded-lg transition-colors cursor-pointer"
+                                title="Edit Task"
+                              >
+                                <Edit2 size={16} />
+                              </button>
+                              <button
+                                onClick={() => setDeletingTaskId(task.id)}
+                                className="p-1.5 text-red-500 hover:bg-red-50 rounded-lg transition-colors cursor-pointer"
+                                title="Delete Task"
+                              >
+                                <Trash2 size={16} />
+                              </button>
+                            </>
                           )}
                         </div>
                       </div>
-                      <div className="flex items-center justify-between mt-3">
+                      <div className="mt-2">
                         <p className="text-[#6B7280] text-[15px]">
                           Due: {formatDate(task.dueDate)}
                           {task.priority &&
                             ` • Priority: ${task.priority.toUpperCase()}`}
                         </p>
+                        {task.taskAssignments &&
+                          task.taskAssignments.length > 0 && (
+                            <p className="text-[#6B7280] text-[14px] mt-1">
+                              Assigned to:{" "}
+                              {task.taskAssignments
+                                .map(
+                                  (assignment: any) =>
+                                    assignment.worker?.name || "Unknown"
+                                )
+                                .join(", ")}
+                            </p>
+                          )}
+                      </div>
+                      <div className="flex items-center justify-between mt-3">
                         {isWorker && (
                           <div className="flex items-center gap-3">
                             {/* Always show dropdown and button, regardless of status */}
@@ -606,75 +622,74 @@ export default function FieldDetailPage({
         </div>
       </div>
 
-      {/* PART 33: Assigned Workers Section - Admin/Farmer only */}
-      {isAdmin && (
-        <div className="mt-8">
-          <div className="flex items-center justify-between mb-6">
-            <h2
-              className="font-semibold text-[#1F2937]"
-              style={{ fontFamily: "Poppins, sans-serif", fontSize: "24px" }}
-            >
-              Assigned Workers ({workers.length} workers)
-            </h2>
-            {isAdmin && (
-              <button
-                onClick={() => setShowCreateTaskModal(true)}
-                className="h-10 px-4 bg-[#4CAF50] text-white rounded-lg font-semibold hover:bg-[#388E3C] transition-all flex items-center gap-2 text-[14px] cursor-pointer"
-              >
-                <Plus size={16} />
-                Assign Worker
-              </button>
-            )}
-          </div>
+      {/* PART 33: Assigned Workers Section - Admin/Farmer only (Read-only: Shows workers from tasks) */}
+      {isAdmin &&
+        (() => {
+          // Extract unique workers from all tasks
+          const taskWorkers = new Map();
+          activeTasks.forEach((task: any) => {
+            task.taskAssignments?.forEach((assignment: any) => {
+              if (assignment.worker && !taskWorkers.has(assignment.worker.id)) {
+                taskWorkers.set(assignment.worker.id, assignment.worker);
+              }
+            });
+          });
+          const uniqueWorkers = Array.from(taskWorkers.values());
 
-          <div className="bg-white border border-[#E5E7EB] rounded-2xl p-8 shadow-sm">
-            {workers.length === 0 ? (
-              <p className="text-[#6B7280] italic text-center py-4">
-                No workers assigned to this field
-              </p>
-            ) : (
-              workers.map((worker: any, idx: number) => (
-                <div
-                  key={worker.id}
-                  className={`py-5 ${
-                    idx !== workers.length - 1
-                      ? "border-b border-[#F3F4F6]"
-                      : ""
-                  } flex items-center gap-5`}
+          return (
+            <div className="mt-8">
+              <div className="flex items-center justify-between mb-6">
+                <h2
+                  className="font-semibold text-[#1F2937]"
+                  style={{
+                    fontFamily: "Poppins, sans-serif",
+                    fontSize: "24px",
+                  }}
                 >
-                  <div className="relative">
-                    <div className="w-14 h-14 bg-linear-to-br from-[#4CAF50] to-[#388E3C] rounded-full flex items-center justify-center text-white font-bold text-[16px]">
-                      {worker.name
-                        .split(" ")
-                        .map((n: string) => n[0])
-                        .join("")
-                        .toUpperCase()}
-                    </div>
-                    <div className="absolute bottom-0 right-0 w-3 h-3 bg-[#4CAF50] rounded-full border-2 border-white"></div>
-                  </div>
-                  <div>
-                    <h3 className="font-semibold text-[#1F2937] text-[17px]">
-                      {worker.name}
-                    </h3>
-                    <p className="text-[#6B7280] mt-1.5 text-[15px]">
-                      {worker.email}
-                    </p>
-                  </div>
-                  {isAdmin && (
-                    <button
-                      onClick={() => setRemovingWorker(worker)}
-                      className="ml-auto p-2 text-red-500 hover:bg-red-50 rounded-lg transition-colors cursor-pointer"
-                      title="Remove Worker"
+                  Workers Assigned to Tasks ({uniqueWorkers.length} workers)
+                </h2>
+              </div>
+
+              <div className="bg-white border border-[#E5E7EB] rounded-2xl p-8 shadow-sm">
+                {uniqueWorkers.length === 0 ? (
+                  <p className="text-[#6B7280] italic text-center py-4">
+                    No workers assigned to tasks in this field
+                  </p>
+                ) : (
+                  uniqueWorkers.map((worker: any, idx: number) => (
+                    <div
+                      key={worker.id}
+                      className={`py-5 ${
+                        idx !== uniqueWorkers.length - 1
+                          ? "border-b border-[#F3F4F6]"
+                          : ""
+                      } flex items-center gap-5`}
                     >
-                      <UserX size={18} />
-                    </button>
-                  )}
-                </div>
-              ))
-            )}
-          </div>
-        </div>
-      )}
+                      <div className="relative">
+                        <div className="w-14 h-14 bg-linear-to-br from-[#4CAF50] to-[#388E3C] rounded-full flex items-center justify-center text-white font-bold text-[16px]">
+                          {worker.name
+                            .split(" ")
+                            .map((n: string) => n[0])
+                            .join("")
+                            .toUpperCase()}
+                        </div>
+                        <div className="absolute bottom-0 right-0 w-3 h-3 bg-[#4CAF50] rounded-full border-2 border-white"></div>
+                      </div>
+                      <div>
+                        <h3 className="font-semibold text-[#1F2937] text-[17px]">
+                          {worker.name}
+                        </h3>
+                        <p className="text-[#6B7280] mt-1.5 text-[15px]">
+                          {worker.email}
+                        </p>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+          );
+        })()}
 
       {/* PART 34: Field History Section - Admin/Farmer only */}
       {!isWorker && (
@@ -780,9 +795,22 @@ export default function FieldDetailPage({
           isOpen={showCreateTaskModal}
           onClose={() => {
             setShowCreateTaskModal(false);
-            fetchData(); // Refresh data after task creation
+            fetchData(true); // Silent refresh to prevent scroll
           }}
           fieldId={parseInt(id)}
+          fieldName={fieldData.name}
+        />
+      )}
+
+      {showEditTaskModal && selectedTask && (
+        <EditTaskModal
+          isOpen={showEditTaskModal}
+          onClose={() => {
+            setShowEditTaskModal(false);
+            setSelectedTask(null);
+            fetchData(true); // Silent refresh to prevent scroll
+          }}
+          taskData={selectedTask}
           fieldName={fieldData.name}
         />
       )}
@@ -818,45 +846,6 @@ export default function FieldDetailPage({
                   <Loader2 size={20} className="animate-spin" />
                 ) : (
                   "Delete"
-                )}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Remove Worker Confirmation Modal */}
-      {removingWorker && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[60] p-4">
-          <div className="bg-white rounded-2xl p-8 max-w-md w-full shadow-2xl animate-in zoom-in duration-200">
-            <div className="w-16 h-16 bg-red-50 rounded-full flex items-center justify-center mb-6 mx-auto">
-              <UserX size={32} className="text-red-500" />
-            </div>
-            <h2 className="text-2xl font-bold text-center text-[#1F2937] mb-3">
-              Remove Worker?
-            </h2>
-            <p className="text-[#6B7280] text-center mb-8">
-              Are you sure you want to remove{" "}
-              <strong>{removingWorker.name}</strong> from this field? They will
-              be unassigned from all tasks in this field.
-            </p>
-            <div className="flex gap-4">
-              <button
-                onClick={() => setRemovingWorker(null)}
-                disabled={isProcessing}
-                className="flex-1 h-12 bg-white border border-[#D1D5DB] text-[#6B7280] rounded-xl font-semibold hover:bg-[#F9FAFB] transition-all disabled:opacity-50"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleRemoveWorker}
-                disabled={isProcessing}
-                className="flex-1 h-12 bg-red-500 text-white rounded-xl font-semibold hover:bg-red-600 transition-all flex items-center justify-center shadow-lg hover:shadow-red-200 disabled:opacity-50"
-              >
-                {isProcessing ? (
-                  <Loader2 size={20} className="animate-spin" />
-                ) : (
-                  "Remove"
                 )}
               </button>
             </div>

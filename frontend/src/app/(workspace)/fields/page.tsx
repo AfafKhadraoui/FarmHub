@@ -58,7 +58,9 @@ export default function FieldsPage() {
         tasks.forEach((t: any) => {
           if (t.taskAssignments) {
             t.taskAssignments.forEach((ta: any) => {
-              if (ta.workerId) workerIds.add(ta.workerId);
+              if (ta.worker?.id) {
+                workerIds.add(ta.worker.id);
+              }
             });
           }
         });
