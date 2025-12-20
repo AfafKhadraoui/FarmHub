@@ -11,21 +11,15 @@ import {
   Scissors,
   RefreshCw,
   AlertCircle,
-  X,
 } from "lucide-react";
 import { useDashboardStats } from '@/hooks/useDashboardStats';
 import { WorkerDashboardResponse } from '@/types/dashboard.types';
+import { TaskCard } from '@/components/workspace/tasks/TaskCard';
 
 export function WorkerDashboard() {
   const [showStatusDropdown, setShowStatusDropdown] = useState(false);
-  const [showCompleteModal, setShowCompleteModal] = useState(false);
-  const [showHelpModal, setShowHelpModal] = useState(false);
-  const [showNoteModal, setShowNoteModal] = useState(false);
-  const [showPauseModal, setShowPauseModal] = useState(false);
   const [selectedTask, setSelectedTask] = useState<any>(null);
-  const [noteText, setNoteText] = useState("");
-  const [pauseReason, setPauseReason] = useState("");
-  const [helpDescription, setHelpDescription] = useState("");
+  // dashboard-level simple modals removed; TaskCard provides full worker actions
   const statusButtonRef = useRef<HTMLButtonElement>(null);
 
   // Use the dashboard stats hook
@@ -50,13 +44,13 @@ export function WorkerDashboard() {
     setSelectedTask(task);
     switch (status) {
       case "complete":
-        setShowCompleteModal(true);
+        // Use TaskCard's Update Status flow instead of dashboard-level modal
         break;
       case "pause":
-        setShowPauseModal(true);
+        // handled by TaskCard
         break;
       case "help":
-        setShowHelpModal(true);
+        // handled by TaskCard
         break;
       default:
         alert(`Status updated to: ${status}`);
@@ -65,26 +59,7 @@ export function WorkerDashboard() {
     setShowStatusDropdown(false);
   };
 
-  const handleSubmitAction = () => {
-    if (showCompleteModal) {
-      alert("Task marked as completed!");
-      setShowCompleteModal(false);
-      setNoteText("");
-    } else if (showHelpModal) {
-      alert("Help request sent!");
-      setShowHelpModal(false);
-      setHelpDescription("");
-    } else if (showPauseModal) {
-      alert("Task paused!");
-      setShowPauseModal(false);
-      setPauseReason("");
-    } else if (showNoteModal) {
-      alert("Note added!");
-      setShowNoteModal(false);
-      setNoteText("");
-    }
-    refreshStats();
-  };
+  // dashboard-level submit handlers removed — TaskCard handles status, notes, etc.
 
   const getTaskIcon = (title: string) => {
     const lowerTitle = title.toLowerCase();
@@ -169,6 +144,29 @@ export function WorkerDashboard() {
       snow: "❄️",
     };
     return iconMap[icon] || "☀️";
+  };
+
+  // Map a dashboard `todayTasks` entry to the canonical TaskCard shape
+  const mapDashboardTaskToTaskCard = (t: any) => {
+    return {
+      // keep original identifiers
+      id: t.id,
+      title: t.title,
+      status: t.status,
+      priority: t.priority || 'MEDIUM',
+      // TaskCard checks a few possible fields for due date/time
+      dueDate: t.dueTime || t.dueDate || t.due_time || null,
+      dueTime: t.dueTime || t.dueTimeString || null,
+      fieldName: t.fieldName ?? (t.field && t.field.name) ?? null,
+      fieldId: t.fieldId ?? (t.field && t.field.id) ?? undefined,
+      // Worker dashboard doesn't include assignedWorkers by default — leave empty
+      assignedWorkers: t.assignedWorkers ?? [],
+      assignedWorkerIds: t.assignedWorkerIds ?? [],
+      taskAssignments: t.taskAssignments ?? [],
+      description: t.description ?? '',
+      // keep any other keys that TaskCard may rely on
+      ...t,
+    };
   };
 
   // Show loading state
@@ -309,121 +307,11 @@ export function WorkerDashboard() {
           Today's Tasks
         </h2>
 
-        {dashboardData.todayTasks.map((task) => {
-          const Icon = getTaskIcon(task.title);
-          const priorityStyle = getPriorityStyle(task.priority);
-          const statusStyle = getStatusStyle(task.status);
-
-          return (
-            <div
-              key={task.id}
-              className="bg-white border border-[#E5E7EB] rounded-xl p-6 shadow-sm mb-4 hover:border-[#4CAF50] transition-all"
-            >
-              {/* Header */}
-              <div className="flex items-center gap-4 mb-4">
-                <div
-                  className="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0"
-                  style={{ backgroundColor: statusStyle.bg }}
-                >
-                  <Icon size={24} style={{ color: statusStyle.text }} />
-                </div>
-                <h3 className="font-semibold text-[#1F2937]">{task.title}</h3>
-              </div>
-
-              {/* Details */}
-              <div className="flex items-center gap-3 mb-4 flex-wrap">
-                <span
-                  className="px-3 py-1.5 rounded-xl font-bold text-[12px]"
-                  style={{
-                    backgroundColor: priorityStyle.bg,
-                    color: priorityStyle.text,
-                  }}
-                >
-                  {task.priority}
-                </span>
-                <span className="text-[#6B7280] text-[14px]">
-                  Due: {formatDueTime(task.dueTime)}
-                </span>
-                <span
-                  className="px-3 py-1.5 rounded-xl font-bold text-[12px]"
-                  style={{
-                    backgroundColor: statusStyle.bg,
-                    color: statusStyle.text,
-                  }}
-                >
-                  {task.status.replace("_", " ")}
-                </span>
-              </div>
-
-              {/* Progress - Only for IN_PROGRESS tasks */}
-              {task.status === "IN_PROGRESS" && (
-                <div className="mb-5">
-                  <div className="font-semibold text-[#374151] mb-2 text-[14px]">
-                    Progress
-                  </div>
-                  <div className="w-full h-2 bg-[#E5E7EB] rounded-full overflow-hidden">
-                    <div
-                      className="h-full bg-gradient-to-r from-[#64B5F6] to-[#2196F3] rounded-full transition-all"
-                      style={{ width: `60%` }}
-                    />
-                  </div>
-                </div>
-              )}
-
-              {/* Action Buttons */}
-              <div className="flex items-center gap-3 flex-wrap">
-                <div className="relative">
-                  <button
-                    ref={statusButtonRef}
-                    onClick={() => {
-                      setSelectedTask(task);
-                      setShowStatusDropdown(!showStatusDropdown);
-                    }}
-                    className="h-9 px-5 bg-[#4CAF50] text-white rounded-lg font-semibold hover:bg-[#388E3C] transition-all cursor-pointer text-[14px]"
-                  >
-                    Update Status
-                  </button>
-                  {showStatusDropdown && selectedTask?.id === task.id && (
-                    <div className="absolute top-full left-0 mt-2 w-48 bg-white border border-[#E5E7EB] rounded-xl shadow-lg z-50">
-                      <div className="py-2">
-                        <button
-                          onClick={() => handleStatusChange(task, "complete")}
-                          className="w-full px-4 py-2 text-left hover:bg-[#F9FAFB] text-[#374151]"
-                        >
-                          Mark Complete
-                        </button>
-                        <button
-                          onClick={() => handleStatusChange(task, "pause")}
-                          className="w-full px-4 py-2 text-left hover:bg-[#F9FAFB] text-[#374151]"
-                        >
-                          Pause Task
-                        </button>
-                        <button
-                          onClick={() => handleStatusChange(task, "help")}
-                          className="w-full px-4 py-2 text-left hover:bg-[#F9FAFB] text-[#374151]"
-                        >
-                          Need Help
-                        </button>
-                      </div>
-                    </div>
-                  )}
-                </div>
-                <button
-                  onClick={() => {
-                    setSelectedTask(task);
-                    setShowNoteModal(true);
-                  }}
-                  className="h-9 px-5 bg-white border border-[#D1D5DB] text-[#4B5563] rounded-lg font-semibold hover:bg-[#F9FAFB] transition-all cursor-pointer text-[14px]"
-                >
-                  Add Note
-                </button>
-                <button className="h-9 px-5 bg-white border border-[#D1D5DB] text-[#4B5563] rounded-lg font-semibold hover:bg-[#F9FAFB] transition-all cursor-pointer text-[14px]">
-                  View Details
-                </button>
-              </div>
-            </div>
-          );
-        })}
+        <div className="space-y-4">
+          {dashboardData.todayTasks.map((task) => (
+            <TaskCard key={task.id} mode="worker" task={mapDashboardTaskToTaskCard(task)} />
+          ))}
+        </div>
 
         {dashboardData.todayTasks.length === 0 && (
           <div className="text-center py-8 bg-white border border-[#E5E7EB] rounded-xl">
@@ -527,154 +415,7 @@ export function WorkerDashboard() {
         </div>
       </div>
 
-      {/* Simple Modals */}
-      {/* Complete Task Modal */}
-      {showCompleteModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl max-w-md w-full">
-            <div className="p-6">
-              <div className="flex justify-between items-center mb-4">
-                <h3 className="font-bold text-lg">Complete Task</h3>
-                <button onClick={() => setShowCompleteModal(false)} className="text-gray-500 hover:text-gray-700">
-                  <X size={20} />
-                </button>
-              </div>
-              <p className="text-gray-600 mb-4">Task: {selectedTask?.title}</p>
-              <textarea
-                className="w-full border border-gray-300 rounded-lg p-3 mb-4 min-h-[100px]"
-                placeholder="Add completion notes..."
-                value={noteText}
-                onChange={(e) => setNoteText(e.target.value)}
-              />
-              <div className="flex gap-3">
-                <button
-                  onClick={() => setShowCompleteModal(false)}
-                  className="flex-1 h-10 border border-gray-300 text-gray-700 rounded-lg font-semibold hover:bg-gray-50"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={handleSubmitAction}
-                  className="flex-1 h-10 bg-[#4CAF50] text-white rounded-lg font-semibold hover:bg-[#388E3C]"
-                >
-                  Mark Complete
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Help Modal */}
-      {showHelpModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl max-w-md w-full">
-            <div className="p-6">
-              <div className="flex justify-between items-center mb-4">
-                <h3 className="font-bold text-lg">Request Help</h3>
-                <button onClick={() => setShowHelpModal(false)} className="text-gray-500 hover:text-gray-700">
-                  <X size={20} />
-                </button>
-              </div>
-              <p className="text-gray-600 mb-4">Task: {selectedTask?.title}</p>
-              <textarea
-                className="w-full border border-gray-300 rounded-lg p-3 mb-4 min-h-[120px]"
-                placeholder="Describe the issue or help needed..."
-                value={helpDescription}
-                onChange={(e) => setHelpDescription(e.target.value)}
-              />
-              <div className="flex gap-3">
-                <button
-                  onClick={() => setShowHelpModal(false)}
-                  className="flex-1 h-10 border border-gray-300 text-gray-700 rounded-lg font-semibold hover:bg-gray-50"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={handleSubmitAction}
-                  className="flex-1 h-10 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700"
-                >
-                  Request Help
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Pause Task Modal */}
-      {showPauseModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl max-w-md w-full">
-            <div className="p-6">
-              <div className="flex justify-between items-center mb-4">
-                <h3 className="font-bold text-lg">Pause Task</h3>
-                <button onClick={() => setShowPauseModal(false)} className="text-gray-500 hover:text-gray-700">
-                  <X size={20} />
-                </button>
-              </div>
-              <p className="text-gray-600 mb-4">Task: {selectedTask?.title}</p>
-              <textarea
-                className="w-full border border-gray-300 rounded-lg p-3 mb-4 min-h-[100px]"
-                placeholder="Reason for pausing..."
-                value={pauseReason}
-                onChange={(e) => setPauseReason(e.target.value)}
-              />
-              <div className="flex gap-3">
-                <button
-                  onClick={() => setShowPauseModal(false)}
-                  className="flex-1 h-10 border border-gray-300 text-gray-700 rounded-lg font-semibold hover:bg-gray-50"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={handleSubmitAction}
-                  className="flex-1 h-10 bg-orange-500 text-white rounded-lg font-semibold hover:bg-orange-600"
-                >
-                  Pause Task
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Add Note Modal */}
-      {showNoteModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl max-w-md w-full">
-            <div className="p-6">
-              <div className="flex justify-between items-center mb-4">
-                <h3 className="font-bold text-lg">Add Note</h3>
-                <button onClick={() => setShowNoteModal(false)} className="text-gray-500 hover:text-gray-700">
-                  <X size={20} />
-                </button>
-              </div>
-              <p className="text-gray-600 mb-4">Task: {selectedTask?.title}</p>
-              <textarea
-                className="w-full border border-gray-300 rounded-lg p-3 mb-4 min-h-[120px]"
-                placeholder="Add your note here..."
-                value={noteText}
-                onChange={(e) => setNoteText(e.target.value)}
-              />
-              <div className="flex gap-3">
-                <button
-                  onClick={() => setShowNoteModal(false)}
-                  className="flex-1 h-10 border border-gray-300 text-gray-700 rounded-lg font-semibold hover:bg-gray-50"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={handleSubmitAction}
-                  className="flex-1 h-10 bg-[#4CAF50] text-white rounded-lg font-semibold hover:bg-[#388E3C]"
-                >
-                  Add Note
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* Dashboard-level simple modals removed. Individual TaskCard handles status/note flows. */}
     </>
   );
 }
