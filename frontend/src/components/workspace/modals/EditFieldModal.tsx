@@ -1,9 +1,13 @@
+"use client";
+
 import React, { useState } from "react";
 import { Modal } from "./Modal";
+import { fieldService } from "@/services/field.service";
 
 interface EditFieldModalProps {
   isOpen: boolean;
   onClose: () => void;
+  fieldId: number;
   fieldData?: {
     name: string;
     size: string;
@@ -19,34 +23,116 @@ interface EditFieldModalProps {
 export function EditFieldModal({
   isOpen,
   onClose,
+  fieldId,
   fieldData,
-}: EditFieldModalProps) {
+}: EditFieldModalProps): React.JSX.Element {
   const [formData, setFormData] = useState({
-    fieldName: fieldData?.name || "Field A",
-    size: fieldData?.size || "12",
-    location: fieldData?.location || "North Plot",
-    cropType: fieldData?.cropType || "wheat",
-    status: fieldData?.status || "growing",
+    fieldName: fieldData?.name || "",
+    size: fieldData?.size || "",
+    location: fieldData?.location || "",
+    cropType: fieldData?.cropType || "",
+    status:
+      (fieldData?.status === "harvesting" ? "harvested" : fieldData?.status) ||
+      "idle",
     customCrop: "",
-    plantingDate: fieldData?.plantingDate || "2024-03-01",
-    harvestDate: fieldData?.harvestDate || "2024-08-15",
-    description:
-      fieldData?.description ||
-      "Primary wheat field with advanced irrigation system",
+    plantingDate: fieldData?.plantingDate || "",
+    harvestDate: fieldData?.harvestDate || "",
+    description: fieldData?.description || "",
   });
-
+  const [errors, setErrors] = useState<Record<string, string>>({});
   const [isLoading, setIsLoading] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    // Comprehensive Validation
+    const newErrors: Record<string, string> = {};
+
+    // Required fields
+    if (!formData.fieldName.trim()) {
+      newErrors.fieldName = "Field name is required";
+    } else if (formData.fieldName.trim().length < 2) {
+      newErrors.fieldName = "Field name must be at least 2 characters";
+    }
+
+    if (!formData.size) {
+      newErrors.size = "Size is required";
+    } else if (parseFloat(formData.size) <= 0) {
+      newErrors.size = "Size must be greater than 0";
+    } else if (parseFloat(formData.size) > 10000) {
+      newErrors.size = "Size seems too large. Please verify.";
+    }
+
+    if (!formData.cropType) {
+      newErrors.cropType = "Crop type is required";
+    }
+
+    if (formData.cropType === "other" && !formData.customCrop.trim()) {
+      newErrors.customCrop = "Please specify the crop name";
+    }
+
+    // Date validations
+    if (formData.plantingDate && formData.harvestDate) {
+      const plantDate = new Date(formData.plantingDate);
+      const harvestDate = new Date(formData.harvestDate);
+
+      if (harvestDate < plantDate) {
+        newErrors.harvestDate = "Harvest date cannot be before planting date";
+      }
+
+      // Check if dates are too far apart (more than 2 years)
+      const daysDiff =
+        (harvestDate.getTime() - plantDate.getTime()) / (1000 * 60 * 60 * 24);
+      if (daysDiff > 730) {
+        newErrors.harvestDate = "Harvest date seems too far in the future";
+      }
+    }
+
+    if (Object.keys(newErrors).length > 0) {
+      setErrors(newErrors);
+      return;
+    }
+
+    setErrors({});
     setIsLoading(true);
 
-    // Simulate API call
-    setTimeout(() => {
-      setIsLoading(false);
+    try {
+      const crop =
+        formData.cropType === "other" ? formData.customCrop : formData.cropType;
+
+      const response = await fieldService.update(fieldId, {
+        name: formData.fieldName,
+        size: parseFloat(formData.size),
+        cropType: crop,
+        status: formData.status,
+        plantedDate: formData.plantingDate
+          ? new Date(formData.plantingDate)
+          : null,
+        harvestDate: formData.harvestDate
+          ? new Date(formData.harvestDate)
+          : null,
+      });
+
+      // If the field was versioned (ID changed), redirect to the new ID
+      if (
+        response.field &&
+        response.field.id &&
+        response.field.id !== fieldId
+      ) {
+        onClose();
+        (window as any).showToast?.("New crop season started!", "success");
+        window.location.href = `/fields/${response.field.id}`;
+        return;
+      }
+
       onClose();
       (window as any).showToast?.("Field updated successfully!", "success");
-    }, 1000);
+    } catch (error) {
+      console.error("Failed to update field:", error);
+      (window as any).showToast?.("Failed to update field", "error");
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const isFormValid = formData.fieldName && formData.size && formData.cropType;
@@ -239,14 +325,14 @@ export function EditFieldModal({
               <input
                 type="radio"
                 name="status"
-                value="harvesting"
-                checked={formData.status === "harvesting"}
+                value="harvested"
+                checked={formData.status === "harvested"}
                 onChange={(e) =>
                   setFormData({ ...formData, status: e.target.value })
                 }
                 className="w-4 h-4 text-[#4CAF50] focus:ring-[#4CAF50]"
               />
-              <span className="text-[#374151]">Harvesting</span>
+              <span className="text-[#374151]">Harvested</span>
             </label>
           </div>
         </div>
@@ -282,8 +368,15 @@ export function EditFieldModal({
                 onChange={(e) =>
                   setFormData({ ...formData, harvestDate: e.target.value })
                 }
-                className="w-full h-11 px-4 border border-[#D1D5DB] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#4CAF50] focus:border-transparent"
+                className={`w-full h-11 px-4 border ${
+                  errors.harvestDate ? "border-red-500" : "border-[#D1D5DB]"
+                } rounded-lg focus:outline-none focus:ring-2 focus:ring-[#4CAF50] focus:border-transparent`}
               />
+              {errors.harvestDate && (
+                <p className="mt-1 text-xs text-red-500">
+                  {errors.harvestDate}
+                </p>
+              )}
             </div>
           </div>
         </div>

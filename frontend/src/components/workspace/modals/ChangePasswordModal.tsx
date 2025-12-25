@@ -1,6 +1,9 @@
+"use client";
+
 import React, { useState } from "react";
 import { Modal } from "@/components/workspace/modals/Modal";
 import { Lock, Eye, EyeOff } from "lucide-react";
+import { useProfile } from "@/hooks/useProfile";
 
 interface ChangePasswordModalProps {
   isOpen: boolean;
@@ -22,6 +25,7 @@ export const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+  const { changePassword } = useProfile();
 
   const handleSubmit = async () => {
     // Validation
@@ -43,32 +47,20 @@ export const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({
     setLoading(true);
 
     try {
-      // TODO: Replace with actual API call when ready
-      // const response = await fetch('/auth/change-password', {
-      //   method: 'POST',
-      //   headers: {
-      //     'Content-Type': 'application/json',
-      //     'Authorization': `Bearer ${localStorage.getItem('accessToken')}`
-      //   },
-      //   body: JSON.stringify({
-      //     currentPassword,
-      //     newPassword
-      //   })
-      // });
-      
-      // const data = await response.json();
-      
-      // if (!response.ok) {
-      //   throw new Error(data.message || 'Failed to change password');
-      // }
+      const res = await changePassword({
+        currentPassword,
+        newPassword,
+        confirmationPassword: confirmPassword,
+      });
 
-      // Simulate API call
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-
-      onSuccess("Password changed successfully!");
-      handleClose();
-    } catch (error: any) {
-      onError(error.message || "Failed to change password");
+      if (res && res.success) {
+        onSuccess(res.data?.message || "Password changed successfully!");
+        handleClose();
+      } else {
+        onError(res?.error || "Failed to change password");
+      }
+    } catch (err: any) {
+      onError(err?.message || "Failed to change password");
     } finally {
       setLoading(false);
     }

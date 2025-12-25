@@ -244,6 +244,7 @@ export default function AnalyticsPage() {
                   boxShadow: "0px 8px 24px rgba(75, 175, 71, 0.15)",
                   padding: "12px 16px",
                 }}
+                cursor={{ fill: "rgba(75, 175, 71, 0.1)" }}
               />
               <Bar
                 dataKey="tasks"
@@ -292,6 +293,7 @@ export default function AnalyticsPage() {
                 boxShadow: "0px 8px 24px rgba(255, 107, 0, 0.15)",
                 padding: "12px 16px",
               }}
+              cursor={{ fill: "rgba(255, 107, 0, 0.1)" }}
             />
             <Bar
               dataKey="tasks"

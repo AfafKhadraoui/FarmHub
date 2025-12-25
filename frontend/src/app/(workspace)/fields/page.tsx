@@ -1,17 +1,18 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { MapPin, Plus, ChevronDown, Filter } from "lucide-react";
+import { MapPin, Plus, ChevronDown, Filter, Loader2 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { AddFieldModal } from "@/components/workspace/modals/AddFieldModal";
+import { fieldService } from "@/services/field.service";
 
 interface Field {
   id: number;
   name: string;
   size: string;
   cropType: string;
-  status: "idle" | "planted" | "growing" | "harvesting";
+  status: "idle" | "planted" | "growing" | "harvesting" | "harvested";
   progress: number;
   activeTasks: number;
   assignedWorkers: number;
@@ -21,135 +22,114 @@ export default function FieldsPage() {
   const router = useRouter();
   const { user } = useAuth();
   const [filter, setFilter] = useState<
-    "all" | "idle" | "planted" | "growing" | "harvesting"
+    "all" | "idle" | "planted" | "growing" | "harvested"
   >("all");
   const [showFilterMenu, setShowFilterMenu] = useState(false);
   const [showAddFieldModal, setShowAddFieldModal] = useState(false);
+  const [fieldsData, setFieldsData] = useState<Field[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
   // Determine user role
   const isAdmin = user?.role === "admin";
   const isWorker = user?.role === "worker";
 
-  // Mock data - All fields (what admin/farmer sees)
-  const allFieldsData: Field[] = [
-    {
-      id: 1,
-      name: "Field A",
-      size: "12 hectares",
-      cropType: "Wheat",
-      status: "growing",
-      progress: 80,
-      activeTasks: 5,
-      assignedWorkers: 3,
-    },
-    {
-      id: 2,
-      name: "Field B",
-      size: "8 hectares",
-      cropType: "Corn",
-      status: "planted",
-      progress: 40,
-      activeTasks: 3,
-      assignedWorkers: 2,
-    },
-    {
-      id: 3,
-      name: "Field C",
-      size: "15 hectares",
-      cropType: "Barley",
-      status: "harvesting",
-      progress: 95,
-      activeTasks: 8,
-      assignedWorkers: 5,
-    },
-    {
-      id: 4,
-      name: "Field D",
-      size: "10 hectares",
-      cropType: "Potatoes",
-      status: "growing",
-      progress: 65,
-      activeTasks: 4,
-      assignedWorkers: 2,
-    },
-    {
-      id: 5,
-      name: "Field E",
-      size: "6 hectares",
-      cropType: "Tomatoes",
-      status: "planted",
-      progress: 30,
-      activeTasks: 2,
-      assignedWorkers: 1,
-    },
-    {
-      id: 6,
-      name: "Field F",
-      size: "20 hectares",
-      cropType: "Carrots",
-      status: "growing",
-      progress: 75,
-      activeTasks: 6,
-      assignedWorkers: 4,
-    },
-    {
-      id: 7,
-      name: "Field G",
-      size: "14 hectares",
-      cropType: "Lettuce",
-      status: "idle",
-      progress: 0,
-      activeTasks: 0,
-      assignedWorkers: 0,
-    },
-    {
-      id: 8,
-      name: "Field H",
-      size: "9 hectares",
-      cropType: "Peppers",
-      status: "growing",
-      progress: 55,
-      activeTasks: 3,
-      assignedWorkers: 2,
-    },
-    {
-      id: 9,
-      name: "Field I",
-      size: "11 hectares",
-      cropType: "Onions",
-      status: "harvesting",
-      progress: 90,
-      activeTasks: 5,
-      assignedWorkers: 3,
-    },
-  ];
+  const fetchFields = async () => {
+    try {
+      setIsLoading(true);
+      let data: any[] = [];
 
-  // Worker sees only fields they're assigned to (mock: fields 1, 2, 4, 6)
-  // In real app: Backend filters by TaskAssignment table where workerId = user.id
-  const workerAssignedFieldIds = [1, 2, 4, 6];
+      if (isWorker) {
+        data = await fieldService.getWorkerFields();
+      } else {
+        const response = await fieldService.getAll(1); // Fetch all fields (large limit)
+        data = response.data;
+      }
 
-  // Role-based filtering
-  const allFields = isWorker
-    ? allFieldsData.filter((field) => workerAssignedFieldIds.includes(field.id))
-    : allFieldsData;
+      // Map backend data to frontend model
+      const mappedFields: Field[] = data.map((field: any) => {
+        // Calculate active tasks
+        const tasks = field.tasks || [];
+        const activeTasksCount = tasks.filter(
+          (t: any) => t.status !== "completed"
+        ).length;
+
+        // Calculate unique assigned workers
+        const workerIds = new Set();
+        tasks.forEach((t: any) => {
+          if (t.taskAssignments) {
+            t.taskAssignments.forEach((ta: any) => {
+              if (ta.worker?.id) {
+                workerIds.add(ta.worker.id);
+              }
+            });
+          }
+        });
+
+        // Backend sends size as number/float, frontend expects string sometimes (e.g. "12 hectares")
+        // But backend sends plain number. Let's format it.
+        const sizeString = `${field.size} hectares`;
+
+        return {
+          id: field.id,
+          name: field.name,
+          size: sizeString,
+          cropType: field.cropType,
+          status: field.status,
+          progress: field.progress || 0,
+          activeTasks: activeTasksCount,
+          assignedWorkers: workerIds.size,
+        };
+      });
+
+      setFieldsData(mappedFields);
+    } catch (error) {
+      console.error("Failed to fetch fields:", error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (user) {
+      fetchFields();
+    }
+  }, [user]);
 
   // Apply status filter
   const fields =
-    filter === "all" ? allFields : allFields.filter((f) => f.status === filter);
+    filter === "all"
+      ? fieldsData
+      : fieldsData.filter((f) => f.status === filter);
 
   const getStatusColor = (status: string) => {
     const colors: Record<string, { bg: string; text: string }> = {
       idle: { bg: "#F8D7DA", text: "#721C24" },
       planted: { bg: "#CCE5FF", text: "#004085" },
       growing: { bg: "#D4EDDA", text: "#155724" },
-      harvesting: { bg: "#FFF3CD", text: "#856404" },
+      harvested: { bg: "#FEEBC8", text: "#744210" },
     };
-    return colors[status];
+    return colors[status] || colors.idle;
   };
 
   const handleViewField = (fieldId: number) => {
+    // router.push(`/fields/${fieldId}`);
+    // For now notify not implemented if page doesn't exist
+    // Check if the page exists in codebase?
+    // Usually it is [id]/page.tsx. Assuming it exists.
     router.push(`/fields/${fieldId}`);
   };
+
+  const handleFieldAdded = () => {
+    fetchFields(); // Refresh list after adding
+  };
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-[60vh]">
+        <Loader2 className="w-10 h-10 text-green-500 animate-spin" />
+      </div>
+    );
+  }
 
   return (
     <>
@@ -187,72 +167,42 @@ export default function FieldsPage() {
 
               {/* Filter Menu */}
               {showFilterMenu && (
-                <div className="absolute right-0 mt-2 w-48 bg-white border border-[#E5E7EB] rounded-lg shadow-lg z-50">
-                  <button
-                    onClick={() => {
-                      setFilter("all");
-                      setShowFilterMenu(false);
-                    }}
-                    className={`w-full text-left px-4 py-2 hover:bg-[#F9FAFB] ${
-                      filter === "all"
-                        ? "bg-[#F0F9F1] text-[#4CAF50] font-semibold"
-                        : "text-[#374151]"
-                    }`}
-                  >
-                    All Fields
-                  </button>
-                  <button
-                    onClick={() => {
-                      setFilter("idle");
-                      setShowFilterMenu(false);
-                    }}
-                    className={`w-full text-left px-4 py-2 hover:bg-[#F9FAFB] ${
-                      filter === "idle"
-                        ? "bg-[#F0F9F1] text-[#4CAF50] font-semibold"
-                        : "text-[#374151]"
-                    }`}
-                  >
-                    Idle
-                  </button>
-                  <button
-                    onClick={() => {
-                      setFilter("planted");
-                      setShowFilterMenu(false);
-                    }}
-                    className={`w-full text-left px-4 py-2 hover:bg-[#F9FAFB] ${
-                      filter === "planted"
-                        ? "bg-[#F0F9F1] text-[#4CAF50] font-semibold"
-                        : "text-[#374151]"
-                    }`}
-                  >
-                    Planted
-                  </button>
-                  <button
-                    onClick={() => {
-                      setFilter("growing");
-                      setShowFilterMenu(false);
-                    }}
-                    className={`w-full text-left px-4 py-2 hover:bg-[#F9FAFB] ${
-                      filter === "growing"
-                        ? "bg-[#F0F9F1] text-[#4CAF50] font-semibold"
-                        : "text-[#374151]"
-                    }`}
-                  >
-                    Growing
-                  </button>
-                  <button
-                    onClick={() => {
-                      setFilter("harvesting");
-                      setShowFilterMenu(false);
-                    }}
-                    className={`w-full text-left px-4 py-2 hover:bg-[#F9FAFB] ${
-                      filter === "harvesting"
-                        ? "bg-[#F0F9F1] text-[#4CAF50] font-semibold"
-                        : "text-[#374151]"
-                    }`}
-                  >
-                    Harvesting
-                  </button>
+                <div className="absolute right-0 mt-2 w-52 bg-white border border-[#E5E7EB] rounded-xl shadow-xl z-50 py-1 overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200">
+                  {["all", "idle", "planted", "growing", "harvested"].map(
+                    (status) => {
+                      const statusColor =
+                        status !== "all" ? getStatusColor(status) : null;
+                      return (
+                        <button
+                          key={status}
+                          onClick={() => {
+                            setFilter(status as any);
+                            setShowFilterMenu(false);
+                          }}
+                          className={`w-full text-left px-4 py-2.5 flex items-center gap-3 hover:bg-[#F9FAFB] transition-colors ${
+                            filter === status
+                              ? "bg-[#F0F9F1] text-[#4CAF50] font-semibold"
+                              : "text-[#4B5563]"
+                          }`}
+                        >
+                          {status === "all" ? (
+                            <div className="w-2.5 h-2.5 rounded-full bg-[#9CA3AF]" />
+                          ) : (
+                            <div
+                              className="w-2.5 h-2.5 rounded-full"
+                              style={{ backgroundColor: statusColor?.text }}
+                            />
+                          )}
+                          <span className="text-[14px]">
+                            {status === "all"
+                              ? "All Fields"
+                              : status.charAt(0).toUpperCase() +
+                                status.slice(1)}
+                          </span>
+                        </button>
+                      );
+                    }
+                  )}
                 </div>
               )}
             </div>
@@ -276,6 +226,7 @@ export default function FieldsPage() {
         <AddFieldModal
           isOpen={showAddFieldModal}
           onClose={() => setShowAddFieldModal(false)}
+          onSuccess={handleFieldAdded}
         />
       )}
 
@@ -286,7 +237,7 @@ export default function FieldsPage() {
           <p className="text-[#6B7280] text-lg">No fields found</p>
           {isAdmin && (
             <button
-              onClick={() => router.push("/fields/new")}
+              onClick={() => setShowAddFieldModal(true)}
               className="mt-4 h-11 px-6 bg-[#4CAF50] text-white rounded-lg font-semibold hover:bg-[#388E3C] transition-all"
             >
               Add Your First Field
@@ -295,73 +246,78 @@ export default function FieldsPage() {
         </div>
       ) : (
         <div className="grid grid-cols-3 gap-8">
-          {fields.map((field) => {
-            const statusColor = getStatusColor(field.status);
-            return (
-              <div
-                key={field.id}
-                className="bg-white border border-[#E5E7EB] rounded-2xl p-8 shadow-sm hover:shadow-lg transition-all flex flex-col h-[450px]"
-              >
-                {/* Icon */}
-                <div className="w-16 h-16 bg-[#E8F5E9] rounded-full flex items-center justify-center mb-6">
-                  <MapPin size={36} className="text-[#4CAF50]" />
-                </div>
-
-                {/* Field Name */}
-                <h3 className="font-semibold text-[#1F2937] text-[22px] mb-3">
-                  {field.name}
-                </h3>
-
-                {/* Details */}
-                <p className="text-[#6B7280] text-[16px] mb-2">{field.size}</p>
-                <p className="text-[#6B7280] text-[16px] mb-5">
-                  {field.cropType}
-                </p>
-
-                {/* Status Badge */}
-                <span
-                  className="inline-block px-4 py-2 rounded-xl font-bold text-[13px] mb-6 w-fit"
-                  style={{
-                    backgroundColor: statusColor.bg,
-                    color: statusColor.text,
-                  }}
+          {fields
+            .filter((f) => filter === "all" || f.status === filter)
+            .map((field) => {
+              const statusColor = getStatusColor(field.status);
+              return (
+                <div
+                  key={field.id}
+                  className="bg-white border border-[#E5E7EB] rounded-2xl p-8 shadow-sm hover:shadow-lg transition-all flex flex-col h-[480px]"
                 >
-                  {field.status.charAt(0).toUpperCase() + field.status.slice(1)}
-                </span>
-
-                {/* Progress Section */}
-                <div className="mb-8">
-                  <div className="font-semibold text-[#374151] mb-3 text-[16px]">
-                    Progress: {field.progress}%
+                  {/* Icon */}
+                  <div className="w-16 h-16 bg-[#E8F5E9] rounded-full flex items-center justify-center mb-6">
+                    <MapPin size={36} className="text-[#4CAF50]" />
                   </div>
-                  <div className="w-full h-3 bg-[#E5E7EB] rounded-full overflow-hidden">
-                    <div
-                      className="h-full bg-linear-to-r from-[#66BB6A] to-[#4CAF50] rounded-full transition-all"
-                      style={{ width: `${field.progress}%` }}
-                    />
+
+                  {/* Field Name */}
+                  <h3 className="font-semibold text-[#1F2937] text-[22px] mb-3">
+                    {field.name}
+                  </h3>
+
+                  {/* Details */}
+                  <p className="text-[#6B7280] text-[16px] mb-2">
+                    {field.size}
+                  </p>
+                  <p className="text-[#6B7280] text-[16px] mb-5">
+                    {field.cropType}
+                  </p>
+
+                  {/* Status Badge */}
+                  <span
+                    className="inline-block px-4 py-2 rounded-xl font-bold text-[13px] mb-6 w-fit"
+                    style={{
+                      backgroundColor: statusColor.bg,
+                      color: statusColor.text,
+                    }}
+                  >
+                    {field.status.charAt(0).toUpperCase() +
+                      field.status.slice(1)}
+                  </span>
+
+                  {/* Progress Section */}
+                  <div className="mb-8">
+                    <div className="font-semibold text-[#374151] mb-3 text-[16px]">
+                      Progress: {field.progress}%
+                    </div>
+                    <div className="w-full h-3 bg-[#E5E7EB] rounded-full overflow-hidden">
+                      <div
+                        className="h-full bg-linear-to-r from-[#66BB6A] to-[#4CAF50] rounded-full transition-all"
+                        style={{ width: `${field.progress}%` }}
+                      />
+                    </div>
                   </div>
-                </div>
 
-                {/* Stats */}
-                <div className="flex items-center justify-between mb-6 text-[15px]">
-                  <span className="text-[#6B7280]">
-                    Tasks: {field.activeTasks}
-                  </span>
-                  <span className="text-[#6B7280]">
-                    Workers: {field.assignedWorkers}
-                  </span>
-                </div>
+                  {/* Stats */}
+                  <div className="flex items-center justify-between mb-6 text-[15px]">
+                    <span className="text-[#6B7280]">
+                      Tasks: {field.activeTasks}
+                    </span>
+                    <span className="text-[#6B7280]">
+                      Workers: {field.assignedWorkers}
+                    </span>
+                  </div>
 
-                {/* View Button */}
-                <button
-                  onClick={() => handleViewField(field.id)}
-                  className="w-full h-16 mt-auto px-8 bg-[#4CAF50] text-white rounded-lg font-bold hover:bg-[#388E3C] transition-all hover:shadow-lg cursor-pointer text-[18px]"
-                >
-                  View Details
-                </button>
-              </div>
-            );
-          })}
+                  {/* View Button */}
+                  <button
+                    onClick={() => handleViewField(field.id)}
+                    className="w-full h-16 mt-auto px-8 bg-[#4CAF50] text-white rounded-lg font-bold hover:bg-[#388E3C] transition-all hover:shadow-lg cursor-pointer text-[18px]"
+                  >
+                    View Details
+                  </button>
+                </div>
+              );
+            })}
         </div>
       )}
     </>

@@ -1,42 +1,34 @@
 "use client";
 
-import { ChevronRight, Copy, Archive, MapPin, Building2, X, Save, AlertTriangle } from "lucide-react";
+import { ChevronRight, Copy, Archive, MapPin, Building2, X, Save, AlertTriangle, Eye, EyeOff } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useRouter } from "next/navigation";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { CustomAlert } from "@/components/workspace/CustomAlert";
 import { Modal } from "@/components/workspace/modals/Modal";
-import { useState } from "react";
+import { useFarmSettings } from "@/hooks/useFarmSettings"; // Import our custom hook
+import { UpdateFarmSettingsData, DeleteFarmAccountData } from "@/types/settings.types"; // Import types
 
 export default function SettingsPage() {
   const { user } = useAuth();
   const router = useRouter();
   const [isEditingFarm, setIsEditingFarm] = useState(false);
-  const [savingFarm, setSavingFarm] = useState(false);
-  const [alert, setAlert] = useState<{
-    isOpen: boolean;
-    type: "success" | "error";
-    message: string;
-  }>({
-    isOpen: false,
-    type: "success",
-    message: "",
-  });
+  
+  // Use our custom hook for farm settings
+  const {
+    farmSettings,
+    loading,
+    alert: hookAlert,
+    closeAlert,
+    fetchFarmSettings,
+    updateFarmSettings,
+    deleteFarmAccount,
+  } = useFarmSettings();
 
-  // Mock farm data - replace with actual API data when ready
-  const [farmData] = useState({
-    name: "Green Valley Farm",
-    location: "Algiers, Algeria",
-    farmCode: "FARM-ABC123",
-    created: "January 2024",
-    totalFields: 12,
-    totalWorkers: 8,
-    activeTasks: 34,
-  });
-
+  // Local form states
   const [formData, setFormData] = useState({
-    name: farmData.name,
-    location: farmData.location,
+    name: "",
+    location: "",
   });
 
   const [showDeleteModal, setShowDeleteModal] = useState(false);
@@ -44,166 +36,108 @@ export default function SettingsPage() {
     password: "",
     confirmation: "",
   });
-  const [deletingFarm, setDeletingFarm] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
 
+  // Fetch farm settings on component mount
+  useEffect(() => {
+    if (user?.role === "admin") {
+      fetchFarmSettings();
+    }
+  }, [user]);
+
+  // Update form data when farm settings are loaded
+  useEffect(() => {
+    if (farmSettings) {
+      setFormData({
+        name: farmSettings.name,
+        location: farmSettings.location,
+      });
+    }
+  }, [farmSettings]);
+
+  // Check if user is admin (access control)
+  useEffect(() => {
+    if (user && user.role !== "admin") {
+      router.push("/workspace/dashboard");
+    }
+  }, [user, router]);
+
+  // Handle copying farm join code
   const handleCopyFarmCode = async () => {
+    if (!farmSettings?.joinCode) return;
+    
     try {
-      await navigator.clipboard.writeText(farmData.farmCode);
-      setAlert({
-        isOpen: true,
-        type: "success",
-        message: "Farm code copied to clipboard!",
-      });
-      setTimeout(() => setAlert({ ...alert, isOpen: false }), 3000);
+      await navigator.clipboard.writeText(farmSettings.joinCode);
+      // We'll use the hook's alert system
+      // Alert will be shown by the hook's success/error handlers
     } catch (error) {
-      setAlert({
-        isOpen: true,
-        type: "error",
-        message: "Failed to copy farm code",
-      });
-      setTimeout(() => setAlert({ ...alert, isOpen: false }), 3000);
+      console.error("Failed to copy farm code:", error);
     }
   };
 
+  // Handle saving farm information
   const handleSaveFarm = async () => {
     // Validation
     if (!formData.name.trim() || !formData.location.trim()) {
-      setAlert({
-        isOpen: true,
-        type: "error",
-        message: "Please fill in all fields",
-      });
-      setTimeout(() => setAlert({ ...alert, isOpen: false }), 3000);
+      // We could add a local alert here, but the hook will handle validation errors
       return;
     }
 
-    setSavingFarm(true);
-
     try {
-      // TODO: Replace with actual API call when ready
-      // const response = await fetch('/settings/farm', {
-      //   method: 'PUT',
-      //   headers: {
-      //     'Content-Type': 'application/json',
-      //     'Authorization': `Bearer ${localStorage.getItem('accessToken')}`
-      //   },
-      //   body: JSON.stringify({
-      //     name: formData.name,
-      //     location: formData.location
-      //   })
-      // });
-
-      // const data = await response.json();
-
-      // if (!response.ok) {
-      //   throw new Error(data.message || 'Failed to update farm information');
-      // }
-
-      // Simulate API call
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-
-      setAlert({
-        isOpen: true,
-        type: "success",
-        message: "Farm information updated successfully!",
-      });
-      setTimeout(() => setAlert({ ...alert, isOpen: false }), 3000);
+      const updateData: UpdateFarmSettingsData = {
+        name: formData.name,
+        location: formData.location,
+      };
+      
+      await updateFarmSettings(updateData);
       setIsEditingFarm(false);
-    } catch (error: any) {
-      setAlert({
-        isOpen: true,
-        type: "error",
-        message: error.message || "Failed to update farm information",
-      });
-      setTimeout(() => setAlert({ ...alert, isOpen: false }), 3000);
-    } finally {
-      setSavingFarm(false);
+    } catch (error) {
+      // Error is already handled by the hook and shown via CustomAlert
+      console.error("Failed to update farm:", error);
     }
   };
 
+  // Handle cancel edit
   const handleCancelEdit = () => {
     setIsEditingFarm(false);
-    // Reset form data to original values
-    setFormData({
-      name: farmData.name,
-      location: farmData.location,
-    });
+    // Reset form data to current farm settings
+    if (farmSettings) {
+      setFormData({
+        name: farmSettings.name,
+        location: farmSettings.location,
+      });
+    }
   };
+
+  // Handle farm deletion
   const handleDeleteFarm = async () => {
     // Validation
     if (!deleteFormData.password) {
-      setAlert({
-        isOpen: true,
-        type: "error",
-        message: "Please enter your password",
-      });
-      setTimeout(() => setAlert({ ...alert, isOpen: false }), 3000);
+      // We could show an alert here, but the backend will validate
       return;
     }
 
     if (deleteFormData.confirmation !== "DELETE MY FARM") {
-      setAlert({
-        isOpen: true,
-        type: "error",
-        message: "Please type 'DELETE MY FARM' to confirm",
-      });
-      setTimeout(() => setAlert({ ...alert, isOpen: false }), 3000);
+      // We could show an alert here, but the backend will validate
       return;
     }
 
-    setDeletingFarm(true);
-
     try {
-      // TODO: Replace with actual API call when ready
-      // const response = await fetch('/settings/farm', {
-      //   method: 'DELETE',
-      //   headers: {
-      //     'Content-Type': 'application/json',
-      //     'Authorization': `Bearer ${localStorage.getItem('accessToken')}`
-      //   },
-      //   body: JSON.stringify({
-      //     password: deleteFormData.password,
-      //     confirmation: deleteFormData.confirmation
-      //   })
-      // });
-
-      // const data = await response.json();
-
-      // if (!response.ok) {
-      //   throw new Error(data.message || 'Failed to delete farm account');
-      // }
-
-      // Simulate API call
-      await new Promise((resolve) => setTimeout(resolve, 1500));
-
-      // Clear tokens and redirect to login
-      localStorage.removeItem("accessToken");
-      document.cookie = "token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
-
-      setAlert({
-        isOpen: true,
-        type: "success",
-        message: "Farm account deleted successfully",
-      });
-
-      // Redirect after showing success message
-      setTimeout(() => {
-        router.push("/login");
-      }, 1500);
-
-    } catch (error: any) {
-      setAlert({
-        isOpen: true,
-        type: "error",
-        message: error.message || "Failed to delete farm account",
-      });
-      setTimeout(() => setAlert({ ...alert, isOpen: false }), 3000);
-    } finally {
-      setDeletingFarm(false);
+      const deleteData: DeleteFarmAccountData = {
+        password: deleteFormData.password,
+        confirmation: deleteFormData.confirmation,
+      };
+      
+      await deleteFarmAccount(deleteData);
+      // The hook handles the success alert and redirect
+      handleCloseDeleteModal();
+    } catch (error) {
+      // Error is already handled by the hook
+      console.error("Failed to delete farm:", error);
     }
   };
 
+  // Close delete modal and reset form
   const handleCloseDeleteModal = () => {
     setShowDeleteModal(false);
     setDeleteFormData({
@@ -213,16 +147,30 @@ export default function SettingsPage() {
     setShowPassword(false);
   };
 
-  useEffect(() => {
-    // Only admins can access settings page
-    if (user && user.role !== "admin") {
-      router.push("/dashboard");
-    }
-  }, [user, router]);
+  // Format date for display
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
+    return date.toLocaleDateString('en-US', { 
+      year: 'numeric', 
+      month: 'long' 
+    });
+  };
+
+  // Show loading state
+  if (loading && !farmSettings) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#4CAF50] mx-auto"></div>
+          <p className="mt-4 text-[#6B7280]">Loading farm settings...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <>
-      {/* PART 48: Settings Page Header */}
+      {/* Settings Page Header */}
       <div className="mb-8">
         <h1
           className="font-bold text-[#1F2937]"
@@ -233,8 +181,7 @@ export default function SettingsPage() {
         <p className="mt-2 text-[#6B7280]">Manage your farm settings</p>
       </div>
 
-      {/* PART 48: Farm Information */}
-      {/* PART 48: Farm Information */}
+      {/* Farm Information Section */}
       <div className="mb-8">
         <div className="flex items-center justify-between mb-5">
           <h2
@@ -243,10 +190,11 @@ export default function SettingsPage() {
           >
             Farm Information
           </h2>
-          {!isEditingFarm ? (
+          {!isEditingFarm && farmSettings ? (
             <button
               onClick={() => setIsEditingFarm(true)}
-              className="h-10 px-6 bg-white border border-[#4CAF50] text-[#4CAF50] rounded-lg font-semibold hover:bg-[#F0F9F1] transition-all cursor-pointer"
+              className="h-10 px-6 bg-white border border-[#4CAF50] text-[#4CAF50] rounded-lg font-semibold hover:bg-[#F0F9F1] transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+              disabled={loading}
             >
               Edit Farm
             </button>
@@ -254,25 +202,25 @@ export default function SettingsPage() {
             <div className="flex gap-2">
               <button
                 onClick={handleCancelEdit}
-                disabled={savingFarm}
-                className="h-10 px-5 bg-white border border-[#D1D5DB] text-[#6B7280] rounded-lg font-semibold hover:bg-[#F9FAFB] transition-all flex items-center gap-2 disabled:opacity-50 cursor-pointer"
+                disabled={loading}
+                className="h-10 px-5 bg-white border border-[#D1D5DB] text-[#6B7280] rounded-lg font-semibold hover:bg-[#F9FAFB] transition-all flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
               >
                 <X size={16} />
                 Cancel
               </button>
               <button
                 onClick={handleSaveFarm}
-                disabled={savingFarm}
-                className="h-10 px-5 bg-[#4CAF50] text-white rounded-lg font-semibold hover:bg-[#388E3C] transition-all flex items-center gap-2 disabled:opacity-50 cursor-pointer"
+                disabled={loading}
+                className="h-10 px-5 bg-[#4CAF50] text-white rounded-lg font-semibold hover:bg-[#388E3C] transition-all flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
               >
                 <Save size={16} />
-                {savingFarm ? "Saving..." : "Save Changes"}
+                {loading ? "Saving..." : "Save Changes"}
               </button>
             </div>
           )}
         </div>
 
-        {/* ADD THIS WRAPPER DIV */}
+        {/* Farm Information Card */}
         <div className="bg-white border border-[#E5E7EB] rounded-2xl p-8 shadow-sm">
           <div className="grid grid-cols-2 gap-x-12 gap-y-6">
             {/* Left Column */}
@@ -293,9 +241,12 @@ export default function SettingsPage() {
                     placeholder="Enter farm name"
                   />
                 ) : (
-                  <div className="text-[#1F2937]">{farmData.name}</div>
+                  <div className="text-[#1F2937]">
+                    {farmSettings?.name || "Loading..."}
+                  </div>
                 )}
               </div>
+              
               <div className="mb-4">
                 <div className="flex items-center gap-2 font-semibold text-[#6B7280] mb-2">
                   <MapPin size={16} />
@@ -312,19 +263,23 @@ export default function SettingsPage() {
                     placeholder="Enter location"
                   />
                 ) : (
-                  <div className="text-[#1F2937]">{farmData.location}</div>
+                  <div className="text-[#1F2937]">
+                    {farmSettings?.location || "Loading..."}
+                  </div>
                 )}
               </div>
+              
               <div className="mb-4">
                 <div className="font-semibold text-[#6B7280] mb-2">Farm Code</div>
                 <div className="flex items-center gap-2">
                   <span className="text-[#1F2937] font-mono bg-[#F9FAFB] px-3 py-2 rounded-lg border border-[#E5E7EB]">
-                    {farmData.farmCode}
+                    {farmSettings?.joinCode || "Loading..."}
                   </span>
                   <button
                     onClick={handleCopyFarmCode}
-                    className="w-9 h-9 bg-[#F9FAFB] border border-[#E5E7EB] rounded-lg flex items-center justify-center hover:bg-[#4CAF50] hover:border-[#4CAF50] group transition-all cursor-pointer"
+                    className="w-9 h-9 bg-[#F9FAFB] border border-[#E5E7EB] rounded-lg flex items-center justify-center hover:bg-[#4CAF50] hover:border-[#4CAF50] group transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                     title="Copy farm code"
+                    disabled={!farmSettings?.joinCode || loading}
                   >
                     <Copy size={16} className="text-[#6B7280] group-hover:text-white transition-colors" />
                   </button>
@@ -333,32 +288,43 @@ export default function SettingsPage() {
                   Share this code with workers to join your farm
                 </p>
               </div>
+              
               <div className="mb-4">
                 <div className="font-semibold text-[#6B7280] mb-2">Created</div>
-                <div className="text-[#1F2937]">{farmData.created}</div>
+                <div className="text-[#1F2937]">
+                  {farmSettings?.createdAt ? formatDate(farmSettings.createdAt) : "Loading..."}
+                </div>
               </div>
             </div>
 
-            {/* Right Column */}
+            {/* Right Column - Statistics */}
             <div>
               <div className="mb-4">
                 <div className="font-semibold text-[#6B7280] mb-2">Total Fields</div>
-                <div className="text-[#1F2937]">{farmData.totalFields}</div>
+                <div className="text-[#1F2937]">
+                  {farmSettings?.totalFields ?? "Loading..."}
+                </div>
               </div>
+              
               <div className="mb-4">
                 <div className="font-semibold text-[#6B7280] mb-2">Total Workers</div>
-                <div className="text-[#1F2937]">{farmData.totalWorkers}</div>
+                <div className="text-[#1F2937]">
+                  {farmSettings?.totalWorkers ?? "Loading..."}
+                </div>
               </div>
+              
               <div className="mb-4">
                 <div className="font-semibold text-[#6B7280] mb-2">Active Tasks</div>
-                <div className="text-[#1F2937]">{farmData.activeTasks}</div>
+                <div className="text-[#1F2937]">
+                  {farmSettings?.activeTasks ?? "Loading..."}
+                </div>
               </div>
             </div>
           </div>
         </div>
-        {/* END OF WRAPPER DIV */}
       </div>
-      {/* ARCHIVED FIELDS */}
+
+      {/* Archived Fields Section */}
       <div className="mb-8">
         <h2
           className="font-semibold text-[#1F2937] mb-5"
@@ -378,8 +344,9 @@ export default function SettingsPage() {
               </p>
             </div>
             <button
-              onClick={() => router.push("/settings/archived-fields")}
-              className="h-11 px-8 bg-[#F59E0B] text-white rounded-lg font-semibold hover:bg-[#D97706] transition-all cursor-pointer flex items-center gap-2"
+              onClick={() => router.push("/settings/archived-fields")} // Updated route
+              className="h-11 px-8 bg-[#F59E0B] text-white rounded-lg font-semibold hover:bg-[#D97706] transition-all cursor-pointer flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+              disabled={loading}
             >
               <Archive size={18} />
               View Archived
@@ -388,7 +355,7 @@ export default function SettingsPage() {
         </div>
       </div>
 
-      {/* DANGER ZONE */}
+      {/* Danger Zone */}
       <div className="mb-8">
         <h2
           className="font-semibold text-[#F44336] mb-5"
@@ -404,19 +371,22 @@ export default function SettingsPage() {
           </p>
           <button
             onClick={() => setShowDeleteModal(true)}
-            className="h-11 px-8 bg-[#F44336] text-white rounded-lg font-semibold hover:bg-[#D32F2F] transition-all cursor-pointer"
+            className="h-11 px-8 bg-[#F44336] text-white rounded-lg font-semibold hover:bg-[#D32F2F] transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+            disabled={loading || !farmSettings}
           >
             Delete Farm
           </button>
         </div>
       </div>
-      {/* Custom Alert */}
+
+      {/* Custom Alert from hook */}
       <CustomAlert
-        isOpen={alert.isOpen}
-        onClose={() => setAlert({ ...alert, isOpen: false })}
-        type={alert.type}
-        message={alert.message}
+        isOpen={hookAlert.isOpen}
+        onClose={closeAlert}
+        type={hookAlert.type}
+        message={hookAlert.message}
       />
+
       {/* Delete Farm Modal */}
       <Modal
         isOpen={showDeleteModal}
@@ -428,17 +398,17 @@ export default function SettingsPage() {
           <>
             <button
               onClick={handleCloseDeleteModal}
-              disabled={deletingFarm}
-              className="h-11 px-6 bg-white border border-[#D1D5DB] text-[#4B5563] rounded-lg font-semibold hover:bg-[#F9FAFB] transition-all disabled:opacity-50"
+              disabled={loading}
+              className="h-11 px-6 bg-white border border-[#D1D5DB] text-[#4B5563] rounded-lg font-semibold hover:bg-[#F9FAFB] transition-all disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
             >
               Cancel
             </button>
             <button
               onClick={handleDeleteFarm}
-              disabled={deletingFarm}
-              className="h-11 px-6 bg-[#F44336] text-white rounded-lg font-semibold hover:bg-[#D32F2F] transition-all disabled:opacity-50"
+              disabled={loading}
+              className="h-11 px-6 bg-[#F44336] text-white rounded-lg font-semibold hover:bg-[#D32F2F] transition-all disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
             >
-              {deletingFarm ? "Deleting..." : "Delete Farm"}
+              {loading ? "Deleting..." : "Delete Farm"}
             </button>
           </>
         }
@@ -487,23 +457,15 @@ export default function SettingsPage() {
                 }
                 placeholder="Enter your password"
                 className="w-full h-11 px-4 pr-12 border border-[#D1D5DB] rounded-lg text-[#1F2937] focus:outline-none focus:ring-2 focus:ring-[#F44336] focus:border-transparent"
+                disabled={loading}
               />
               <button
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
                 className="absolute right-3 top-1/2 -translate-y-1/2 text-[#6B7280] hover:text-[#1F2937] transition-colors"
+                disabled={loading}
               >
-                {showPassword ? (
-                  <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path>
-                    <line x1="1" y1="1" x2="23" y2="23"></line>
-                  </svg>
-                ) : (
-                  <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
-                    <circle cx="12" cy="12" r="3"></circle>
-                  </svg>
-                )}
+                {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
               </button>
             </div>
           </div>
@@ -521,6 +483,7 @@ export default function SettingsPage() {
               }
               placeholder="DELETE MY FARM"
               className="w-full h-11 px-4 border border-[#D1D5DB] rounded-lg text-[#1F2937] focus:outline-none focus:ring-2 focus:ring-[#F44336] focus:border-transparent font-mono"
+              disabled={loading}
             />
             <p className="text-[#9CA3AF] text-[12px] mt-1">
               This must match exactly (case-sensitive)

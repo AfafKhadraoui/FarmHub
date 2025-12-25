@@ -1,144 +1,64 @@
 "use client";
 
 import { MapPin, CheckCircle, AlertCircle, Calendar } from "lucide-react";
-import React, { useState } from "react";
-
-// Mock data matching API responses
-const mockCurrentWeather = {
-  temperature: 28,
-  feelsLike: 30,
-  condition: "Sunny",
-  icon: "sunny",
-  humidity: 45,
-  windSpeedKmh: 12,
-  windDirection: "NE",
-  uvIndex: 7,
-  uvLevel: "high",
-  timestamp: "2025-11-27T12:46:00.000Z",
-};
-
-const mockDailyForecast = {
-  days: [
-    {
-      date: "2025-11-27",
-      dayOfWeek: "Thursday",
-      minTemp: 15,
-      maxTemp: 28,
-      condition: "Sunny",
-      icon: "sunny",
-      precipitationChance: 0,
-    },
-    {
-      date: "2025-11-28",
-      dayOfWeek: "Friday",
-      minTemp: 14,
-      maxTemp: 25,
-      condition: "Partly Cloudy",
-      icon: "partly_cloudy",
-      precipitationChance: 10,
-    },
-    {
-      date: "2025-11-29",
-      dayOfWeek: "Saturday",
-      minTemp: 16,
-      maxTemp: 22,
-      condition: "Rainy",
-      icon: "rainy",
-      precipitationChance: 80,
-    },
-    {
-      date: "2025-11-30",
-      dayOfWeek: "Sunday",
-      minTemp: 15,
-      maxTemp: 27,
-      condition: "Sunny",
-      icon: "sunny",
-      precipitationChance: 0,
-    },
-    {
-      date: "2025-12-01",
-      dayOfWeek: "Monday",
-      minTemp: 16,
-      maxTemp: 26,
-      condition: "Partly Cloudy",
-      icon: "partly_cloudy",
-      precipitationChance: 15,
-    },
-    {
-      date: "2025-12-02",
-      dayOfWeek: "Tuesday",
-      minTemp: 17,
-      maxTemp: 29,
-      condition: "Sunny",
-      icon: "sunny",
-      precipitationChance: 5,
-    },
-    {
-      date: "2025-12-03",
-      dayOfWeek: "Wednesday",
-      minTemp: 18,
-      maxTemp: 30,
-      condition: "Sunny",
-      icon: "sunny",
-      precipitationChance: 0,
-    },
-  ],
-};
-
-const mockHourlyForecast = {
-  hours: [
-    { time: "2025-11-27T12:00:00.000Z", temperature: 28, condition: "Sunny" },
-    { time: "2025-11-27T13:00:00.000Z", temperature: 29, condition: "Sunny" },
-    { time: "2025-11-27T14:00:00.000Z", temperature: 29, condition: "Sunny" },
-    { time: "2025-11-27T15:00:00.000Z", temperature: 28, condition: "Sunny" },
-    { time: "2025-11-27T16:00:00.000Z", temperature: 27, condition: "Sunny" },
-    { time: "2025-11-27T17:00:00.000Z", temperature: 26, condition: "Sunny" },
-    { time: "2025-11-27T18:00:00.000Z", temperature: 25, condition: "Clear" },
-    { time: "2025-11-27T19:00:00.000Z", temperature: 24, condition: "Clear" },
-    { time: "2025-11-27T20:00:00.000Z", temperature: 23, condition: "Clear" },
-    { time: "2025-11-27T21:00:00.000Z", temperature: 22, condition: "Clear" },
-    { time: "2025-11-27T22:00:00.000Z", temperature: 21, condition: "Clear" },
-    { time: "2025-11-27T23:00:00.000Z", temperature: 20, condition: "Clear" },
-    { time: "2025-11-28T00:00:00.000Z", temperature: 19, condition: "Clear" },
-    { time: "2025-11-28T01:00:00.000Z", temperature: 18, condition: "Clear" },
-    { time: "2025-11-28T02:00:00.000Z", temperature: 17, condition: "Clear" },
-    { time: "2025-11-28T03:00:00.000Z", temperature: 17, condition: "Clear" },
-    { time: "2025-11-28T04:00:00.000Z", temperature: 16, condition: "Clear" },
-    { time: "2025-11-28T05:00:00.000Z", temperature: 16, condition: "Clear" },
-    { time: "2025-11-28T06:00:00.000Z", temperature: 17, condition: "Sunny" },
-    { time: "2025-11-28T07:00:00.000Z", temperature: 19, condition: "Sunny" },
-    { time: "2025-11-28T08:00:00.000Z", temperature: 21, condition: "Sunny" },
-    { time: "2025-11-28T09:00:00.000Z", temperature: 23, condition: "Sunny" },
-    { time: "2025-11-28T10:00:00.000Z", temperature: 25, condition: "Sunny" },
-    { time: "2025-11-28T11:00:00.000Z", temperature: 26, condition: "Sunny" },
-  ],
-};
-
-const mockRecommendations = {
-  recommendations: [
-    {
-      type: "irrigation",
-      priority: "medium",
-      message: "Good day for irrigation",
-    },
-    {
-      type: "safety",
-      priority: "high",
-      message: "High UV - protect workers with hats and sunscreen",
-    },
-    {
-      type: "planning",
-      priority: "medium",
-      message: "Rain expected Wednesday - plan harvesting accordingly",
-    },
-  ],
-};
+import React from "react";
+import { useWeather } from "@/hooks/useWeather";
+import { CurrentWeather, WorkerWeatherResponse } from "@/types/weather.types";
 
 export default function WeatherPage() {
-  const [currentWeather] = useState(mockCurrentWeather);
-  const [dailyForecast] = useState(mockDailyForecast);
-  const [hourlyForecast] = useState(mockHourlyForecast);
-  const [recommendations] = useState(mockRecommendations);
+  // Fetch all weather data using the combined hook
+  const { current, daily, hourly, recommendations, loading, error } =
+    useWeather();
+
+  // Loading state
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-96">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#4CAF50] mx-auto mb-4"></div>
+          <p className="text-[#6B7280]">Loading weather data...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Error state
+  if (error) {
+    return (
+      <div className="flex items-center justify-center h-96">
+        <div className="text-center bg-red-50 border border-red-200 rounded-lg p-6 max-w-md">
+          <AlertCircle className="text-red-500 mx-auto mb-3" size={48} />
+          <h3 className="text-lg font-semibold text-red-800 mb-2">
+            Failed to Load Weather
+          </h3>
+          <p className="text-red-600">{error}</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Worker responses include a nested `current` and a top-level `location`.
+  // Farmer/admin responses return the current fields at the top-level (may also include a top-level `location`).
+  const isWorkerWeather = (weather: any): weather is WorkerWeatherResponse => {
+    return (
+      weather &&
+      typeof weather === "object" &&
+      "current" in weather &&
+      "location" in weather
+    );
+  };
+
+  // Extract current weather data (handle both worker and farmer formats)
+  const currentWeather = isWorkerWeather(current)
+    ? current.current
+    : (current as CurrentWeather | null);
+
+  // Get location name (prefer worker.location, else farmer top-level location)
+  const locationName = isWorkerWeather(current)
+    ? current.location.name
+    : current && (current as any).location
+    ? (current as any).location.name
+    : "Farm Location";
 
   // Get weather icon emoji
   const getWeatherIcon = (icon: string) => {
@@ -152,18 +72,6 @@ export default function WeatherPage() {
       clear: "🌙",
     };
     return iconMap[icon] || "☀️";
-  };
-
-  // Get UV level color
-  const getUVColor = (level: string) => {
-    const colorMap: { [key: string]: string } = {
-      low: "#4CAF50",
-      moderate: "#FFC107",
-      high: "#FF9800",
-      "very high": "#F44336",
-      extreme: "#9C27B0",
-    };
-    return colorMap[level.toLowerCase()] || "#FF9800";
   };
 
   // Get recommendation icon and color
@@ -194,6 +102,15 @@ export default function WeatherPage() {
     return dayOfWeek.substring(0, 3);
   };
 
+  // If no data available
+  if (!currentWeather || !daily || !hourly || !recommendations) {
+    return (
+      <div className="text-center py-12">
+        <p className="text-[#6B7280]">No weather data available</p>
+      </div>
+    );
+  }
+
   return (
     <>
       {/* Weather Page Header */}
@@ -215,13 +132,13 @@ export default function WeatherPage() {
           {/* Right - Location Badge */}
           <div className="flex items-center gap-2 bg-[#F9FAFB] border border-[#E5E7EB] px-5 py-2.5 rounded-lg">
             <MapPin size={20} className="text-[#6B7280]" />
-            <span className="font-medium text-[#1F2937]">Algiers</span>
+            <span className="font-medium text-[#1F2937]">{locationName}</span>
           </div>
         </div>
       </div>
 
       {/* Current Weather Card */}
-      <div className="mb-8 bg-white border border-[#E5E7EB] rounded-2xl p-12 shadow-sm text-center">
+      <div className="mb-8 bg-white border border-[#E5E7EB] rounded-2xl p-12 shadow-sm  text-center ">
         <div className="text-[120px] mb-6">
           {getWeatherIcon(currentWeather.icon)}
         </div>
@@ -241,11 +158,11 @@ export default function WeatherPage() {
           {currentWeather.condition}
         </div>
 
-        <div className="grid grid-cols-4 gap-8 max-w-4xl mx-auto">
+        <div className="grid grid-cols-3 gap-8 max-w-4xl mx-auto">
           <div>
             <div className="text-[#9CA3AF] mb-1">Feels like:</div>
             <div className="text-[#1F2937] font-semibold">
-              {currentWeather.feelsLike}°C
+              {currentWeather.feelsLike || currentWeather.temperature}°C
             </div>
           </div>
           <div>
@@ -257,19 +174,8 @@ export default function WeatherPage() {
           <div>
             <div className="text-[#9CA3AF] mb-1">Wind:</div>
             <div className="text-[#1F2937] font-semibold">
-              {currentWeather.windSpeedKmh} km/h {currentWeather.windDirection}
-            </div>
-          </div>
-          <div>
-            <div className="text-[#9CA3AF] mb-1">UV Index:</div>
-            <div
-              className="font-semibold"
-              style={{ color: getUVColor(currentWeather.uvLevel) }}
-            >
-              {currentWeather.uvIndex} (
-              {currentWeather.uvLevel.charAt(0).toUpperCase() +
-                currentWeather.uvLevel.slice(1)}
-              )
+              {currentWeather.windSpeedKmh} km/h{" "}
+              {currentWeather.windDirection || ""}
             </div>
           </div>
         </div>
@@ -285,8 +191,8 @@ export default function WeatherPage() {
         </h2>
 
         <div className="bg-white border border-[#E5E7EB] rounded-2xl p-6 shadow-sm">
-          <div className="flex gap-4 overflow-x-auto">
-            {dailyForecast.days.map((day, index) => (
+          <div className="flex justify-center gap-4 overflow-x-auto">
+            {daily.days.map((day, index) => (
               <DayCard
                 key={index}
                 day={formatDayName(day.dayOfWeek)}
@@ -339,7 +245,7 @@ export default function WeatherPage() {
         </h2>
 
         <div className="bg-white border border-[#E5E7EB] rounded-2xl p-6 shadow-sm">
-          <HourlyChart hours={hourlyForecast.hours} />
+          <HourlyChart hours={hourly.hours} />
         </div>
       </div>
     </>

@@ -509,6 +509,26 @@ export const adminService = {
       throw error;
     }
   },
+
+  /**
+   * Delete all notifications
+   * DELETE /admin/notifications
+   */
+  deleteAllNotifications: async (): Promise<{
+    message: string;
+    count: number;
+  }> => {
+    try {
+      const response = await api.delete<{
+        message: string;
+        count: number;
+      }>("/admin/notifications");
+      return response.data;
+    } catch (error) {
+      console.error("Failed to delete all notifications:", error);
+      throw error;
+    }
+  },
 };
 
 // ============================================================================

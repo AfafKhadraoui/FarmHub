@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import {
   Clock,
   Activity,
@@ -9,96 +9,57 @@ import {
   Wrench,
   Leaf,
   Scissors,
+  RefreshCw,
+  AlertCircle,
 } from "lucide-react";
-
-// Mock data matching API response
-const mockDashboardData = {
-  taskStatistics: {
-    pending: {
-      count: 3,
-      label: "Start soon",
-    },
-    inProgress: {
-      count: 2,
-      label: "Finish today",
-    },
-    completed: {
-      count: 42,
-      label: "Total",
-    },
-  },
-  todayTasks: [
-    {
-      id: "task_123",
-      title: "Water irrigation system - Field A",
-      status: "IN_PROGRESS",
-      priority: "HIGH",
-      dueTime: "2025-11-27T17:00:00Z",
-      fieldName: "Field A",
-      progressPercent: 60,
-    },
-    {
-      id: "task_125",
-      title: "Equipment maintenance check",
-      status: "PENDING",
-      priority: "MEDIUM",
-      dueTime: "2025-11-27T15:00:00Z",
-      fieldName: null,
-      progressPercent: 0,
-    },
-  ],
-  upcomingTasks: [
-    {
-      id: "task_124",
-      title: "Apply fertilizer - Field B",
-      status: "PENDING",
-      priority: "MEDIUM",
-      dueDate: "2025-11-28T08:00:00Z",
-      fieldName: "Field B",
-    },
-    {
-      id: "task_126",
-      title: "Harvest Field C",
-      status: "PENDING",
-      priority: "LOW",
-      dueDate: "2025-11-29T10:00:00Z",
-      fieldName: "Field C",
-    },
-  ],
-  weather: {
-    temperature: 28,
-    condition: "Sunny",
-    humidity: 45,
-    windSpeed: 12,
-    icon: "sunny",
-  },
-};
+import { useDashboardStats } from '@/hooks/useDashboardStats';
+import { WorkerDashboardResponse } from '@/types/dashboard.types';
+import { TaskCard } from '@/components/workspace/tasks/TaskCard';
 
 export function WorkerDashboard() {
   const [showStatusDropdown, setShowStatusDropdown] = useState(false);
-  const [showCompleteModal, setShowCompleteModal] = useState(false);
-  const [showHelpModal, setShowHelpModal] = useState(false);
-  const [showNoteModal, setShowNoteModal] = useState(false);
-  const [showPauseModal, setShowPauseModal] = useState(false);
+  const [selectedTask, setSelectedTask] = useState<any>(null);
+  // dashboard-level simple modals removed; TaskCard provides full worker actions
   const statusButtonRef = useRef<HTMLButtonElement>(null);
 
-  const [dashboardData] = useState(mockDashboardData);
+  // Use the dashboard stats hook
+  const { 
+    stats, 
+    loading, 
+    error, 
+    refreshStats, 
+    isWorker 
+  } = useDashboardStats();
 
-  const handleStatusChange = (status: string) => {
+  const dashboardData = stats as WorkerDashboardResponse['data'];
+
+  // Fetch data on mount and when refresh is called
+  useEffect(() => {
+    if (isWorker) {
+      refreshStats();
+    }
+  }, [isWorker, refreshStats]);
+
+  const handleStatusChange = (task: any, status: string) => {
+    setSelectedTask(task);
     switch (status) {
       case "complete":
-        setShowCompleteModal(true);
+        // Use TaskCard's Update Status flow instead of dashboard-level modal
         break;
       case "pause":
-        setShowPauseModal(true);
+        // handled by TaskCard
         break;
       case "help":
-        setShowHelpModal(true);
+        // handled by TaskCard
         break;
       default:
-        alert("Status updated");
+        alert(`Status updated to: ${status}`);
+        refreshStats();
     }
+    setShowStatusDropdown(false);
   };
+
+  // dashboard-level submit handlers removed — TaskCard handles status, notes, etc.
 
   const getTaskIcon = (title: string) => {
     const lowerTitle = title.toLowerCase();
@@ -178,21 +139,109 @@ export function WorkerDashboard() {
       rainy: "🌧️",
       partly_cloudy: "⛅",
       stormy: "⛈️",
+      clear: "☀️",
+      rain: "🌧️",
+      snow: "❄️",
     };
     return iconMap[icon] || "☀️";
   };
 
+  // Map a dashboard `todayTasks` entry to the canonical TaskCard shape
+  const mapDashboardTaskToTaskCard = (t: any) => {
+    return {
+      // keep original identifiers
+      id: t.id,
+      title: t.title,
+      status: t.status,
+      priority: t.priority || 'MEDIUM',
+      // TaskCard checks a few possible fields for due date/time
+      dueDate: t.dueTime || t.dueDate || t.due_time || null,
+      dueTime: t.dueTime || t.dueTimeString || null,
+      fieldName: t.fieldName ?? (t.field && t.field.name) ?? null,
+      fieldId: t.fieldId ?? (t.field && t.field.id) ?? undefined,
+      // Worker dashboard doesn't include assignedWorkers by default — leave empty
+      assignedWorkers: t.assignedWorkers ?? [],
+      assignedWorkerIds: t.assignedWorkerIds ?? [],
+      taskAssignments: t.taskAssignments ?? [],
+      description: t.description ?? '',
+      // keep any other keys that TaskCard may rely on
+      ...t,
+    };
+  };
+
+  // Show loading state
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#4CAF50] mx-auto"></div>
+          <p className="mt-4 text-[#6B7280]">Loading dashboard data...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Show error state
+  if (error) {
+    return (
+      <div className="p-6">
+        <div className="rounded-lg border border-red-200 bg-red-50 p-4">
+          <div className="flex items-center gap-3">
+            <AlertCircle className="h-5 w-5 text-red-600" />
+            <div className="flex-1">
+              <p className="text-sm font-medium text-red-800">Error loading data</p>
+              <p className="text-sm text-red-700 mt-1">{error}</p>
+            </div>
+            <button
+              onClick={refreshStats}
+              className="h-9 px-4 bg-white border border-gray-300 text-gray-700 rounded-lg font-semibold hover:bg-gray-50 transition-all cursor-pointer text-sm flex items-center gap-2"
+            >
+              <RefreshCw className="h-4 w-4" />
+              Retry
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Show empty state if no data
+  if (!dashboardData) {
+    return (
+      <div className="p-6 text-center">
+        <AlertCircle className="h-12 w-12 mx-auto mb-4 text-gray-400" />
+        <h3 className="text-lg font-semibold mb-2">No Dashboard Data</h3>
+        <p className="text-gray-500 mb-4">
+          Unable to load dashboard data. Please try refreshing.
+        </p>
+        <button
+          onClick={refreshStats}
+          className="h-10 px-5 bg-[#4CAF50] text-white rounded-lg font-semibold hover:bg-[#388E3C] transition-all cursor-pointer text-sm flex items-center gap-2 mx-auto"
+        >
+          <RefreshCw className="h-4 w-4" />
+          Refresh
+        </button>
+      </div>
+    );
+  }
+
   return (
     <>
       {/* Worker Dashboard Page Header */}
-      <div className="mb-8">
-        <h1
-          className="font-bold text-[#1F2937]"
-          style={{ fontFamily: "Poppins, sans-serif", fontSize: "30px" }}
+      <div className="mb-8 flex justify-between items-start">
+        <div>
+          <h1 className="font-bold text-[#1F2937]" style={{ fontFamily: "Poppins, sans-serif", fontSize: "30px" }}>
+            My Dashboard
+          </h1>
+          <p className="mt-2 text-[#6B7280]">Welcome back!</p>
+        </div>
+        <button
+          onClick={refreshStats}
+          className="h-9 px-4 bg-white border border-gray-300 text-gray-700 rounded-lg font-semibold hover:bg-gray-50 transition-all cursor-pointer text-sm flex items-center gap-2"
         >
-          My Dashboard
-        </h1>
-        <p className="mt-2 text-[#6B7280]">Welcome back, Ahmed!</p>
+          <RefreshCw className="h-4 w-4" />
+          Refresh
+        </button>
       </div>
 
       {/* Task Summary Cards */}
@@ -203,10 +252,7 @@ export function WorkerDashboard() {
             <Clock size={28} className="text-[#FFC107]" strokeWidth={2} />
           </div>
           <div className="flex items-baseline gap-2 mb-3">
-            <span
-              className="font-bold text-[#1F2937]"
-              style={{ fontSize: "40px", lineHeight: "1" }}
-            >
+            <span className="font-bold text-[#1F2937]" style={{ fontSize: "40px", lineHeight: "1" }}>
               {dashboardData.taskStatistics.pending.count}
             </span>
           </div>
@@ -224,10 +270,7 @@ export function WorkerDashboard() {
             <Activity size={28} className="text-[#2196F3]" strokeWidth={2} />
           </div>
           <div className="flex items-baseline gap-2 mb-3">
-            <span
-              className="font-bold text-[#1F2937]"
-              style={{ fontSize: "40px", lineHeight: "1" }}
-            >
+            <span className="font-bold text-[#1F2937]" style={{ fontSize: "40px", lineHeight: "1" }}>
               {dashboardData.taskStatistics.inProgress.count}
             </span>
           </div>
@@ -245,10 +288,7 @@ export function WorkerDashboard() {
             <CheckCircle size={28} className="text-[#4CAF50]" strokeWidth={2} />
           </div>
           <div className="flex items-baseline gap-2 mb-3">
-            <span
-              className="font-bold text-[#1F2937]"
-              style={{ fontSize: "40px", lineHeight: "1" }}
-            >
+            <span className="font-bold text-[#1F2937]" style={{ fontSize: "40px", lineHeight: "1" }}>
               {dashboardData.taskStatistics.completed.count}
             </span>
           </div>
@@ -263,139 +303,32 @@ export function WorkerDashboard() {
 
       {/* Today's Tasks Section */}
       <div className="mt-8">
-        <h2
-          className="font-semibold text-[#1F2937] mb-5"
-          style={{ fontFamily: "Poppins, sans-serif", fontSize: "20px" }}
-        >
+        <h2 className="font-semibold text-[#1F2937] mb-5" style={{ fontFamily: "Poppins, sans-serif", fontSize: "20px" }}>
           Today's Tasks
         </h2>
 
-        {dashboardData.todayTasks.map((task) => {
-          const Icon = getTaskIcon(task.title);
-          const priorityStyle = getPriorityStyle(task.priority);
-          const statusStyle = getStatusStyle(task.status);
-
-          return (
-            <div
+        <div className="space-y-4">
+          {dashboardData.todayTasks.map((task) => (
+            <TaskCard
               key={task.id}
-              className="bg-white border border-[#E5E7EB] rounded-xl p-6 shadow-sm mb-4 hover:border-[#4CAF50] transition-all"
-            >
-              {/* Header */}
-              <div className="flex items-center gap-4 mb-4">
-                <div
-                  className="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0"
-                  style={{ backgroundColor: statusStyle.bg }}
-                >
-                  <Icon size={24} style={{ color: statusStyle.text }} />
-                </div>
-                <h3 className="font-semibold text-[#1F2937]">{task.title}</h3>
-              </div>
+              mode="worker"
+              task={mapDashboardTaskToTaskCard(task)}
+              onUpdateStatus={() => refreshStats()}
+            />
+          ))}
+        </div>
 
-              {/* Details */}
-              <div className="flex items-center gap-3 mb-4 flex-wrap">
-                <span
-                  className="px-3 py-1.5 rounded-xl font-bold text-[12px]"
-                  style={{
-                    backgroundColor: priorityStyle.bg,
-                    color: priorityStyle.text,
-                  }}
-                >
-                  {task.priority}
-                </span>
-                <span className="text-[#6B7280] text-[14px]">
-                  Due: {formatDueTime(task.dueTime)}
-                </span>
-                <span
-                  className="px-3 py-1.5 rounded-xl font-bold text-[12px]"
-                  style={{
-                    backgroundColor: statusStyle.bg,
-                    color: statusStyle.text,
-                  }}
-                >
-                  {task.status.replace("_", " ")}
-                </span>
-              </div>
-
-              {/* Progress - Only for IN_PROGRESS tasks */}
-              {task.status === "IN_PROGRESS" && task.progressPercent !== undefined && (
-                <div className="mb-5">
-                  <div className="font-semibold text-[#374151] mb-2 text-[14px]">
-                    Progress: {task.progressPercent}%
-                  </div>
-                  <div className="w-full h-2 bg-[#E5E7EB] rounded-full overflow-hidden">
-                    <div
-                      className="h-full bg-gradient-to-r from-[#64B5F6] to-[#2196F3] rounded-full transition-all"
-                      style={{ width: `${task.progressPercent}%` }}
-                    />
-                  </div>
-                </div>
-              )}
-
-              {/* Action Buttons */}
-              <div className="flex items-center gap-3 flex-wrap">
-                <div className="relative">
-                  <button
-                    ref={statusButtonRef}
-                    onClick={() => setShowStatusDropdown(!showStatusDropdown)}
-                    className="h-9 px-5 bg-[#4CAF50] text-white rounded-lg font-semibold hover:bg-[#388E3C] transition-all cursor-pointer text-[14px]"
-                  >
-                    Update Status
-                  </button>
-                  {showStatusDropdown && (
-                    <div className="absolute top-full left-0 mt-2 w-48 bg-white border border-[#E5E7EB] rounded-xl shadow-lg z-50">
-                      <div className="py-2">
-                        <button
-                          onClick={() => {
-                            handleStatusChange("complete");
-                            setShowStatusDropdown(false);
-                          }}
-                          className="w-full px-4 py-2 text-left hover:bg-[#F9FAFB] text-[#374151]"
-                        >
-                          Mark Complete
-                        </button>
-                        <button
-                          onClick={() => {
-                            handleStatusChange("pause");
-                            setShowStatusDropdown(false);
-                          }}
-                          className="w-full px-4 py-2 text-left hover:bg-[#F9FAFB] text-[#374151]"
-                        >
-                          Pause Task
-                        </button>
-                        <button
-                          onClick={() => {
-                            handleStatusChange("help");
-                            setShowStatusDropdown(false);
-                          }}
-                          className="w-full px-4 py-2 text-left hover:bg-[#F9FAFB] text-[#374151]"
-                        >
-                          Need Help
-                        </button>
-                      </div>
-                    </div>
-                  )}
-                </div>
-                <button
-                  onClick={() => setShowNoteModal(true)}
-                  className="h-9 px-5 bg-white border border-[#D1D5DB] text-[#4B5563] rounded-lg font-semibold hover:bg-[#F9FAFB] transition-all cursor-pointer text-[14px]"
-                >
-                  Add Note
-                </button>
-                <button className="h-9 px-5 bg-white border border-[#D1D5DB] text-[#4B5563] rounded-lg font-semibold hover:bg-[#F9FAFB] transition-all cursor-pointer text-[14px]">
-                  View Details
-                </button>
-              </div>
-            </div>
-          );
-        })}
+        {dashboardData.todayTasks.length === 0 && (
+          <div className="text-center py-8 bg-white border border-[#E5E7EB] rounded-xl">
+            <CheckCircle className="h-12 w-12 mx-auto mb-4 text-green-500" />
+            <p className="text-[#6B7280]">No tasks scheduled for today!</p>
+          </div>
+        )}
       </div>
 
       {/* Upcoming Tasks Section */}
       <div className="mt-8">
-        <h2
-          className="font-semibold text-[#1F2937] mb-5"
-          style={{ fontFamily: "Poppins, sans-serif", fontSize: "20px" }}
-        >
+        <h2 className="font-semibold text-[#1F2937] mb-5" style={{ fontFamily: "Poppins, sans-serif", fontSize: "20px" }}>
           Upcoming Tasks
         </h2>
 
@@ -443,7 +376,7 @@ export function WorkerDashboard() {
           {/* Footer Link */}
           <div className="mt-4 pt-4 border-t border-[#F3F4F6]">
             <a
-              href="#"
+              href="/workspace/tasks"
               className="text-[#4CAF50] font-semibold text-[14px] hover:underline"
             >
               View All My Tasks →
@@ -454,10 +387,7 @@ export function WorkerDashboard() {
 
       {/* Weather Today Section */}
       <div className="mt-8 mb-8">
-        <h2
-          className="font-semibold text-[#1F2937] mb-5"
-          style={{ fontFamily: "Poppins, sans-serif", fontSize: "20px" }}
-        >
+        <h2 className="font-semibold text-[#1F2937] mb-5" style={{ fontFamily: "Poppins, sans-serif", fontSize: "20px" }}>
           Weather Today
         </h2>
 
@@ -468,10 +398,7 @@ export function WorkerDashboard() {
           </div>
 
           {/* Temperature & Condition */}
-          <div
-            className="font-bold text-[#1F2937] mb-3"
-            style={{ fontSize: "24px" }}
-          >
+          <div className="font-bold text-[#1F2937] mb-3" style={{ fontSize: "24px" }}>
             {dashboardData.weather.temperature}°C •{" "}
             {dashboardData.weather.condition}
           </div>
@@ -485,13 +412,15 @@ export function WorkerDashboard() {
 
           {/* Footer Link */}
           <a
-            href="#"
+            href="/workspace/weather"
             className="text-[#4CAF50] font-semibold text-[14px] hover:underline"
           >
             View Full Forecast →
           </a>
         </div>
       </div>
+
+      {/* Dashboard-level simple modals removed. Individual TaskCard handles status/note flows. */}
     </>
   );
 }

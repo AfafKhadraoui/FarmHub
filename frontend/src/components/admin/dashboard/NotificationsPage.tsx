@@ -15,6 +15,7 @@ export default function NotificationsPage() {
     markAsRead,
     markAllAsRead,
     deleteNotification,
+    deleteAllNotifications,
   } = useNotifications(filter === "unread");
 
   const filteredNotifications = notifications;
@@ -109,20 +110,37 @@ export default function NotificationsPage() {
             </div>
           </div>
 
-          {unreadCount > 0 && (
-            <button
-              onClick={markAllAsRead}
-              className="flex items-center gap-2 px-4 py-2 bg-[#4baf47] text-white rounded-lg hover:bg-[#3d9639] transition-colors"
-            >
-              <Check size={18} strokeWidth={2} />
-              <span
-                className="text-sm font-medium"
-                style={{ fontFamily: "Inter, sans-serif" }}
+          <div className="flex items-center gap-3">
+            {unreadCount > 0 && (
+              <button
+                onClick={markAllAsRead}
+                className="flex items-center gap-2 px-4 py-2 bg-[#4baf47] text-white rounded-lg hover:bg-[#3d9639] transition-colors"
               >
-                Mark all as read
-              </span>
-            </button>
-          )}
+                <Check size={18} strokeWidth={2} />
+                <span
+                  className="text-sm font-medium"
+                  style={{ fontFamily: "Inter, sans-serif" }}
+                >
+                  Mark all as read
+                </span>
+              </button>
+            )}
+            
+            {notifications.length > 0 && (
+              <button
+                onClick={deleteAllNotifications}
+                className="flex items-center gap-2 px-4 py-2 bg-white text-red-600 border border-red-200 rounded-lg hover:bg-red-50 transition-colors"
+              >
+                <Trash2 size={18} strokeWidth={2} />
+                <span
+                  className="text-sm font-medium"
+                  style={{ fontFamily: "Inter, sans-serif" }}
+                >
+                  Clear all
+                </span>
+              </button>
+            )}
+          </div>
         </div>
       </div>
 

@@ -8,7 +8,10 @@
   },
   "scripts": {
     "start": "node src/server.js",
-    "dev": "nodemon src/server.js"
+    "dev": "nodemon src/server.js",
+    "seed1": "node prisma/seed1.js",
+    "verify-seed": "node prisma/verify-seed.js",
+    "reset-db": "npx prisma migrate reset --force --skip-seed"
   },
   "keywords": [],
   "author": "",
@@ -16,6 +19,7 @@
   "description": "",
   "dependencies": {
     "@prisma/client": "^6.19.0",
+    "axios": "^1.13.2",
     "bcrypt": "^6.0.0",
     "bcryptjs": "^3.0.3",
     "cookie-parser": "^1.4.7",
@@ -25,7 +29,9 @@
     "express-validation": "^4.1.1",
     "express-validator": "^7.3.1",
     "jsonwebtoken": "^9.0.2",
-    "multer": "^2.0.2"
+    "multer": "^2.0.2",
+    "node-cache": "^5.1.2",
+    "node-cron": "^4.2.1"
   },
   "devDependencies": {
     "@types/node": "^24.10.1",

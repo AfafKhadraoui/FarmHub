@@ -9,6 +9,7 @@ const {
 } = require("../middleware/dashboardMiddleware");
 const { sendError } = require("../utils/error");
 const { handleValidationErrors } = require("../middleware/validation");
+
 router.get(
   "/notifications",
   authenticate,
@@ -99,6 +100,34 @@ router.patch(
   }
 );
 
+// DELETE /admin/notifications/all to delete all notifications
+router.delete(
+  "/notifications/all",
+  authenticate,
+  requirePlatformAdmin,
+  handleValidationErrors,
+  async (req, res) => {
+    try {
+      const deleted = await prisma.notification.deleteMany({
+        where: { userId: req.user.id },
+      });
+
+      if (deleted.count === 0) {
+        return sendError(res, 404, "NOT_FOUND", "Notifications not found");
+      }
+
+      res.json({
+        success: true,
+        message: "All notifications deleted",
+        count: deleted.count,
+      });
+    } catch (err) {
+      console.error(err);
+      return sendError(res, 500, "INTERNAL_ERROR", "Internal Server Error");
+    }
+  }
+);
+
 // DELETE /admin/notifications/:id
 router.delete(
   "/notifications/:id",
@@ -121,6 +150,29 @@ router.delete(
       res.json({
         success: true,
         message: "Notification deleted",
+      });
+    } catch (err) {
+      console.error(err);
+      return sendError(res, 500, "INTERNAL_ERROR", "Internal Server Error");
+    }
+  }
+);
+
+// DELETE /admin/notifications (delete all)
+router.delete(
+  "/notifications",
+  authenticate,
+  requirePlatformAdmin,
+  async (req, res) => {
+    try {
+      const deleted = await prisma.notification.deleteMany({
+        where: { userId: req.user.id },
+      });
+
+      res.json({
+        success: true,
+        message: "All notifications deleted",
+        count: deleted.count,
       });
     } catch (err) {
       console.error(err);

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import {
   TrendingUp,
   Users,
@@ -25,235 +25,69 @@ import {
   Image,
 } from "lucide-react";
 import Link from "next/link";
-// Mock data matching API responses
-const mockDashboardOverview = {
-  fields: {
-    total: 12,
-    monthlyIncrease: 2,
-    active: 10,
-  },
-  tasks: {
-    total: 34,
-    pending: 12,
-    in_progress: 8,
-    completed: 14,
-    doneToday: 5,
-    pendingIncreaseToday: 3,
-  },
-  workers: {
-    total: 8,
-    activeToday: 6,
-  },
-  progress: {
-    completionPercent: 75,
-    weeklyChangePercent: 5,
-  },
-};
+import { useDashboard } from "@/hooks/useDashboard";
+import { CustomAlert } from "@/components/workspace/CustomAlert";
+import { useDailyForecast } from "@/hooks/useWeather";
+import { CurrentWeather } from "@/types/weather.types";
 
-const mockFarmActivity = {
-  activeTasks: [
-    {
-      id: 101,
-      title: "Water irrigation system - Field A",
-      fieldId: 1,
-      fieldName: "Field A",
-      status: "in_progress",
-      priority: "high",
-      dueDate: "2025-11-27T17:00:00.000Z",
-      assignedWorkers: [
-        { id: 3, name: "Ahmed Khalil", initials: "AK" },
-        { id: 5, name: "Sara Mohammed", initials: "SM" },
-      ],
-      progressPercent: 60,
-    },
-    {
-      id: 102,
-      title: "Harvest Field B",
-      fieldId: 2,
-      fieldName: "Field B",
-      status: "pending",
-      priority: "medium",
-      dueDate: "2025-11-28T09:00:00.000Z",
-      assignedWorkers: [{ id: 4, name: "Ali Benali", initials: "AB" }],
-      progressPercent: 0,
-    },
-    {
-      id: 103,
-      title: "Repair equipment",
-      fieldId: null,
-      fieldName: null,
-      status: "pending",
-      priority: "low",
-      dueDate: "2025-11-29T14:00:00.000Z",
-      assignedWorkers: [{ id: 3, name: "Ahmed Khalil", initials: "AK" }],
-      progressPercent: 0,
-    },
-  ],
-  fieldStatus: [
-    {
-      id: 1,
-      name: "Field A",
-      size: 10.0,
-      cropType: "Potatoes",
-      status: "growing",
-      activeTasks: 4,
-      workersCount: 2,
-      progressPercent: 80,
-    },
-    {
-      id: 2,
-      name: "Field B",
-      size: 8.5,
-      cropType: "Wheat",
-      status: "planted",
-      activeTasks: 2,
-      workersCount: 1,
-      progressPercent: 40,
-    },
-    {
-      id: 3,
-      name: "Field C",
-      size: 12.0,
-      cropType: "Corn",
-      status: "harvesting",
-      activeTasks: 1,
-      workersCount: 3,
-      progressPercent: 100,
-    },
-  ],
-};
-
-const mockRecentActivity = {
-  activities: [
-    {
-      id: "act_001",
-      type: "task_completed",
-      title: "Task completed",
-      message: 'Task "Water North Field" completed',
-      timestamp: "2025-11-27T09:30:00.000Z",
-      metadata: { farmId: 1, taskId: 201, workerId: 3 },
-    },
-    {
-      id: "act_002",
-      type: "worker_joined",
-      title: "New worker joined",
-      message: "New worker Sara joined the team",
-      timestamp: "2025-11-27T08:15:00.000Z",
-      metadata: { farmId: 1, workerId: 5 },
-    },
-    {
-      id: "act_003",
-      type: "field_status_change",
-      title: "Field status changed",
-      message: 'Field "West Plot" status changed to Growing',
-      timestamp: "2025-11-27T06:00:00.000Z",
-      metadata: { farmId: 1, fieldId: 4 },
-    },
-    {
-      id: "act_004",
-      type: "task_due_soon",
-      title: "Task due soon",
-      message: 'Task "Fertilize Field B" due tomorrow',
-      timestamp: "2025-11-26T14:00:00.000Z",
-      metadata: { farmId: 1, taskId: 205 },
-    },
-  ],
-};
-
-const mockTodayOverview = {
-  weather: {
-    temperature: 28,
-    condition: "Sunny",
-    icon: "sunny",
-    feelsLike: 30,
-    humidity: 45,
-    windSpeedKmh: 12,
-    windDirection: "NE",
-    uvIndex: 7,
-    uvLevel: "high",
-  },
-  fields: {
-    total: 12,
-    activeFields: 10,
-    totalArea: 120.0,
-    underCultivationArea: 95.0,
-  },
-};
-
-const mockRecentTasks = {
-  tasks: [
-    {
-      id: 301,
-      title: "Irrigation System Check",
-      status: "completed",
-      priority: "medium",
-      fieldId: 2,
-      fieldName: "Field B",
-      assignedWorkers: [{ id: 3, name: "Ahmed Khalil" }],
-      dueDate: "2025-11-27T10:30:00.000Z",
-      completedAt: "2025-11-27T11:00:00.000Z",
-    },
-    {
-      id: 302,
-      title: "Fertilizer Application - Field A",
-      status: "in_progress",
-      priority: "high",
-      fieldId: 1,
-      fieldName: "Field A",
-      assignedWorkers: [{ id: 5, name: "Sara Mansouri" }],
-      dueDate: "2025-11-27T14:00:00.000Z",
-      completedAt: null,
-    },
-    {
-      id: 303,
-      title: "Equipment Maintenance",
-      status: "pending",
-      priority: "low",
-      fieldId: null,
-      fieldName: null,
-      assignedWorkers: [{ id: 4, name: "Ali Benali" }],
-      dueDate: "2025-11-28T09:00:00.000Z",
-      completedAt: null,
-    },
-    {
-      id: 304,
-      title: "Soil Testing - Field C",
-      status: "completed",
-      priority: "medium",
-      fieldId: 3,
-      fieldName: "Field C",
-      assignedWorkers: [{ id: 3, name: "Ahmed Khalil" }],
-      dueDate: "2025-11-26T16:15:00.000Z",
-      completedAt: "2025-11-26T16:45:00.000Z",
-    },
-  ],
-};
-
-const mockWeatherForecast = [
-  { day: "Mon", icon: "☀️", high: "28°C", low: "15°C" },
-  { day: "Tue", icon: "⛅", high: "25°C", low: "14°C" },
-  { day: "Wed", icon: "🌧️", high: "22°C", low: "16°C" },
-  { day: "Thu", icon: "☀️", high: "27°C", low: "15°C" },
-  { day: "Fri", icon: "⛅", high: "26°C", low: "16°C" },
-  { day: "Sat", icon: "☀️", high: "29°C", low: "17°C" },
-  { day: "Sun", icon: "☀️", high: "30°C", low: "18°C" },
-];
+// Weather forecast will be loaded from backend via hook
 
 export function AdminDashboard() {
-  const [showExportDropdown, setShowExportDropdown] = useState(false);
-  const exportButtonRef = useRef<HTMLButtonElement>(null);
+  // Use the dashboard hook
+  const {
+    fetchAdminOverview,
+    fetchFarmActivity,
+    fetchRecentActivity,
+    fetchTodayOverview,
+    fetchRecentTasks,
+    loading,
+    alert,
+    closeAlert,
+  } = useDashboard();
 
-  const [overview] = useState(mockDashboardOverview);
-  const [farmActivity] = useState(mockFarmActivity);
-  const [recentActivity] = useState(mockRecentActivity);
-  const [todayOverview] = useState(mockTodayOverview);
-  const [recentTasks] = useState(mockRecentTasks);
-  const [weatherForecast] = useState(mockWeatherForecast);
+  // State for dashboard data
+  const [overview, setOverview] = useState<any>(null);
+  const [farmActivity, setFarmActivity] = useState<any>(null);
+  const [recentActivity, setRecentActivity] = useState<any>(null);
+  const [todayOverview, setTodayOverview] = useState<any>(null);
+  const [recentTasks, setRecentTasks] = useState<any>(null);
 
-  const handleExport = (type: string) => {
-    setShowExportDropdown(false);
-    alert(`Exporting dashboard as ${type}... Download will start shortly`);
-  };
+  // Daily forecast hook (calls weather service)
+  const { forecast: dailyForecast, loading: dailyLoading, error: dailyError } = useDailyForecast();
+
+  // Fetch all dashboard data on component mount
+  useEffect(() => {
+    const loadDashboardData = async () => {
+      try {
+        const [
+          overviewResult,
+          farmActivityResult,
+          recentActivityResult,
+          todayOverviewResult,
+          recentTasksResult,
+        ] = await Promise.all([
+          fetchAdminOverview(),
+          fetchFarmActivity({ taskLimit: 5, fieldLimit: 4 }),
+          fetchRecentActivity({ limit: 10 }),
+          fetchTodayOverview(),
+          fetchRecentTasks({ limit: 5 }),
+        ]);
+
+        // Set state with real data
+        if (overviewResult.data) setOverview(overviewResult.data);
+        if (farmActivityResult.data) setFarmActivity(farmActivityResult.data);
+        if (recentActivityResult.data) setRecentActivity(recentActivityResult.data);
+        if (todayOverviewResult.data) setTodayOverview(todayOverviewResult.data);
+        if (recentTasksResult.data) setRecentTasks(recentTasksResult.data);
+      } catch (error) {
+        console.error("Failed to load dashboard data:", error);
+        // Errors are already handled by the hook and shown via CustomAlert
+      }
+    };
+
+    loadDashboardData();
+  }, [fetchAdminOverview, fetchFarmActivity, fetchRecentActivity, fetchTodayOverview, fetchRecentTasks]);
+
 
   const formatRelativeTime = (timestamp: string) => {
     const date = new Date(timestamp);
@@ -284,17 +118,16 @@ export function AdminDashboard() {
   };
 
   const getActivityIcon = (type: string) => {
-    const iconMap: { [key: string]: { icon: any; bg: string; color: string } } =
-      {
-        task_completed: {
-          icon: CheckCircle,
-          bg: "#D4EDDA",
-          color: "#155724",
-        },
-        worker_joined: { icon: UserPlus, bg: "#CCE5FF", color: "#004085" },
-        field_status_change: { icon: Sprout, bg: "#D4EDDA", color: "#155724" },
-        task_due_soon: { icon: Calendar, bg: "#FFF3CD", color: "#856404" },
-      };
+    const iconMap: { [key: string]: { icon: any; bg: string; color: string } } = {
+      task_completed: {
+        icon: CheckCircle,
+        bg: "#D4EDDA",
+        color: "#155724",
+      },
+      worker_joined: { icon: UserPlus, bg: "#CCE5FF", color: "#004085" },
+      field_status_change: { icon: Sprout, bg: "#D4EDDA", color: "#155724" },
+      task_due_soon: { icon: Calendar, bg: "#FFF3CD", color: "#856404" },
+    };
     return iconMap[type] || iconMap.task_completed;
   };
 
@@ -306,9 +139,58 @@ export function AdminDashboard() {
       return Wrench;
     return CheckCircle;
   };
+  // Get weather icon emoji
+  const getWeatherIcon = (icon: string) => {
+    const iconMap: { [key: string]: string } = {
+      sunny: "☀️",
+      partly_cloudy: "⛅",
+      cloudy: "☁️",
+      rainy: "🌧️",
+      stormy: "⛈️",
+      snowy: "❄️",
+      clear: "🌙",
+    };
+    return iconMap[icon] || "☀️";
+  };
+
+  // Show loading state while fetching data
+  if (loading && !overview) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#4CAF50] mx-auto"></div>
+          <p className="mt-4 text-[#6B7280]">Loading dashboard data...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Fallback to empty data if API hasn't loaded yet
+  const safeOverview = overview || {
+    fields: { total: 0, monthlyIncrease: 0, active: 0 },
+    tasks: { total: 0, pending: 0, in_progress: 0, completed: 0, doneToday: 0, pendingIncreaseToday: 0 },
+    workers: { total: 0, activeToday: 0 },
+    progress: { completionPercent: 0, weeklyChangePercent: 0 },
+  };
+
+  const safeFarmActivity = farmActivity || { activeTasks: [], fieldStatus: [] };
+  const safeRecentActivity = recentActivity || { activities: [] };
+  const safeTodayOverview = todayOverview || {
+    weather: { temperature: 0, condition: "Loading...", humidity: 0, windSpeedKmh: 0 },
+    fields: { total: 0, activeFields: 0, totalArea: 0, underCultivationArea: 0 },
+  };
+  const safeRecentTasks = recentTasks || { tasks: [] };
 
   return (
     <>
+      {/* Custom Alert from hook */}
+      <CustomAlert
+        isOpen={alert.isOpen}
+        onClose={closeAlert}
+        type={alert.type}
+        message={alert.message}
+      />
+
       {/* Dashboard Header */}
       <div className="mb-8">
         <div className="flex items-start justify-between">
@@ -324,53 +206,6 @@ export function AdminDashboard() {
               Overview of your farm operations
             </p>
           </div>
-
-          {/* Right - Export Button */}
-          <div className="relative">
-            <button
-              ref={exportButtonRef}
-              onClick={() => setShowExportDropdown(!showExportDropdown)}
-              className="h-11 px-6 bg-white border border-[#D1D5DB] text-[#4B5563] rounded-lg font-semibold flex items-center gap-2 hover:bg-[#F9FAFB] transition-all cursor-pointer"
-            >
-              <Download size={20} />
-              Export
-            </button>
-
-            {showExportDropdown && (
-              <div className="absolute right-0 mt-2 w-56 bg-white border border-[#E5E7EB] rounded-xl shadow-lg z-50">
-                <div className="py-2">
-                  <button
-                    onClick={() => handleExport("PDF")}
-                    className="w-full px-4 py-2.5 text-left hover:bg-[#F9FAFB] flex items-center gap-3 text-[#374151]"
-                  >
-                    <FileText size={18} />
-                    Export as PDF
-                  </button>
-                  <button
-                    onClick={() => handleExport("Excel")}
-                    className="w-full px-4 py-2.5 text-left hover:bg-[#F9FAFB] flex items-center gap-3 text-[#374151]"
-                  >
-                    <FileSpreadsheet size={18} />
-                    Export as Excel
-                  </button>
-                  <button
-                    onClick={() => handleExport("CSV")}
-                    className="w-full px-4 py-2.5 text-left hover:bg-[#F9FAFB] flex items-center gap-3 text-[#374151]"
-                  >
-                    <File size={18} />
-                    Export as CSV
-                  </button>
-                  <button
-                    onClick={() => handleExport("Image")}
-                    className="w-full px-4 py-2.5 text-left hover:bg-[#F9FAFB] flex items-center gap-3 text-[#374151]"
-                  >
-                    <Image size={18} />
-                    Export as Image
-                  </button>
-                </div>
-              </div>
-            )}
-          </div>
         </div>
       </div>
 
@@ -378,30 +213,30 @@ export function AdminDashboard() {
       <div className="grid grid-cols-4 gap-6 mb-8">
         <QuickStatCard
           icon={<MapPin size={24} strokeWidth={2} />}
-          number={overview.fields.total.toString()}
+          number={safeOverview.fields.total.toString()}
           label="Fields"
-          change={`+${overview.fields.monthlyIncrease} this month`}
+          change={`+${safeOverview.fields.monthlyIncrease} this month`}
           changeIcon={<ArrowUp size={12} />}
         />
         <QuickStatCard
           icon={<CheckCircle size={24} strokeWidth={2} />}
-          number={overview.tasks.total.toString()}
+          number={safeOverview.tasks.total.toString()}
           label="Tasks"
-          change={`${overview.tasks.doneToday} done today`}
+          change={`${safeOverview.tasks.doneToday} done today`}
           changeIcon={<Check size={12} />}
         />
         <QuickStatCard
           icon={<Users size={24} strokeWidth={2} />}
-          number={overview.workers.total.toString()}
+          number={safeOverview.workers.total.toString()}
           label="Workers"
-          change={`${overview.workers.activeToday} active today`}
+          change={`${safeOverview.workers.activeToday} active today`}
           changeIcon={<ArrowUp size={12} />}
         />
         <QuickStatCard
           icon={<TrendingUp size={24} strokeWidth={2} />}
-          number={`${overview.progress.completionPercent}%`}
+          number={`${safeOverview.progress.completionPercent}%`}
           label="Progress"
-          change={`+${overview.progress.weeklyChangePercent}% this week`}
+          change={`+${safeOverview.progress.weeklyChangePercent}% this week`}
           changeIcon={<ArrowUp size={12} />}
         />
       </div>
@@ -425,64 +260,71 @@ export function AdminDashboard() {
           </h3>
 
           <div className="space-y-4 flex-1 overflow-y-auto">
-            {farmActivity.activeTasks.map((task) => {
-              const Icon = getTaskIcon(task.title);
-              const statusConfig: { [key: string]: { bg: string; text: string; label: string } } = {
-                in_progress: {
-                  bg: "#CCE5FF",
-                  text: "#004085",
-                  label: "In Progress",
-                },
-                pending: { bg: "#FFF3CD", text: "#856404", label: "Pending" },
-                completed: {
-                  bg: "#D4EDDA",
-                  text: "#155724",
-                  label: "Completed",
-                },
-              };
-              const status = statusConfig[task.status];
+            {safeFarmActivity.activeTasks.length > 0 ? (
+              safeFarmActivity.activeTasks.map((task: any) => {
+                const Icon = getTaskIcon(task.title);
+                const statusConfig: { [key: string]: { bg: string; text: string; label: string } } = {
+                  in_progress: {
+                    bg: "#CCE5FF",
+                    text: "#004085",
+                    label: "In Progress",
+                  },
+                  pending: { bg: "#FFF3CD", text: "#856404", label: "Pending" },
+                  completed: {
+                    bg: "#D4EDDA",
+                    text: "#155724",
+                    label: "Completed",
+                  },
+                };
+                const status = statusConfig[task.status] || statusConfig.pending;
 
-              return (
-                <div
-                  key={task.id}
-                  className="pb-4 border-b border-[#F3F4F6] last:border-0"
-                >
-                  <div className="flex items-center gap-3 mb-1">
-                    <div
-                      className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0"
-                      style={{ backgroundColor: status.bg }}
-                    >
-                      <Icon size={20} style={{ color: status.text }} />
+                return (
+                  <div
+                    key={task.id}
+                    className="pb-4 border-b border-[#F3F4F6] last:border-0"
+                  >
+                    <div className="flex items-center gap-3 mb-1">
+                      <div
+                        className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0"
+                        style={{ backgroundColor: status.bg }}
+                      >
+                        <Icon size={20} style={{ color: status.text }} />
+                      </div>
+                      <span className="font-semibold text-[#1F2937]">
+                        {task.title}
+                      </span>
                     </div>
-                    <span className="font-semibold text-[#1F2937]">
-                      {task.title}
-                    </span>
-                  </div>
-                  <div className="ml-11 space-y-1">
-                    <p className="text-[#6B7280] text-[14px]">
-                      {formatDueDate(task.dueDate)}
-                    </p>
-                    <p className="text-[#6B7280] text-[14px]">
-                      {task.assignedWorkers.map((w) => w.name).join(", ")}
-                    </p>
-                    <div
-                      className="inline-block mt-2 px-3 py-1 rounded-xl font-semibold text-[12px]"
-                      style={{
-                        backgroundColor: status.bg,
-                        color: status.text,
-                      }}
-                    >
-                      {status.label}
+                    <div className="ml-11 space-y-1">
+                      <p className="text-[#6B7280] text-[14px]">
+                        {formatDueDate(task.dueDate)}
+                      </p>
+                      <p className="text-[#6B7280] text-[14px]">
+                        {task.assignedWorkers?.map((w: any) => w.name).join(", ") || "Unassigned"}
+                      </p>
+                      <div
+                        className="inline-block mt-2 px-3 py-1 rounded-xl font-semibold text-[12px]"
+                        style={{
+                          backgroundColor: status.bg,
+                          color: status.text,
+                        }}
+                      >
+                        {status.label}
+                      </div>
                     </div>
                   </div>
-                </div>
-              );
-            })}
+                );
+              })
+            ) : (
+              <div className="text-center py-8 text-[#6B7280]">
+                No active tasks found
+              </div>
+            )}
           </div>
 
           <Link 
-                href="/tasks"
-                className="mt-4 inline-flex items-center justify-center text-[#4CAF50] font-semibold hover:text-[#388E3C] transition-colors flex-shrink-0">
+            href="/tasks"
+            className="mt-4 inline-flex items-center justify-center text-[#4CAF50] font-semibold hover:text-[#388E3C] transition-colors flex-shrink-0"
+          >
             View All Tasks →
           </Link>
         </div>
@@ -493,30 +335,37 @@ export function AdminDashboard() {
             Field Status
           </h3>
 
-          <div className="space-y-6 flex-1">
-            {farmActivity.fieldStatus.map((field) => (
-              <div key={field.id}>
-                <div className="flex items-center justify-between mb-2">
-                  <span className="font-semibold text-[#1F2937]">
-                    {field.name}: {field.status.charAt(0).toUpperCase() + field.status.slice(1)}
-                  </span>
-                  <span className="text-[#4CAF50] font-medium text-[13px]">
-                    {field.progressPercent}%
-                  </span>
+          <div className="space-y-6 flex-1 overflow-y-auto">
+            {safeFarmActivity.fieldStatus.length > 0 ? (
+              safeFarmActivity.fieldStatus.map((field: any) => (
+                <div key={field.id}>
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="font-semibold text-[#1F2937]">
+                      {field.name}: {field.status.charAt(0).toUpperCase() + field.status.slice(1)}
+                    </span>
+                    <span className="text-[#4CAF50] font-medium text-[13px]">
+                      {field.progressPercent}%
+                    </span>
+                  </div>
+                  <div className="w-full h-2 bg-[#E5E7EB] rounded-full overflow-hidden">
+                    <div
+                      className="h-full bg-gradient-to-r from-[#81C784] to-[#4CAF50] rounded-full"
+                      style={{ width: `${field.progressPercent}%` }}
+                    />
+                  </div>
                 </div>
-                <div className="w-full h-2 bg-[#E5E7EB] rounded-full overflow-hidden">
-                  <div
-                    className="h-full bg-gradient-to-r from-[#81C784] to-[#4CAF50] rounded-full"
-                    style={{ width: `${field.progressPercent}%` }}
-                  />
-                </div>
+              ))
+            ) : (
+              <div className="text-center py-8 text-[#6B7280]">
+                No field status data available
               </div>
-            ))}
+            )}
           </div>
 
           <Link 
-                href="/fields"
-                className="mt-4 inline-flex items-center justify-center text-[#4CAF50] font-semibold hover:text-[#388E3C] transition-colors flex-shrink-0">
+            href="/fields"
+            className="mt-4 inline-flex items-center justify-center text-[#4CAF50] font-semibold hover:text-[#388E3C] transition-colors flex-shrink-0"
+          >
             View All Fields →
           </Link>
         </div>
@@ -534,30 +383,36 @@ export function AdminDashboard() {
 
       <div className="bg-white border border-[#E5E7EB] rounded-2xl p-6 shadow-sm mb-8">
         <div className="space-y-4">
-          {recentActivity.activities.map((activity) => {
-            const iconConfig = getActivityIcon(activity.type);
-            const Icon = iconConfig.icon;
+          {safeRecentActivity.activities.length > 0 ? (
+            safeRecentActivity.activities.map((activity: any) => {
+              const iconConfig = getActivityIcon(activity.type);
+              const Icon = iconConfig.icon;
 
-            return (
-              <div
-                key={activity.id}
-                className="flex gap-4 pb-4 border-b border-[#F3F4F6] last:border-0"
-              >
+              return (
                 <div
-                  className="w-12 h-12 rounded-full flex items-center justify-center flex-shrink-0"
-                  style={{ backgroundColor: iconConfig.bg }}
+                  key={activity.id}
+                  className="flex gap-4 pb-4 border-b border-[#F3F4F6] last:border-0"
                 >
-                  <Icon size={24} style={{ color: iconConfig.color }} />
+                  <div
+                    className="w-12 h-12 rounded-full flex items-center justify-center flex-shrink-0"
+                    style={{ backgroundColor: iconConfig.bg }}
+                  >
+                    <Icon size={24} style={{ color: iconConfig.color }} />
+                  </div>
+                  <div className="flex-1">
+                    <p className="text-[#374151]">{activity.message}</p>
+                    <p className="text-[#9CA3AF] mt-1">
+                      {formatRelativeTime(activity.timestamp)}
+                    </p>
+                  </div>
                 </div>
-                <div className="flex-1">
-                  <p className="text-[#374151]">{activity.message}</p>
-                  <p className="text-[#9CA3AF] mt-1">
-                    {formatRelativeTime(activity.timestamp)}
-                  </p>
-                </div>
-              </div>
-            );
-          })}
+              );
+            })
+          ) : (
+            <div className="text-center py-8 text-[#6B7280]">
+              No recent activities found
+            </div>
+          )}
         </div>
       </div>
 
@@ -572,16 +427,24 @@ export function AdminDashboard() {
       </div>
 
       <div className="bg-white border border-[#E5E7EB] rounded-2xl p-6 shadow-sm mb-8">
-        <div className="flex gap-4 overflow-x-auto">
-          {weatherForecast.map((day, index) => (
-            <WeatherDay
-              key={index}
-              day={day.day}
-              icon={day.icon}
-              high={day.high}
-              low={day.low}
-            />
-          ))}
+        <div className="flex justify-center gap-4 overflow-x-auto">
+          {dailyLoading ? (
+            <div className="py-6 px-4 text-[#6B7280]">Loading forecast...</div>
+          ) : dailyError ? (
+            <div className="py-6 px-4 text-[#EF4444]">Failed to load forecast</div>
+          ) : dailyForecast && dailyForecast.days && dailyForecast.days.length > 0 ? (
+            dailyForecast.days.map((d: any, index: number) => (
+              <WeatherDay
+                key={index}
+                day={d.dayOfWeek || new Date(d.date).toLocaleDateString(undefined, { weekday: 'short' })}
+                icon={getWeatherIcon(d.icon)}
+                high={`${d.maxTemp}${d.maxTemp && typeof d.maxTemp === 'number' ? '°C' : ''}`}
+                low={`${d.minTemp}${d.minTemp && typeof d.minTemp === 'number' ? '°C' : ''}`}
+              />
+            ))
+          ) : (
+            <div className="py-6 px-4 text-[#6B7280]">No forecast available</div>
+          )}
         </div>
       </div>
 
@@ -600,10 +463,10 @@ export function AdminDashboard() {
                 className="text-[48px] font-bold"
                 style={{ fontFamily: "Poppins, sans-serif" }}
               >
-                {todayOverview.weather.temperature}°C
+                {safeTodayOverview.weather.temperature}°C
               </div>
               <div className="text-[18px] opacity-90">
-                {todayOverview.weather.condition}
+                {safeTodayOverview.weather.condition}
               </div>
             </div>
           </div>
@@ -615,7 +478,7 @@ export function AdminDashboard() {
                 <span>Humidity</span>
               </div>
               <span className="font-semibold">
-                {todayOverview.weather.humidity}%
+                {safeTodayOverview.weather.humidity}%
               </span>
             </div>
             <div className="flex items-center justify-between">
@@ -624,7 +487,7 @@ export function AdminDashboard() {
                 <span>Wind Speed</span>
               </div>
               <span className="font-semibold">
-                {todayOverview.weather.windSpeedKmh} km/h
+                {safeTodayOverview.weather.windSpeedKmh} km/h
               </span>
             </div>
           </div>
@@ -643,7 +506,7 @@ export function AdminDashboard() {
                 className="text-[32px] font-bold text-[#1F2937]"
                 style={{ fontFamily: "Poppins, sans-serif" }}
               >
-                {todayOverview.fields.total}
+                {safeTodayOverview.fields.total}
               </div>
             </div>
             <div className="p-4 bg-[#F9FAFB] rounded-lg">
@@ -652,7 +515,7 @@ export function AdminDashboard() {
                 className="text-[32px] font-bold text-[#1F2937]"
                 style={{ fontFamily: "Poppins, sans-serif" }}
               >
-                {todayOverview.fields.activeFields}
+                {safeTodayOverview.fields.activeFields}
               </div>
             </div>
             <div className="p-4 bg-[#F9FAFB] rounded-lg">
@@ -661,7 +524,7 @@ export function AdminDashboard() {
                 className="text-[32px] font-bold text-[#1F2937]"
                 style={{ fontFamily: "Poppins, sans-serif" }}
               >
-                {todayOverview.fields.totalArea}ha
+                {safeTodayOverview.fields.totalArea}ha
               </div>
             </div>
             <div className="p-4 bg-[#F9FAFB] rounded-lg">
@@ -670,7 +533,7 @@ export function AdminDashboard() {
                 className="text-[32px] font-bold text-[#1F2937]"
                 style={{ fontFamily: "Poppins, sans-serif" }}
               >
-                {todayOverview.fields.underCultivationArea}ha
+                {safeTodayOverview.fields.underCultivationArea}ha
               </div>
             </div>
           </div>
@@ -684,61 +547,46 @@ export function AdminDashboard() {
             Recent Tasks
           </h3>
           <Link
-            href="\tasks"
-            className="text-[#4CAF50] font-semibold hover:text-[#388E3C] transition-colors">
+            href="/tasks"
+            className="text-[#4CAF50] font-semibold hover:text-[#388E3C] transition-colors"
+          >
             View All →
           </Link>
         </div>
 
         <div className="space-y-3">
-          {recentTasks.tasks.map((task) => (
-            <TaskItem
-              key={task.id}
-              title={task.title}
-              assignedTo={task.assignedWorkers[0]?.name || "Unassigned"}
-              status={task.status as "completed" | "in_progress" | "pending"}
-              date={
-                task.completedAt
-                  ? new Date(task.completedAt).toLocaleString("en-US", {
-                      month: "short",
-                      day: "numeric",
-                      hour: "numeric",
-                      minute: "2-digit",
-                    })
-                  : formatDueDate(task.dueDate)
-              }
-            />
-          ))}
+          {safeRecentTasks.tasks.length > 0 ? (
+            safeRecentTasks.tasks.map((task: any) => (
+              <TaskItem
+                key={task.id}
+                title={task.title}
+                assignedTo={task.assignedWorkers?.[0]?.name || "Unassigned"}
+                status={task.status as "completed" | "in_progress" | "pending"}
+                date={
+                  task.completedAt
+                    ? new Date(task.completedAt).toLocaleString("en-US", {
+                        month: "short",
+                        day: "numeric",
+                        hour: "numeric",
+                        minute: "2-digit",
+                      })
+                    : formatDueDate(task.dueDate)
+                }
+              />
+            ))
+          ) : (
+            <div className="text-center py-8 text-[#6B7280]">
+              No recent tasks found
+            </div>
+          )}
         </div>
       </div>
 
-      {/* Quick Actions */}
-      <div className="grid grid-cols-4 gap-4">
-        <QuickActionCard
-          icon={<Calendar size={24} />}
-          label="Schedule Task"
-          color="#4CAF50"
-        />
-        <QuickActionCard
-          icon={<Users size={24} />}
-          label="Manage Workers"
-          color="#2196F3"
-        />
-        <QuickActionCard
-          icon={<CheckCircle size={24} />}
-          label="View Reports"
-          color="#FF9800"
-        />
-        <QuickActionCard
-          icon={<TrendingUp size={24} />}
-          label="Analytics"
-          color="#9C27B0"
-        />
-      </div>
     </>
   );
 }
 
+// Helper Components (unchanged)
 function QuickStatCard({ icon, number, label, change, changeIcon }: { 
   icon: React.ReactNode; 
   number: string; 
@@ -802,21 +650,6 @@ function TaskItem({ title, assignedTo, status, date }: {
   );
 }
 
-function QuickActionCard({ icon, label, color }: { icon: React.ReactNode; label: string; color: string }) {
-  return (
-    <button 
-      className="p-6 bg-white border-2 border-[#E5E7EB] rounded-xl hover:border-[#4CAF50] hover:shadow-lg transition-all cursor-pointer"
-    >
-      <div 
-        className="w-12 h-12 rounded-full flex items-center justify-center mb-3 mx-auto"
-        style={{ backgroundColor: `${color}15` }}
-      >
-        <div style={{ color }}>{icon}</div>
-      </div>
-      <div className="font-semibold text-[#1F2937] text-center">{label}</div>
-    </button>
-  );
-}
 
 function WeatherDay({ day, icon, high, low }: { day: string; icon: string; high: string; low: string }) {
   return (

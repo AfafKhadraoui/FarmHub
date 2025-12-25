@@ -85,7 +85,9 @@ export default function EditTaskPage() {
     const load = async () => {
       try {
         const res = await api.get(`/tasks/${id}`);
-        setTask(res.data);
+        // Backend wraps payload as { success, data }
+        const payload = (res.data as any)?.data ?? res.data;
+        setTask(payload);
       } catch (error: any) {
         // If backend is not available, use dummy data
         if (error?.response?.status === 404 || error?.response?.status >= 500) {
@@ -106,12 +108,14 @@ export default function EditTaskPage() {
 
   const handleSubmit = async (data: any) => {
     try {
-      await api.patch(`/tasks/${id}`, {
+      // Match backend route: PUT /tasks/:id for full update
+      await api.put(`/tasks/${id}`, {
         title: data.title,
         description: data.description,
         priority: data.priority,
         dueDate: data.dueDate,
         fieldId: data.fieldId,
+        assignedWorkerIds: data.assignedWorkerIds || [],
       });
       router.push(`/tasks/${id}`);
     } catch (error: any) {
@@ -173,12 +177,18 @@ export default function EditTaskPage() {
           onSubmit={handleSubmit}
           submitText="Update Task"
           initialData={{
-            title: task.title,
-            description: task.description || '',
-            priority: task.priority.toLowerCase() as 'low' | 'medium' | 'high',
-            dueDate: task.dueDate ? new Date(task.dueDate).toISOString().slice(0, 16) : '',
-            fieldId: task.fieldId?.toString() || '',
-          }}
+              title: task.title,
+              description: task.description || '',
+              priority: task.priority.toLowerCase() as 'low' | 'medium' | 'high',
+              dueDate: task.dueDate ? new Date(task.dueDate).toISOString().slice(0, 16) : '',
+              fieldId: task.fieldId?.toString() || '',
+              // Support both shapes: assignedWorkers (objects) or assignedWorkerIds (array of ids)
+              assignedWorkerIds: Array.isArray(task.assignedWorkerIds)
+                ? task.assignedWorkerIds.map((id: any) => Number(id))
+                : task.assignedWorkers
+                  ? task.assignedWorkers.map((w: any) => Number(w.id))
+                  : [],
+            }}
         />
       </div>
     </div>

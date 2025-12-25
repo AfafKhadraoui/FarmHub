@@ -7,7 +7,9 @@ export function TaskStatusBadge({ status }: { status: string }) {
     overdue: { label: 'Overdue', bg: '#FFEBEE', text: '#F44336' },
   };
 
-  const config = statusConfig[status?.toLowerCase()] || statusConfig.pending;
+  // Normalize status (backend may return 'in_progress' or 'INPROGRESS')
+  const normalized = (status || '').toString().toLowerCase().replace(/[_\s]/g, '');
+  const config = statusConfig[normalized] || statusConfig.pending;
 
   return (
     <span

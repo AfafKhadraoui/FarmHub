@@ -180,3 +180,23 @@ select option:focus {
   background-color: #4baf47;
   color: white;
 }
+
+/* Ensure text selection in form fields is readable and matches the theme
+   Prevents selected text from appearing with a black background/color */
+input::selection,
+textarea::selection,
+input *::selection,
+textarea *::selection,
+[contenteditable]::selection,
+[contenteditable] *::selection {
+  background-color: var(--admin-primary);
+  color: #ffffff;
+}
+
+/* Also ensure selection for inputs on older browsers */
+input::-moz-selection,
+textarea::-moz-selection,
+[contenteditable]::-moz-selection {
+  background: var(--admin-primary);
+  color: #ffffff;
+}

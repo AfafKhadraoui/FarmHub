@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from "react";
 import Link from 'next/link';
 import { useRouter } from "next/navigation";
 import { User, Settings, Lock, Bell, HelpCircle, LogOut } from "lucide-react";
+import { useProfile } from "@/hooks/useProfile";
 import { Modal } from "./modals/Modal";
 
 interface ProfileDropdownProps {
@@ -12,6 +13,7 @@ interface ProfileDropdownProps {
   userRole?: string;
   userEmail?: string;
   userInitials?: string;
+  userRoleType?: "admin" | "worker";
 }
 
 export function ProfileDropdown({
@@ -22,10 +24,13 @@ export function ProfileDropdown({
   userRole = "Farm Admin",
   userEmail = "ahmed@email.com",
   userInitials = "AK",
+  userRoleType = "worker",
 }: ProfileDropdownProps) {
   const router = useRouter();
   const dropdownRef = useRef<HTMLDivElement>(null);
   const [showLogoutModal, setShowLogoutModal] = useState(false);
+  const { profile } = useProfile();
+  const isAdmin = userRoleType === "admin" || profile?.role?.toLowerCase() === "admin";
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -57,7 +62,6 @@ export function ProfileDropdown({
   }, [isOpen, onClose, triggerRef]);
 
   const handleLogout = () => {
-    onClose();
     setShowLogoutModal(true);
   };
 
@@ -106,16 +110,18 @@ export function ProfileDropdown({
             <span className="text-[13px] font-semibold">My Profile</span>
           </button>
 
-          <button
-            onClick={() => {
-              router.push("/settings");
-              onClose();
-            }}
-            className="w-full h-11 px-5 flex items-center gap-3 text-[#374151] hover:bg-[#F9FAFB] transition-colors"
-          >
-            <Settings size={20} className="text-[#6B7280]" />
-            <span className="text-[13px] font-semibold">Account Settings</span>
-          </button>
+          {isAdmin && (
+            <button
+              onClick={() => {
+                router.push("/settings");
+                onClose();
+              }}
+              className="w-full h-11 px-5 flex items-center gap-3 text-[#374151] hover:bg-[#F9FAFB] transition-colors"
+            >
+              <Settings size={20} className="text-[#6B7280]" />
+              <span className="text-[13px] font-semibold">Account Settings</span>
+            </button>
+          )}
 
           <button
             onClick={() => {

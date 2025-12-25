@@ -1,30 +1,38 @@
 import React, { useState } from "react";
 import { Modal } from "./Modal";
 import { AlertTriangle } from "lucide-react";
+import { fieldService } from "@/services/field.service";
 
 interface ArchiveFieldModalProps {
   isOpen: boolean;
   onClose: () => void;
   fieldName?: string;
+  fieldId: number;
+  onSuccess?: () => void;
 }
 
 export function ArchiveFieldModal({
   isOpen,
   onClose,
   fieldName = "Field A",
+  fieldId,
+  onSuccess,
 }: ArchiveFieldModalProps) {
   const [isLoading, setIsLoading] = useState(false);
 
   const handleArchive = async () => {
     setIsLoading(true);
-
-    // Simulate API call
-    setTimeout(() => {
-      setIsLoading(false);
-      onClose();
+    try {
+      await fieldService.update(fieldId, { active: false });
       (window as any).showToast?.("Field archived successfully", "success");
-      // In real app, redirect to Fields page
-    }, 1000);
+      onClose();
+      if (onSuccess) onSuccess();
+    } catch (error) {
+      console.error("Failed to archive field:", error);
+      (window as any).showToast?.("Failed to archive field", "error");
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const footer = (
