@@ -3,7 +3,7 @@
 import React, { useState, useRef, useEffect } from "react";
 import { Search, Bell } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
-import { useProfile } from "@/hooks/useProfile";
+import { useProfile } from "@/context/ProfileContext";
 import { NotificationsPanel } from "./NotificationsPanel";
 import { ProfileDropdown } from "./ProfileDropdown";
 

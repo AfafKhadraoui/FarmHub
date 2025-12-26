@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/hooks/useAuth";
-import { useProfile } from "@/hooks/useProfile";
+import { useProfile } from "@/context/ProfileContext";
 import { CustomAlert } from "@/components/workspace/CustomAlert";
 import { ChangePasswordModal } from "@/components/workspace/modals/ChangePasswordModal";
 import { ProfileHeader } from "@/components/workspace/profile/ProfileHeader";

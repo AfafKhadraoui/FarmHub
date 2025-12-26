@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState } from "react";
 import Link from 'next/link';
 import { useRouter } from "next/navigation";
 import { User, Settings, Lock, Bell, HelpCircle, LogOut } from "lucide-react";
-import { useProfile } from "@/hooks/useProfile";
+import { useProfile } from "@/context/ProfileContext";
 import { Modal } from "./modals/Modal";
 
 interface ProfileDropdownProps {
