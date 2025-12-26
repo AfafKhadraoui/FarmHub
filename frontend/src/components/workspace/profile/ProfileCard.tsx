@@ -1,18 +1,16 @@
 // components/profile/ProfileCard.tsx
 import React from "react";
-import { User, Mail, Phone, Calendar, Edit2, Camera, Save, X, Shield, MapPin } from "lucide-react";
+import { User, Mail, Phone, Calendar, Edit2, Save, X, Shield, MapPin } from "lucide-react";
 
 interface ProfileCardProps {
   profile: any;
   isEditing: boolean;
   saving: boolean;
   formData: { name: string; phone: string };
-  profileImage: string | null;
   onEdit: () => void;
   onSave: () => void;
   onCancel: () => void;
   onFormChange: (data: { name: string; phone: string }) => void;
-  onImageChange: (image: string | null) => void;
 }
 
 export const ProfileCard = ({
@@ -20,24 +18,24 @@ export const ProfileCard = ({
   isEditing,
   saving,
   formData,
-  profileImage,
   onEdit,
   onSave,
   onCancel,
   onFormChange,
-  onImageChange,
 }: ProfileCardProps) => {
   const isAdmin = profile.role?.toLowerCase() === 'admin';
   const isWorker = profile.role?.toLowerCase() === 'worker';
 
-  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => onImageChange(reader.result as string);
-      reader.readAsDataURL(file);
-    }
+  const getInitials = (name?: string) => {
+    if (!name) return "U";
+    return name
+      .split(" ")
+      .map(n => n[0])
+      .join("")
+      .toUpperCase()
+      .slice(0, 2);
   };
+
 
   const formatDate = (dateString?: string) => {
     if (!dateString) return "N/A";
@@ -50,19 +48,14 @@ export const ProfileCard = ({
       <div className="h-32 bg-gradient-to-r from-[#4CAF50] to-[#66BB6A] rounded-t-2xl relative">
         <div className="absolute -bottom-16 left-8">
           <div className="relative">
-            <div className="w-32 h-32 rounded-full border-4 border-white bg-[#F3F4F6] flex items-center justify-center overflow-hidden">
-              {profileImage ? (
-                <img src={profileImage} alt="Profile" className="w-full h-full object-cover" onError={() => onImageChange(null)} />
-              ) : (
-                <User size={48} className="text-[#9CA3AF]" />
-              )}
+            <div className="w-32 h-32 rounded-full border-4 border-white
+                bg-gradient-to-br from-[#4CAF50] to-[#81C784]
+                flex items-center justify-center">
+              <span className="text-white font-bold text-[40px]">
+                {getInitials(profile.name)}
+              </span>
             </div>
-            {isEditing && (
-              <label className="absolute bottom-0 right-0 w-10 h-10 bg-[#4CAF50] rounded-full flex items-center justify-center cursor-pointer hover:bg-[#388E3C] transition-all shadow-lg">
-                <Camera size={20} className="text-white" />
-                <input type="file" accept="image/*" onChange={handleImageUpload} className="hidden" />
-              </label>
-            )}
+
           </div>
         </div>
       </div>
@@ -75,16 +68,14 @@ export const ProfileCard = ({
               {profile.name}
             </h2>
             <div className="flex items-center gap-2">
-              <span className={`px-3 py-1 rounded-full text-[13px] font-semibold flex items-center gap-1 ${
-                isAdmin ? "bg-[#E8F5E9] text-[#4CAF50]" : "bg-[#DBEAFE] text-[#3B82F6]"
-              }`}>
+              <span className={`px-3 py-1 rounded-full text-[13px] font-semibold flex items-center gap-1 ${isAdmin ? "bg-[#E8F5E9] text-[#4CAF50]" : "bg-[#DBEAFE] text-[#3B82F6]"
+                }`}>
                 <Shield size={14} />
                 {profile.role.charAt(0).toUpperCase() + profile.role.slice(1)}
               </span>
               {isWorker && profile.status && (
-                <span className={`px-3 py-1 rounded-full text-[13px] font-semibold ${
-                  profile.status === "active" ? "bg-[#E8F5E9] text-[#4CAF50]" : "bg-[#FEE2E2] text-[#EF4444]"
-                }`}>
+                <span className={`px-3 py-1 rounded-full text-[13px] font-semibold ${profile.status === "active" ? "bg-[#E8F5E9] text-[#4CAF50]" : "bg-[#FEE2E2] text-[#EF4444]"
+                  }`}>
                   {profile.status.charAt(0).toUpperCase() + profile.status.slice(1)}
                 </span>
               )}
