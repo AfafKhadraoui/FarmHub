@@ -55,7 +55,7 @@ export function LoginForm() {
       <AuthPanelLeft mode="login" />
 
       {/* Right Panel - Login Form */}
-      <div className="flex-1 flex items-center justify-center p-8 bg-white">
+      <div className="flex-1 lg:ml-[40%] flex items-center justify-center p-8 bg-white min-h-screen">
         <div className="w-full max-w-md">
           <div className="mb-8">
             <h2 className="text-3xl font-bold text-[#333333] mb-2">Login to Your Account</h2>

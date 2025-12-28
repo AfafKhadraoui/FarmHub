@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/hooks/useAuth";
-import { useProfile } from "@/hooks/useProfile";
+import { useProfile } from "@/context/ProfileContext";
 import { CustomAlert } from "@/components/workspace/CustomAlert";
 import { ChangePasswordModal } from "@/components/workspace/modals/ChangePasswordModal";
 import { ProfileHeader } from "@/components/workspace/profile/ProfileHeader";
@@ -16,10 +16,9 @@ export default function ProfilePage() {
   const { user } = useAuth();
   const { profile, isLoading, error, refresh, update, changePassword } = useProfile();
   const router = useRouter();
-  
+
   const [isEditing, setIsEditing] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [profileImage, setProfileImage] = useState<string | null>(null);
   const [showLogoutModal, setShowLogoutModal] = useState(false);
   const [showChangePasswordModal, setShowChangePasswordModal] = useState(false);
   const [formData, setFormData] = useState({ name: "", phone: "" });
@@ -28,21 +27,12 @@ export default function ProfilePage() {
   // Initialize profile data
   useEffect(() => {
     if (!profile) return;
-    
-    setFormData({ 
-      name: profile.name || "", 
-      phone: profile.phone || "" 
+
+    setFormData({
+      name: profile.name || "",
+      phone: profile.phone || ""
     });
-    
-    const rawAvatar = profile.avatar;
-    const isMissing = !rawAvatar || rawAvatar === '/avatars/default.jpg' || rawAvatar === 'null' || rawAvatar.trim() === '';
-    
-    if (isMissing) {
-      setProfileImage(null);
-    } else {
-      const apiBase = process.env.NEXT_PUBLIC_API_URL || '';
-      setProfileImage(rawAvatar.startsWith('/') ? `${apiBase}${rawAvatar}` : rawAvatar);
-    }
+
   }, [profile]);
 
   const showAlert = (type: "success" | "error", message: string) => {
@@ -53,7 +43,11 @@ export default function ProfilePage() {
   const handleSave = async () => {
     setSaving(true);
     try {
-      const res = await update({ ...formData, avatar: profileImage });
+      const res = await update({
+        name: formData.name,
+        phone: formData.phone
+      });
+
       if (res.success) {
         showAlert("success", "Profile updated successfully!");
         await refresh();
@@ -108,18 +102,16 @@ export default function ProfilePage() {
   return (
     <>
       <ProfileHeader />
-      
+
       <ProfileCard
         profile={profile}
         isEditing={isEditing}
         saving={saving}
         formData={formData}
-        profileImage={profileImage}
         onEdit={() => setIsEditing(true)}
         onSave={handleSave}
         onCancel={handleCancel}
         onFormChange={setFormData}
-        onImageChange={setProfileImage}
       />
 
       {isWorker && <PerformanceStats profile={profile} />}

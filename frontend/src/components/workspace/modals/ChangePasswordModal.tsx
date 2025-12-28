@@ -3,7 +3,7 @@
 import React, { useState } from "react";
 import { Modal } from "@/components/workspace/modals/Modal";
 import { Lock, Eye, EyeOff } from "lucide-react";
-import { useProfile } from "@/hooks/useProfile";
+import { useProfile } from "@/context/ProfileContext";
 
 interface ChangePasswordModalProps {
   isOpen: boolean;

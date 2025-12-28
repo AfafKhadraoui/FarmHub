@@ -5,7 +5,7 @@ import React from 'react';
 export function AuthPanelLeft({ mode }: { mode: 'login' | 'register' }) {
   return (
     <div
-      className="hidden lg:flex min-h-screen lg:flex-col lg:justify-center lg:w-2/5 relative overflow-hidden text-white"
+      className="hidden lg:flex lg:fixed lg:left-0 lg:top-0 lg:bottom-0 lg:w-2/5 flex-col justify-center relative overflow-hidden text-white"
       style={{
         backgroundImage: "url('/images/farm.jpg')",
         backgroundSize: "cover",
