@@ -348,6 +348,7 @@ export function TaskCard({
             onClose={() => setShowAddNoteModal(false)}
             taskId={id}
             taskTitle={title}
+            currentStatus={status}
             onSuccess={handleSuccess}
           />
         </>
