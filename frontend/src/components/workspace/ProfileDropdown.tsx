@@ -20,17 +20,18 @@ export function ProfileDropdown({
   const dropdownRef = useRef<HTMLDivElement>(null);
   const [showLogoutModal, setShowLogoutModal] = useState(false);
   const { profile } = useProfile();
+  
   const getInitials = (name?: string) => {
-  if (!name) return "U";
-  return name
-    .split(" ")
-    .map(n => n[0])
-    .join("")
-    .toUpperCase()
-    .slice(0, 2);
-};
+    if (!name) return "U";
+    return name
+      .split(" ")
+      .map(n => n[0])
+      .join("")
+      .toUpperCase()
+      .slice(0, 2);
+  };
 
-const isAdmin = profile?.role?.toLowerCase() === "admin";
+  const isAdmin = profile?.role?.toLowerCase() === "admin";
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -61,15 +62,22 @@ const isAdmin = profile?.role?.toLowerCase() === "admin";
     };
   }, [isOpen, onClose, triggerRef]);
 
-  const handleLogout = () => {
+  const handleLogout = (e: React.MouseEvent) => {
+    e.stopPropagation(); // Prevent event from bubbling up
     setShowLogoutModal(true);
   };
 
   const confirmLogout = () => {
     setShowLogoutModal(false);
+    onClose(); // Close dropdown
     localStorage.removeItem("accessToken");
     document.cookie = "token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
     router.push("/login");
+  };
+
+  const handleModalClose = () => {
+    setShowLogoutModal(false);
+    // Don't close dropdown when canceling modal
   };
 
   if (!isOpen) return null;
@@ -188,14 +196,14 @@ const isAdmin = profile?.role?.toLowerCase() === "admin";
       {/* Logout Confirmation Modal */}
       <Modal
         isOpen={showLogoutModal}
-        onClose={() => setShowLogoutModal(false)}
+        onClose={handleModalClose}
         title=""
         width="400px"
         showCloseButton={false}
         footer={
           <>
             <button
-              onClick={() => setShowLogoutModal(false)}
+              onClick={handleModalClose}
               className="h-11 px-6 bg-white border border-[#D1D5DB] text-[#4B5563] rounded-lg font-semibold hover:bg-[#F9FAFB] transition-all"
             >
               Cancel
