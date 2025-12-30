@@ -1,6 +1,6 @@
 "use client";
 
-import { Bell, Search, User } from "lucide-react";
+import { Bell, User } from "lucide-react";
 import { useState } from "react";
 import { useNotifications } from "@/hooks/useNotifications";
 import { useQuery } from '@tanstack/react-query'; // Added
@@ -57,20 +57,6 @@ export default function TopBar({ pageTitle, onNavigate }: TopBarProps) {
 
         {/* Right Section */}
         <div className="flex items-center gap-4">
-          {/* Search */}
-          <div className="relative">
-            <Search
-              size={18}
-              className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--admin-text-muted)]"
-            />
-            <input
-              type="text"
-              placeholder="Search..."
-              className="w-[300px] h-[44px] pl-10 pr-4 rounded-lg border border-[var(--admin-border)] text-[var(--admin-text-dark)] placeholder-[var(--admin-text-muted)] bg-[var(--admin-bg-gray)] focus:border-[var(--admin-primary)] outline-none transition-all"
-              style={{ fontFamily: "Inter, sans-serif", fontSize: "14px" }}
-            />
-          </div>
-
           {/* Notifications */}
           <div className="relative">
             <button

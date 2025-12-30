@@ -46,7 +46,7 @@ export default function DashboardContent() {
         rel="stylesheet"
       />
 
-      <div className="min-h-screen bg-[var(--admin-bg)]">
+      <div className="min-h-screen bg-white">
         {/* Sidebar */}
         <Sidebar
           activePage="overview"

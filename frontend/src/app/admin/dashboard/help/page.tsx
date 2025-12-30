@@ -21,7 +21,7 @@ export default function HelpRoute() {
         rel="stylesheet"
       />
 
-      <div className="min-h-screen bg-[var(--admin-bg)]">
+      <div className="min-h-screen bg-white">
         <Sidebar
           activePage="help"
           onPageChange={(page) =>

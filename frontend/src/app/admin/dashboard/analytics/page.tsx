@@ -21,7 +21,7 @@ export default function AnalyticsRoute() {
         rel="stylesheet"
       />
 
-      <div className="min-h-screen bg-[var(--admin-bg)]">
+      <div className="min-h-screen bg-white">
         <Sidebar
           activePage="analytics"
           onPageChange={(page) =>

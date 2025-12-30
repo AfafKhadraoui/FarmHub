@@ -227,18 +227,18 @@ export default function FarmsPage() {
       )}
 
       {/* Farms Grid */}
-      <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
         {filteredFarms.map((farm) => (
           <div
             key={farm.id}
-            className="group relative bg-white rounded-xl border border-[var(--admin-border)] p-4 flex flex-col gap-4 hover:border-[var(--admin-primary)] transition-all cursor-pointer"
+            className="group relative bg-white rounded-xl border border-[var(--admin-border)] shadow-md hover:shadow-lg p-6 flex flex-col gap-5 hover:border-[var(--admin-primary)] transition-all cursor-pointer"
             onClick={() => setSelectedFarmId(farm.id)}
           >
             {/* Top row: name + status */}
             <div className="flex items-start justify-between">
               <div>
                 <h2
-                  className="text-lg font-semibold text-[var(--admin-text-dark)]"
+                  className="text-xl font-bold text-[var(--admin-text-dark)]"
                   style={{ fontFamily: "Manrope, sans-serif" }}
                 >
                   {farm.name}
@@ -291,75 +291,76 @@ export default function FarmsPage() {
             </div>
 
             {/* Stats */}
-            <div className="grid grid-cols-3 gap-3 pt-2 border-t border-[var(--admin-border)]">
-              <div className="flex items-center gap-2">
-                <CheckSquare className="w-4 h-4 text-[var(--admin-primary)]" />
-                <div>
+            <div className="grid grid-cols-3 gap-3 pt-3 border-t border-[var(--admin-border)]">
+              <div className="flex flex-col items-center gap-2 p-3 bg-gradient-to-br from-green-50 to-green-100/50 rounded-lg">
+                <div className="flex items-center gap-2">
+                  <CheckSquare className="w-5 h-5 text-green-600" />
                   <p
-                    className="text-xs text-[var(--admin-text-muted)]"
+                    className="text-xs font-medium text-green-700"
                     style={{ fontFamily: "Inter, sans-serif" }}
                   >
                     Fields
                   </p>
-                  <p
-                    className="text-sm font-semibold text-[var(--admin-text-dark)]"
-                    style={{ fontFamily: "Manrope, sans-serif" }}
-                  >
-                    {farm.fields}
-                  </p>
                 </div>
+                <p
+                  className="text-2xl font-bold text-green-800"
+                  style={{ fontFamily: "Manrope, sans-serif" }}
+                >
+                  {farm.fields}
+                </p>
               </div>
 
-              <div className="flex items-center gap-2">
-                <Calendar className="w-4 h-4 text-[var(--admin-primary)]" />
-                <div>
+              <div className="flex flex-col items-center gap-2 p-3 bg-gradient-to-br from-blue-50 to-blue-100/50 rounded-lg">
+                <div className="flex items-center gap-2">
+                  <Calendar className="w-5 h-5 text-blue-600" />
                   <p
-                    className="text-xs text-[var(--admin-text-muted)]"
+                    className="text-xs font-medium text-blue-700"
                     style={{ fontFamily: "Inter, sans-serif" }}
                   >
                     Tasks
                   </p>
-                  <p
-                    className="text-sm font-semibold text-[var(--admin-text-dark)]"
-                    style={{ fontFamily: "Manrope, sans-serif" }}
-                  >
-                    {farm.tasks}
-                  </p>
                 </div>
+                <p
+                  className="text-2xl font-bold text-blue-800"
+                  style={{ fontFamily: "Manrope, sans-serif" }}
+                >
+                  {farm.tasks}
+                </p>
               </div>
 
-              <div className="flex items-center gap-2">
-                <Users className="w-4 h-4 text-[var(--admin-primary)]" />
-                <div>
+              <div className="flex flex-col items-center gap-2 p-3 bg-gradient-to-br from-purple-50 to-purple-100/50 rounded-lg">
+                <div className="flex items-center gap-2">
+                  <Users className="w-5 h-5 text-purple-600" />
                   <p
-                    className="text-xs text-[var(--admin-text-muted)]"
+                    className="text-xs font-medium text-purple-700"
                     style={{ fontFamily: "Inter, sans-serif" }}
                   >
                     Workers
                   </p>
-                  <p
-                    className="text-sm font-semibold text-[var(--admin-text-dark)]"
-                    style={{ fontFamily: "Manrope, sans-serif" }}
-                  >
-                    {farm.workers}
-                  </p>
                 </div>
+                <p
+                  className="text-2xl font-bold text-purple-800"
+                  style={{ fontFamily: "Manrope, sans-serif" }}
+                >
+                  {farm.workers}
+                </p>
               </div>
             </div>
 
             {/* View details */}
-            <button
-              type="button"
-              className="absolute right-4 bottom-4 flex items-center gap-1 text-[var(--admin-primary)] hover:text-[var(--admin-primary-dark)] transition-colors opacity-0 group-hover:opacity-100"
-              style={{
-                fontFamily: "Inter, sans-serif",
-                fontWeight: 600,
-                fontSize: "14px",
-              }}
-            >
-              <Eye className="w-4 h-4" />
-              View Details
-            </button>
+            <div className="mt-2 pt-4 border-t border-[var(--admin-border)]">
+              <button
+                type="button"
+                className="w-full flex items-center justify-center gap-2 py-2.5 px-4 bg-gradient-to-r from-[var(--admin-primary)] to-[var(--admin-primary-dark)] text-white rounded-lg hover:shadow-md transition-all font-medium"
+                style={{
+                  fontFamily: "Inter, sans-serif",
+                  fontSize: "14px",
+                }}
+              >
+                <Eye className="w-4 h-4" />
+                View Details
+              </button>
+            </div>
           </div>
         ))}
       </div>
