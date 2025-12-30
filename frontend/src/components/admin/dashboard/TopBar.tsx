@@ -3,6 +3,8 @@
 import { Bell, Search, User } from "lucide-react";
 import { useState } from "react";
 import { useNotifications } from "@/hooks/useNotifications";
+import { useQuery } from '@tanstack/react-query'; // Added
+import { adminProfileService } from '@/services/admin.profile.service'; // Added
 import NotificationDropdown from "./NotificationDropdown";
 import ProfileDropdown from "./ProfileDropdown";
 
@@ -15,17 +17,31 @@ export default function TopBar({ pageTitle, onNavigate }: TopBarProps) {
   const [isNotificationOpen, setIsNotificationOpen] = useState(false);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
 
+  // Fetch real profile data using the same logic as the dropdown
+  const { data: profile } = useQuery({
+    queryKey: ['admin-profile'],
+    queryFn: adminProfileService.getProfile,
+  });
+
   // Get real unread count
-  const { unreadCount, refetch } = useNotifications(true);
+  const { unreadCount } = useNotifications(true);
+
+  // Helper to match the role display in ProfileDropdown
+  const getRoleDisplay = (role?: string) => {
+    if (role === 'platform_admin') return 'Platform Admin';
+    if (role === 'admin') return 'Farm Owner';
+    if (role === 'worker') return 'Worker';
+    return role || 'User';
+  };
 
   const handleNotificationClick = () => {
     setIsNotificationOpen(!isNotificationOpen);
-    setIsProfileOpen(false); // Close profile if open
+    setIsProfileOpen(false);
   };
 
   const handleProfileClick = () => {
     setIsProfileOpen(!isProfileOpen);
-    setIsNotificationOpen(false); // Close notifications if open
+    setIsNotificationOpen(false);
   };
 
   return (
@@ -84,21 +100,31 @@ export default function TopBar({ pageTitle, onNavigate }: TopBarProps) {
               onClick={handleProfileClick}
               className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-[var(--admin-bg-gray)] transition-colors"
             >
-              <div className="w-9 h-9 rounded-full bg-gradient-to-br from-[var(--admin-primary)] to-[var(--admin-secondary)] flex items-center justify-center">
-                <User size={18} className="text-white" strokeWidth={2.5} />
-              </div>
+              {/* Dynamic Avatar */}
+              {profile?.avatarUrl ? (
+                <img 
+                  src={profile.avatarUrl} 
+                  alt={profile.name} 
+                  className="w-9 h-9 rounded-full object-cover"
+                />
+              ) : (
+                <div className="w-9 h-9 rounded-full bg-gradient-to-br from-[var(--admin-primary)] to-[var(--admin-secondary)] flex items-center justify-center">
+                  <User size={18} className="text-white" strokeWidth={2.5} />
+                </div>
+              )}
+
               <div className="text-left">
                 <div
                   className="text-[var(--admin-text-dark)] text-sm leading-tight"
                   style={{ fontFamily: "Inter, sans-serif", fontWeight: 600 }}
                 >
-                  Admin User
+                  {profile?.name || 'Loading...'}
                 </div>
                 <div
                   className="text-[var(--admin-text-muted)] text-xs"
                   style={{ fontFamily: "Inter, sans-serif" }}
                 >
-                  Platform Admin
+                  {getRoleDisplay(profile?.role)}
                 </div>
               </div>
             </button>

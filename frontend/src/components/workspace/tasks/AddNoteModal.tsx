@@ -55,7 +55,11 @@ export function AddNoteModal({
 
       // Use PATCH /tasks/:id/status so workers can add notes without requiring admin PUT permission.
       // We pass the current status to avoid changing it and send appended notes.
-      await api.patch(`/tasks/${taskId}/status`, { status: currentStatus ?? 'in_progress', notes: appended });
+      // Use the status from the task data if currentStatus prop is missing.
+      const statusToUse = (currentStatus || taskData.status || 'in_progress').toLowerCase();
+      const normalizedStatus = statusToUse === 'inprogress' ? 'in_progress' : statusToUse;
+
+      await api.patch(`/tasks/${taskId}/status`, { status: normalizedStatus, notes: appended });
       onSuccess?.();
       setNote("");
       onClose();
@@ -74,7 +78,7 @@ export function AddNoteModal({
         onClick={onClose}
         disabled={isLoading}
         className="h-11 px-6 bg-white border rounded-lg font-semibold hover:bg-[#F9FAFB] transition-all disabled:opacity-50"
-        style={{ 
+        style={{
           borderColor: 'var(--admin-border)',
           color: 'var(--admin-text-dark)'
         }}
@@ -109,7 +113,7 @@ export function AddNoteModal({
             placeholder="Enter your note here..."
             rows={6}
             className="w-full px-4 py-2 rounded-lg focus:outline-none focus:ring-2 resize-none transition-all"
-            style={{ 
+            style={{
               borderColor: 'var(--admin-border)',
               color: 'var(--admin-text-dark)',
               backgroundColor: 'white',

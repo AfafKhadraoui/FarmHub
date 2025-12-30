@@ -4,6 +4,7 @@ import { Sidebar } from "@/components/workspace/Sidebar";
 import { TopBar } from "@/components/workspace/TopBar";
 import { useAuth } from "@/hooks/useAuth";
 import ProtectedRoute from "@/components/auth/ProtectedRoute";
+import { ProfileProvider } from "@/context/ProfileContext";
 
 export default function WorkspaceLayout({
   children,
@@ -15,6 +16,7 @@ export default function WorkspaceLayout({
 
   return (
     <ProtectedRoute>
+      <ProfileProvider>
       <style jsx global>{`
         @import url("https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&family=Inter:wght@400;500;600;700&display=swap");
 
@@ -82,6 +84,7 @@ export default function WorkspaceLayout({
           <div className="flex-1 bg-white overflow-y-auto p-8">{children}</div>
         </div>
       </div>
+      </ProfileProvider>
     </ProtectedRoute>
   );
 }

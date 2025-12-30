@@ -1,6 +1,9 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { settingsService } from '@/services/settings.service';
 import { FarmSettings, UpdateFarmSettingsData, DeleteFarmAccountData } from '@/types/settings.types';
+
+// Custom event to notify all components
+const FARM_SETTINGS_UPDATED_EVENT = 'farmSettings:updated';
 
 export const useFarmSettings = () => {
   const [farmSettings, setFarmSettings] = useState<FarmSettings | null>(null);
@@ -45,6 +48,19 @@ export const useFarmSettings = () => {
     }
   }, [showAlert]);
 
+  // Listen for updates from other components
+  useEffect(() => {
+    const handleFarmSettingsUpdate = () => {
+      fetchFarmSettings();
+    };
+
+    window.addEventListener(FARM_SETTINGS_UPDATED_EVENT, handleFarmSettingsUpdate);
+    
+    return () => {
+      window.removeEventListener(FARM_SETTINGS_UPDATED_EVENT, handleFarmSettingsUpdate);
+    };
+  }, [fetchFarmSettings]);
+
   // Update farm settings
   const updateFarmSettings = useCallback(async (data: UpdateFarmSettingsData) => {
     try {
@@ -62,6 +78,9 @@ export const useFarmSettings = () => {
       }
       
       showAlert('success', response.message || "Farm settings updated successfully");
+      
+      // Notify ALL other components (like Sidebar) to refresh
+      window.dispatchEvent(new CustomEvent(FARM_SETTINGS_UPDATED_EVENT));
       
       return response;
     } catch (err: any) {
