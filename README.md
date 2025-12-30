@@ -355,8 +355,7 @@ Farm_Management/
 │   │   ├── 📁 utils/                # Helper functions
 │   │   └── server.js                # Express app entry point
 │   ├── database-setup.sql           # PostgreSQL schema
-│   ├── package.json
-│   └── .env.example
+│   └── package.json
 │
 ├── 📁 frontend/                     # Next.js frontend
 │   ├── 📁 src/
@@ -499,34 +498,33 @@ cd backend
 # Install dependencies
 npm install
 
-# Create environment file
-copy .env.example .env   # Windows
-# OR
-cp .env.example .env     # macOS/Linux
-
-# Edit .env file with your database credentials
+# Create .env file with your database credentials
 ```
 
-**`.env` Configuration:**
+**Create a `.env` file in the `backend` folder with the following content:**
 
 ```env
-# Database
-DATABASE_URL="postgresql://postgres:yourpassword@localhost:5432/farmhub"
-
-# JWT
-JWT_SECRET="your-super-secret-jwt-key-change-this-in-production"
-JWT_EXPIRES_IN="7d"
-
-# Server
+DATABASE_URL="postgresql://YOUR_USERNAME:YOUR_PASSWORD@YOUR_HOST/YOUR_DATABASE?sslmode=require"
+DIRECT_URL="postgresql://YOUR_USERNAME:YOUR_PASSWORD@YOUR_DIRECT_HOST/YOUR_DATABASE?sslmode=require"
+JWT_SECRET="your-secret-key-here"
 PORT=5000
-NODE_ENV="development"
-
-# CORS (frontend URL)
-FRONTEND_URL="http://localhost:3000"
-
-# Weather API (optional - get free key from openweathermap.org)
-WEATHER_API_KEY="your-weather-api-key"
 ```
+
+> [!CAUTION]
+> **Security Warning**: Replace the placeholder values above with your actual database credentials. 
+
+**For local PostgreSQL setup:**
+```env
+DATABASE_URL="postgresql://postgres:yourpassword@localhost:5432/farmhub"
+DIRECT_URL="postgresql://postgres:yourpassword@localhost:5432/farmhub"
+JWT_SECRET="your-secret-jwt-key-change-this"
+PORT=5000
+```
+
+**For Neon (cloud) PostgreSQL:**
+- Sign up at [Neon.tech](https://neon.tech)
+- Create a new project and database
+- Copy the connection strings from your Neon dashboard
 
 #### Run Prisma Migrations
 
@@ -561,15 +559,10 @@ cd frontend
 # Install dependencies
 npm install
 
-# Create environment file
-copy .env.example .env.local   # Windows
-# OR
-cp .env.example .env.local     # macOS/Linux
-
-# Edit .env.local with backend URL
+# Create .env.local file with the following content
 ```
 
-**`.env.local` Configuration:**
+**Create a `.env.local` file in the `frontend` folder with the following content:**
 
 ```env
 NEXT_PUBLIC_API_URL=http://localhost:5000
@@ -768,7 +761,7 @@ This project was developed using **Agile Scrum** with the following structure:
 ### Collaboration Tools
 
 - **Version Control**: Git with feature branches
-- **Project Management**: Jira (see [jira-backlog.csv](jira-backlog.csv))
+- **Project Management**: Jira
 - **Communication**: Daily standups, Slack
 - **Code Review**: Pull requests with peer review
 
@@ -886,6 +879,9 @@ This project was collaboratively developed by a dedicated team of students:
       </a>
       <br />
       <sub>Frontend Developer</sub>
+      <br />
+      <sub>Team Leader</sub>
+      <br />
     </td>
   </tr>
 </table>
