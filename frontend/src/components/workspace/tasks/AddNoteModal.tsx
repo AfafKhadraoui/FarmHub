@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState } from "react";
+import { toast } from "sonner";
 import { Modal } from "../modals/Modal";
 import { Button } from "@/components/ui/button";
 import api from "@/lib/api";
@@ -30,7 +31,7 @@ export function AddNoteModal({
 
   const handleSubmit = async () => {
     if (!note.trim()) {
-      alert("Please enter a note");
+      toast.error("Please enter a note");
       return;
     }
 
@@ -65,7 +66,7 @@ export function AddNoteModal({
       onClose();
     } catch (error: any) {
       console.error("Failed to add note:", error);
-      alert(error?.response?.data?.message || "Failed to add note. Please try again.");
+      toast.error(error?.response?.data?.message || "Failed to add note. Please try again.");
     } finally {
       setIsLoading(false);
     }

@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { toast } from 'sonner';
 import { Modal } from '@/components/workspace/modals/Modal';
 import { Button } from '@/components/ui/button';
 import api from '@/lib/api';
@@ -75,16 +76,16 @@ export default function AssignTaskModal({ isOpen, onClose, worker, onAssigned }:
       }
 
       if (toAssign.length === 0 && toUnassign.length === 0) {
-        alert('No changes to assignments');
+        toast.info('No changes to assignments');
       } else {
-        alert('Assignments updated');
+        toast.success('Assignments updated');
       }
 
       onAssigned?.();
       onClose();
     } catch (err) {
       console.error('Failed to update assignments', err);
-      alert('Failed to update assignments. See console for details.');
+      toast.error('Failed to update assignments. See console for details.');
     } finally {
       setLoading(false);
     }

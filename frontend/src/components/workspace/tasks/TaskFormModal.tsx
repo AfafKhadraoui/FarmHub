@@ -2,6 +2,7 @@
 'use client';
 
 import { useState } from 'react';
+import { toast } from 'sonner';
 import { Modal } from '@/components/workspace/modals/Modal';
 import { TaskForm } from './TaskForm';
 import api from '@/lib/api';
@@ -65,7 +66,7 @@ export function TaskFormModal({ isOpen, onClose, onSuccess, initialData }: TaskF
       onSuccess();
     } catch (error: any) {
       console.error('Error saving task:', error);
-      alert(error?.response?.data?.message || 'Failed to save task. Please try again.');
+      toast.error(error?.response?.data?.message || 'Failed to save task. Please try again.');
     } finally {
       setIsSubmitting(false);
     }
