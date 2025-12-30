@@ -42,7 +42,7 @@ export default function Navbar() {
               <img src="/images/img_icon.svg" alt="" className="w-6 h-6" />
               <div>
                 <p className="text-xs text-gray-600">Email</p>
-                <p className="text-sm font-bold">ambed@agrios.com</p>
+                <p className="text-sm font-bold">support@farmhub.com</p>
               </div>
             </div>
           </div>
