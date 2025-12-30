@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { User, Settings, Lock, Bell, HelpCircle, LogOut } from "lucide-react";
 import { useProfile } from "@/context/ProfileContext";
 import { Modal } from "./modals/Modal";
+import { authService } from "@/services/auth.service";
 
 interface ProfileDropdownProps {
   isOpen: boolean;
@@ -67,11 +68,11 @@ export function ProfileDropdown({
     setShowLogoutModal(true);
   };
 
+
   const confirmLogout = () => {
     setShowLogoutModal(false);
     onClose(); // Close dropdown
-    localStorage.removeItem("accessToken");
-    document.cookie = "token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
+    authService.logout();
     router.push("/login");
   };
 
