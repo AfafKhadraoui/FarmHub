@@ -11,6 +11,7 @@ import { ProfileCard } from "@/components/workspace/profile/ProfileCard";
 import { PerformanceStats } from "@/components/workspace/profile/PerformanceStats";
 import { SecuritySettings } from "@/components/workspace/profile/SecuritySettings";
 import { LogoutModal } from "@/components/workspace/modals/LogoutModal";
+import { authService } from "@/services/auth.service";
 
 export default function ProfilePage() {
   const { user } = useAuth();
@@ -68,8 +69,7 @@ export default function ProfilePage() {
   };
 
   const handleLogout = () => {
-    localStorage.removeItem("accessToken");
-    document.cookie = "token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
+    authService.logout();
     router.push("/login");
   };
 
