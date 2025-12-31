@@ -19,6 +19,9 @@ const coveredByYourGrace = Covered_By_Your_Grace({
 export const metadata: Metadata = {
   title: 'FarmHub',
   description: 'Smart Farm Management Platform',
+  icons: {
+    icon: '/images/website_logo.png',
+  },
 };
 
 export default function RootLayout({
