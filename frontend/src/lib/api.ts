@@ -21,7 +21,12 @@ api.interceptors.request.use(
       return match ? decodeURIComponent(match[1]) : null;
     };
 
-    const token = getTokenFromCookies();
+    let token = getTokenFromCookies();
+    
+    // Fallback to localStorage if no cookie token found (fixes 404/401 on reload)
+    if (!token && typeof window !== 'undefined') {
+      token = localStorage.getItem('accessToken') || localStorage.getItem('token');
+    }
     if (token) {
       config.headers = config.headers || {};
       // Use Authorization header when a token is available

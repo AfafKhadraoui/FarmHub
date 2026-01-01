@@ -12,6 +12,7 @@ import {
   RefreshCw,
   AlertCircle,
 } from "lucide-react";
+import { toast } from "sonner";
 import { useDashboardStats } from '@/hooks/useDashboardStats';
 import { WorkerDashboardResponse } from '@/types/dashboard.types';
 import { TaskCard } from '@/components/workspace/tasks/TaskCard';
@@ -53,7 +54,7 @@ export function WorkerDashboard() {
         // handled by TaskCard
         break;
       default:
-        alert(`Status updated to: ${status}`);
+        toast.success(`Status updated to: ${status}`);
         refreshStats();
     }
     setShowStatusDropdown(false);

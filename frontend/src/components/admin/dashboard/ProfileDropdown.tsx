@@ -5,6 +5,7 @@ import { useRef, useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { useQuery } from '@tanstack/react-query';
 import { adminProfileService } from '@/services/admin.profile.service';
+import { authService } from '@/services/auth.service';
 import { useRouter } from 'next/navigation';
 
 interface ProfileDropdownProps {
@@ -71,7 +72,7 @@ export default function ProfileDropdown({
   }, [isOpen, onClose]);
 
   const handleLogout = () => {
-    localStorage.removeItem('token');
+    authService.logout();
     setShowLogoutModal(false);
     onClose();
     router.push('/admin/login');

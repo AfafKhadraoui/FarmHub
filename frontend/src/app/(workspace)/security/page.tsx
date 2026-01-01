@@ -1,452 +1,464 @@
-// src/app/security/page.tsx
 'use client';
 
-import { useEffect, useState } from 'react';
-import { Shield, Lock, Bell, Monitor, LogOut, Smartphone } from 'lucide-react';
-import  api  from '@/lib/api';
-import { Switch } from '@/components/ui/switch';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
+import { useState } from 'react';
+import {
+  Shield,
+  Lock,
+  Key,
+  Server,
+  Eye,
+  EyeOff,
+  ChevronDown,
+  ChevronUp,
+  CheckCircle2,
+  AlertTriangle,
+  Mail,
+  Phone,
+  Clock,
+  Database,
+  FileText,
+  UserCheck,
+} from 'lucide-react';
 
-interface ActiveSession {
+interface SecurityBestPractice {
   id: string;
-  device: string;
-  browser: string;
-  location: string;
-  lastActive: string;
-  current: boolean;
+  title: string;
+  icon: React.ReactNode;
+  iconBg: string;
+  iconColor: string;
+  description: string;
+  details: string[];
+}
+
+interface PrivacyItem {
+  title: string;
+  description: string;
+  icon: React.ReactNode;
 }
 
 export default function SecurityPage() {
-  const [loginAlerts, setLoginAlerts] = useState(true);
-  const [loadingPrefs, setLoadingPrefs] = useState(true);
-  const [savingPrefs, setSavingPrefs] = useState(false);
+  const [expandedPractice, setExpandedPractice] = useState<string | null>(null);
+  const [checkedItems, setCheckedItems] = useState<Set<number>>(new Set());
 
-  const [currentPassword, setCurrentPassword] = useState('');
-  const [newPassword, setNewPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
-  const [changingPassword, setChangingPassword] = useState(false);
-  const [passwordError, setPasswordError] = useState('');
+  const securityPractices: SecurityBestPractice[] = [
+    {
+      id: 'passwords',
+      title: 'Strong Passwords',
+      icon: <Lock size={24} />,
+      iconBg: 'bg-blue-50',
+      iconColor: 'text-blue-600',
+      description: 'Create strong, unique passwords to protect your account',
+      details: [
+        'Use at least 12 characters with a mix of letters, numbers, and symbols',
+        'Avoid using personal information like birthdays or names',
+        'Never reuse passwords across multiple accounts',
+        'Consider using a password manager for secure storage',
+        'Change your password if you suspect any unauthorized access',
+      ],
+    },
+    {
+      id: 'account',
+      title: 'Account Security',
+      icon: <Shield size={24} />,
+      iconBg: 'bg-green-50',
+      iconColor: 'text-[var(--admin-primary)]',
+      description: 'Recognize and prevent unauthorized access attempts',
+      details: [
+        'Be cautious of phishing emails asking for your credentials',
+        'Never share your password with anyone, including support staff',
+        'Log out from shared or public devices after use',
+        'Review your account activity regularly for suspicious behavior',
+        'Enable email notifications for new device logins',
+      ],
+    },
+    {
+      id: 'devices',
+      title: 'Device Security',
+      icon: <Server size={24} />,
+      iconBg: 'bg-purple-50',
+      iconColor: 'text-purple-600',
+      description: 'Keep your devices updated and secure',
+      details: [
+        'Install security updates and patches promptly',
+        'Use antivirus software and keep it updated',
+        'Only download FarmHub from official sources',
+        'Lock your devices with passwords or biometric authentication',
+        'Be cautious when connecting to public WiFi networks',
+      ],
+    },
+    {
+      id: 'backup',
+      title: 'Data Backup',
+      icon: <Database size={24} />,
+      iconBg: 'bg-yellow-50',
+      iconColor: 'text-[var(--admin-secondary)]',
+      description: 'Regularly backup your important farm data',
+      details: [
+        'FarmHub automatically backs up your data daily',
+        'Export your data periodically for personal records',
+        'Store backups in multiple secure locations',
+        'Verify backup integrity regularly',
+        'Keep backup access credentials separate and secure',
+      ],
+    },
+  ];
 
-  const [sessions, setSessions] = useState<ActiveSession[]>([]);
-  const [loadingSessions, setLoadingSessions] = useState(true);
+  const securityFeatures = [
+    {
+      title: 'End-to-End Encryption',
+      description: 'All your data is encrypted both in transit and at rest using industry-standard protocols',
+      icon: <Lock size={20} />,
+      iconBg: 'bg-blue-50',
+      iconColor: 'text-blue-600',
+    },
+    {
+      title: 'Secure Authentication',
+      description: 'Multi-layered authentication system with secure token management',
+      icon: <Key size={20} />,
+      iconBg: 'bg-green-50',
+      iconColor: 'text-[var(--admin-primary)]',
+    },
+    {
+      title: 'Regular Backups',
+      description: 'Automated daily backups ensure your farm data is never lost',
+      icon: <Server size={20} />,
+      iconBg: 'bg-purple-50',
+      iconColor: 'text-purple-600',
+    },
+    {
+      title: '24/7 Monitoring',
+      description: 'Continuous security monitoring to detect and prevent threats',
+      icon: <Shield size={20} />,
+      iconBg: 'bg-yellow-50',
+      iconColor: 'text-[var(--admin-secondary)]',
+    },
+  ];
 
-  // Load security preferences and active sessions
-  useEffect(() => {
-    const load = async () => {
-      try {
-        // Load security preferences
-        const prefsRes = await api.get('/settings/security').catch(() => ({ data: { loginAlerts: true } }));
-        setLoginAlerts(Boolean(prefsRes.data.loginAlerts));
+  const privacyItems: PrivacyItem[] = [
+    {
+      title: 'Your Data Rights',
+      description: 'We collect only essential data to provide FarmHub services: farm information, field data, task management, and user profiles. You have full control over your data.',
+      icon: <FileText size={20} />,
+    },
+    {
+      title: 'Data Storage',
+      description: 'Your data is stored on secure, encrypted servers with multiple redundancy layers. We use industry-leading cloud infrastructure with 99.9% uptime.',
+      icon: <Database size={20} />,
+    },
+    {
+      title: 'Data Retention',
+      description: 'Active account data is retained as long as you use FarmHub. Deleted data is permanently removed within 30 days, excluding legally required records.',
+      icon: <Clock size={20} />,
+    },
+    {
+      title: 'Data Access',
+      description: 'Only you and authorized farm members can access your data. Our staff access data only for support requests with your explicit permission.',
+      icon: <UserCheck size={20} />,
+    },
+  ];
 
-        // Load active sessions
-        const sessionsRes = await api.get('/auth/sessions').catch(() => ({ data: { sessions: getDummySessions() } }));
-        setSessions(sessionsRes.data.sessions || sessionsRes.data || getDummySessions());
-      } catch (error) {
-        console.error('Error loading security data:', error);
-        setLoginAlerts(true);
-        setSessions(getDummySessions());
-      } finally {
-        setLoadingPrefs(false);
-        setLoadingSessions(false);
-      }
-    };
-    load();
-  }, []);
+  const securityChecklist = [
+    'Use a strong, unique password for your FarmHub account',
+    'Never share your login credentials with anyone',
+    'Log out when using shared or public devices',
+    'Review your active sessions regularly',
+    'Keep your contact information up to date',
+    'Be cautious of suspicious emails or messages',
+    'Report any security concerns immediately',
+  ];
 
-  // Dummy sessions for demo
-  function getDummySessions(): ActiveSession[] {
-    return [
-      {
-        id: 'session_1',
-        device: 'Windows Desktop',
-        browser: 'Chrome',
-        location: 'Algiers, Algeria',
-        lastActive: new Date().toISOString(),
-        current: true,
-      },
-      {
-        id: 'session_2',
-        device: 'iPhone',
-        browser: 'Safari',
-        location: 'Algiers, Algeria',
-        lastActive: new Date(Date.now() - 2 * 3600 * 1000).toISOString(),
-        current: false,
-      },
-    ];
-  }
-
-  const handleSavePrefs = async () => {
-    setSavingPrefs(true);
-    try {
-      await api.put('/settings/security', { loginAlerts });
-      // optionally show toast here
-    } finally {
-      setSavingPrefs(false);
-    }
+  const togglePractice = (id: string) => {
+    setExpandedPractice(expandedPractice === id ? null : id);
   };
 
-  const handleChangePassword = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setPasswordError('');
-
-    if (!currentPassword || !newPassword || !confirmPassword) {
-      setPasswordError('All fields are required');
-      return;
+  const toggleChecklistItem = (index: number) => {
+    const newChecked = new Set(checkedItems);
+    if (newChecked.has(index)) {
+      newChecked.delete(index);
+    } else {
+      newChecked.add(index);
     }
-
-    if (newPassword !== confirmPassword) {
-      setPasswordError('New passwords do not match');
-      return;
-    }
-
-    if (newPassword.length < 8) {
-      setPasswordError('Password must be at least 8 characters long');
-      return;
-    }
-
-    setChangingPassword(true);
-    try {
-      await api.post('/auth/change-password', {
-        currentPassword,
-        newPassword,
-      });
-      setCurrentPassword('');
-      setNewPassword('');
-      setConfirmPassword('');
-      alert('Password updated successfully!');
-    } catch (error: any) {
-      if (error?.response?.status === 404 || error?.response?.status >= 500) {
-        console.warn('Backend not available, using demo mode');
-        alert('Password updated successfully! (Demo mode - backend unavailable)');
-        setCurrentPassword('');
-        setNewPassword('');
-        setConfirmPassword('');
-      } else {
-        setPasswordError(error?.response?.data?.error || 'Failed to update password. Please try again.');
-      }
-    } finally {
-      setChangingPassword(false);
-    }
-  };
-
-  const handleLogoutSession = async (sessionId: string) => {
-    if (!confirm('Are you sure you want to logout from this device?')) {
-      return;
-    }
-
-    try {
-      await api.delete(`/auth/sessions/${sessionId}`);
-      setSessions(sessions.filter(s => s.id !== sessionId));
-      alert('Logged out successfully from that device');
-    } catch (error: any) {
-      if (error?.response?.status === 404 || error?.response?.status >= 500) {
-        console.warn('Backend not available, using demo mode');
-        setSessions(sessions.filter(s => s.id !== sessionId));
-        alert('Logged out successfully! (Demo mode)');
-      } else {
-        alert('Failed to logout from that device. Please try again.');
-      }
-    }
-  };
-
-  const handleLogoutAll = async () => {
-    if (!confirm('Are you sure you want to logout from all devices? You will need to login again.')) {
-      return;
-    }
-
-    try {
-      await api.post('/auth/logout-all');
-      alert('Logged out from all devices. Please login again.');
-      window.location.href = '/login';
-    } catch (error: any) {
-      if (error?.response?.status === 404 || error?.response?.status >= 500) {
-        console.warn('Backend not available, using demo mode');
-        alert('Logged out from all devices! (Demo mode)');
-        window.location.href = '/login';
-      } else {
-        alert('Failed to logout from all devices. Please try again.');
-      }
-    }
+    setCheckedItems(newChecked);
   };
 
   return (
     <div className="space-y-8">
-      {/* Header */}
-      <div>
-        <h1 className="text-[32px] font-extrabold" style={{ color: 'var(--admin-text-dark)' }}>
-          Security
-        </h1>
-        <p className="mt-1 text-sm" style={{ color: 'var(--admin-text-muted)' }}>
-          Manage your account security settings and active sessions
-        </p>
+      {/* Hero Section */}
+      <div className="relative overflow-hidden rounded-[24px] bg-gradient-to-br from-[var(--admin-primary)] to-[#81C784] p-12 shadow-lg">
+        <div className="relative z-10 flex items-center gap-6">
+          <div className="h-20 w-20 rounded-2xl bg-white/20 backdrop-blur-sm flex items-center justify-center">
+            <Shield size={44} className="text-white" strokeWidth={2} />
+          </div>
+          <div>
+            <h1
+              className="text-[40px] font-bold text-white mb-2"
+              style={{ fontFamily: 'Poppins, sans-serif' }}
+            >
+              Security & Privacy
+            </h1>
+            <p
+              className="text-[18px] text-white/90"
+              style={{ fontFamily: 'Inter, sans-serif' }}
+            >
+              Your trust is our priority. Learn how FarmHub protects your data and account.
+            </p>
+          </div>
+        </div>
+        {/* Decorative circles */}
+        <div className="absolute -right-8 -top-8 h-40 w-40 rounded-full bg-white/10" />
+        <div className="absolute -right-16 -bottom-16 h-56 w-56 rounded-full bg-white/10" />
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Change password */}
-        <div 
-          className="rounded-[24px] border bg-white p-8 shadow-sm"
-          style={{ borderColor: 'var(--admin-border)' }}
+      {/* Security Best Practices */}
+      <div>
+        <h2
+          className="text-[24px] font-semibold mb-6"
+          style={{ color: 'var(--admin-text-dark)', fontFamily: 'Poppins, sans-serif' }}
         >
-          <div className="flex items-center gap-3 mb-4">
-            <div className="h-12 w-12 rounded-full bg-blue-50 flex items-center justify-center">
-              <Lock size={24} className="text-blue-600" />
+          Security Best Practices
+        </h2>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
+          {securityPractices.map((practice) => (
+            <div
+              key={practice.id}
+              className="rounded-[24px] border bg-white p-8 shadow-sm transition-all hover:shadow-md"
+              style={{ borderColor: 'var(--admin-border)' }}
+            >
+              <div className="flex items-start gap-4 mb-4">
+                <div className={`h-14 w-14 rounded-xl ${practice.iconBg} flex items-center justify-center flex-shrink-0`}>
+                  <div className={practice.iconColor}>{practice.icon}</div>
+                </div>
+                <div className="flex-1">
+                  <h3
+                    className="text-[18px] font-semibold mb-2"
+                    style={{ color: 'var(--admin-text-dark)', fontFamily: 'Poppins, sans-serif' }}
+                  >
+                    {practice.title}
+                  </h3>
+                  <p
+                    className="text-[14px] leading-relaxed"
+                    style={{ color: 'var(--admin-text-muted)', fontFamily: 'Inter, sans-serif' }}
+                  >
+                    {practice.description}
+                  </p>
+                </div>
+              </div>
+
+              <button
+                onClick={() => togglePractice(practice.id)}
+                className="flex items-center gap-2 text-[14px] font-semibold transition-colors hover:text-[var(--admin-primary)] mt-4"
+                style={{
+                  color: expandedPractice === practice.id ? 'var(--admin-primary)' : 'var(--admin-text-muted)',
+                  fontFamily: 'Inter, sans-serif',
+                }}
+              >
+                {expandedPractice === practice.id ? 'Show less' : 'Learn more'}
+                {expandedPractice === practice.id ? (
+                  <ChevronUp size={16} />
+                ) : (
+                  <ChevronDown size={16} />
+                )}
+              </button>
+
+              {expandedPractice === practice.id && (
+                <div className="mt-4 space-y-2 animate-in slide-in-from-top-2">
+                  {practice.details.map((detail, idx) => (
+                    <div key={idx} className="flex items-start gap-2">
+                      <CheckCircle2 size={16} className="text-[var(--admin-primary)] mt-0.5 flex-shrink-0" />
+                      <p
+                        className="text-[13px] leading-relaxed"
+                        style={{ color: 'var(--admin-text-dark)', fontFamily: 'Inter, sans-serif' }}
+                      >
+                        {detail}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
-            <div>
-              <h2 className="text-base font-semibold" style={{ color: 'var(--admin-text-dark)' }}>
-                Change Password
-              </h2>
-              <p className="text-xs mt-1" style={{ color: 'var(--admin-text-muted)' }}>
-                Use a strong, unique password
+          ))}
+        </div>
+      </div>
+
+      {/* Security Features Overview */}
+      <div>
+        <h2
+          className="text-[24px] font-semibold mb-6"
+          style={{ color: 'var(--admin-text-dark)', fontFamily: 'Poppins, sans-serif' }}
+        >
+          How FarmHub Protects You
+        </h2>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          {securityFeatures.map((feature, idx) => (
+            <div
+              key={idx}
+              className="rounded-[24px] border bg-white p-6 shadow-sm transition-all hover:shadow-md hover:scale-105"
+              style={{ borderColor: 'var(--admin-border)' }}
+            >
+              <div className={`h-12 w-12 rounded-xl ${feature.iconBg} flex items-center justify-center mb-4`}>
+                <div className={feature.iconColor}>{feature.icon}</div>
+              </div>
+              <h3
+                className="text-[16px] font-semibold mb-2"
+                style={{ color: 'var(--admin-text-dark)', fontFamily: 'Poppins, sans-serif' }}
+              >
+                {feature.title}
+              </h3>
+              <p
+                className="text-[13px] leading-relaxed"
+                style={{ color: 'var(--admin-text-muted)', fontFamily: 'Inter, sans-serif' }}
+              >
+                {feature.description}
               </p>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Privacy & Data Protection */}
+      <div>
+        <h2
+          className="text-[24px] font-semibold mb-6"
+          style={{ color: 'var(--admin-text-dark)', fontFamily: 'Poppins, sans-serif' }}
+        >
+          Privacy & Data Protection
+        </h2>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {privacyItems.map((item, idx) => (
+            <div
+              key={idx}
+              className="rounded-[24px] border bg-white p-8 shadow-sm"
+              style={{ borderColor: 'var(--admin-border)' }}
+            >
+              <div className="flex items-start gap-4">
+                <div className="h-12 w-12 rounded-xl bg-slate-50 flex items-center justify-center flex-shrink-0">
+                  <div className="text-slate-600">{item.icon}</div>
+                </div>
+                <div>
+                  <h3
+                    className="text-[16px] font-semibold mb-2"
+                    style={{ color: 'var(--admin-text-dark)', fontFamily: 'Poppins, sans-serif' }}
+                  >
+                    {item.title}
+                  </h3>
+                  <p
+                    className="text-[14px] leading-relaxed"
+                    style={{ color: 'var(--admin-text-muted)', fontFamily: 'Inter, sans-serif' }}
+                  >
+                    {item.description}
+                  </p>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Security Checklist */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="lg:col-span-2">
+          <div
+            className="rounded-[24px] border bg-white p-8 shadow-sm"
+            style={{ borderColor: 'var(--admin-border)' }}
+          >
+            <div className="flex items-center gap-3 mb-6">
+              <div className="h-12 w-12 rounded-xl bg-green-50 flex items-center justify-center">
+                <CheckCircle2 size={24} className="text-[var(--admin-primary)]" />
+              </div>
+              <div>
+                <h3
+                  className="text-[18px] font-semibold"
+                  style={{ color: 'var(--admin-text-dark)', fontFamily: 'Poppins, sans-serif' }}
+                >
+                  Security Checklist
+                </h3>
+                <p
+                  className="text-[13px]"
+                  style={{ color: 'var(--admin-text-muted)', fontFamily: 'Inter, sans-serif' }}
+                >
+                  Follow these recommendations to keep your account secure
+                </p>
+              </div>
+            </div>
+            <div className="space-y-3">
+              {securityChecklist.map((item, idx) => (
+                <div
+                  key={idx}
+                  className="flex items-start gap-3 p-3 rounded-lg hover:bg-gray-50 transition-colors cursor-pointer"
+                  onClick={() => toggleChecklistItem(idx)}
+                >
+                  <div
+                    className={`h-5 w-5 rounded flex items-center justify-center flex-shrink-0 mt-0.5 transition-all ${
+                      checkedItems.has(idx)
+                        ? 'bg-[var(--admin-primary)]'
+                        : 'border-2 border-gray-300'
+                    }`}
+                  >
+                    {checkedItems.has(idx) && (
+                      <CheckCircle2 size={14} className="text-white" />
+                    )}
+                  </div>
+                  <p
+                    className={`text-[14px] leading-relaxed ${
+                      checkedItems.has(idx) ? 'line-through' : ''
+                    }`}
+                    style={{
+                      color: checkedItems.has(idx) ? 'var(--admin-text-muted)' : 'var(--admin-text-dark)',
+                      fontFamily: 'Inter, sans-serif',
+                    }}
+                  >
+                    {item}
+                  </p>
+                </div>
+              ))}
             </div>
           </div>
-
-          <form className="space-y-4" onSubmit={handleChangePassword}>
-            <div>
-              <Label 
-                htmlFor="currentPassword"
-                className="text-sm font-semibold mb-2 block"
-                style={{ color: 'var(--admin-text-dark)' }}
-              >
-                Current Password <span className="text-red-500">*</span>
-              </Label>
-              <Input
-                id="currentPassword"
-                type="password"
-                className="h-12 rounded-xl"
-                style={{ 
-                  borderColor: 'var(--admin-border)',
-                  color: 'var(--admin-text-dark)'
-                }}
-                value={currentPassword}
-                onChange={e => {
-                  setCurrentPassword(e.target.value);
-                  setPasswordError('');
-                }}
-                required
-              />
-            </div>
-            <div>
-              <Label 
-                htmlFor="newPassword"
-                className="text-sm font-semibold mb-2 block"
-                style={{ color: 'var(--admin-text-dark)' }}
-              >
-                New Password <span className="text-red-500">*</span>
-              </Label>
-              <Input
-                id="newPassword"
-                type="password"
-                className="h-12 rounded-xl"
-                style={{ 
-                  borderColor: 'var(--admin-border)',
-                  color: 'var(--admin-text-dark)'
-                }}
-                value={newPassword}
-                onChange={e => {
-                  setNewPassword(e.target.value);
-                  setPasswordError('');
-                }}
-                required
-              />
-            </div>
-            <div>
-              <Label 
-                htmlFor="confirmPassword"
-                className="text-sm font-semibold mb-2 block"
-                style={{ color: 'var(--admin-text-dark)' }}
-              >
-                Confirm New Password <span className="text-red-500">*</span>
-              </Label>
-              <Input
-                id="confirmPassword"
-                type="password"
-                className="h-12 rounded-xl"
-                style={{ 
-                  borderColor: passwordError ? 'var(--admin-red)' : 'var(--admin-border)',
-                  color: 'var(--admin-text-dark)'
-                }}
-                value={confirmPassword}
-                onChange={e => {
-                  setConfirmPassword(e.target.value);
-                  setPasswordError('');
-                }}
-                required
-              />
-            </div>
-
-            {passwordError && (
-              <p className="text-sm" style={{ color: 'var(--admin-red)' }}>
-                {passwordError}
-              </p>
-            )}
-
-            <Button
-              type="submit"
-              disabled={changingPassword || !currentPassword || !newPassword || !confirmPassword}
-              className="w-full h-12 rounded-xl text-white text-sm font-semibold"
-              style={{ backgroundColor: 'var(--admin-primary)' }}
-            >
-              {changingPassword ? 'Updating...' : 'Update Password'}
-            </Button>
-          </form>
         </div>
 
-        {/* Login alerts toggle */}
-        <div 
-          className="rounded-[24px] border bg-white p-8 shadow-sm"
-          style={{ borderColor: 'var(--admin-border)' }}
-        >
-          <div className="flex items-center gap-3 mb-4">
-            <div className="h-12 w-12 rounded-full bg-purple-50 flex items-center justify-center">
-              <Bell size={24} className="text-purple-600" />
+        {/* Emergency Contact */}
+        <div>
+          <div
+            className="rounded-[24px] border bg-gradient-to-br from-red-50 to-orange-50 p-8 shadow-sm h-full"
+            style={{ borderColor: 'var(--admin-border)' }}
+          >
+            <div className="h-12 w-12 rounded-xl bg-red-100 flex items-center justify-center mb-4">
+              <AlertTriangle size={24} className="text-red-600" />
             </div>
-            <div>
-              <h2 className="text-base font-semibold" style={{ color: 'var(--admin-text-dark)' }}>
-                Login Alerts
-              </h2>
-              <p className="text-xs mt-1" style={{ color: 'var(--admin-text-muted)' }}>
-                Get notified of new logins
-              </p>
-            </div>
-          </div>
-
-          <div className="space-y-4">
-            <div className="flex items-center justify-between gap-4 p-4 rounded-xl" style={{ backgroundColor: 'var(--admin-bg-gray)' }}>
-              <div>
-                <span className="text-sm font-medium block" style={{ color: 'var(--admin-text-dark)' }}>
-                  Email notifications
-                </span>
-                <span className="text-xs block mt-1" style={{ color: 'var(--admin-text-muted)' }}>
-                  Receive email when a new device logs in
+            <h3
+              className="text-[18px] font-semibold mb-3"
+              style={{ color: 'var(--admin-text-dark)', fontFamily: 'Poppins, sans-serif' }}
+            >
+              Security Concerns?
+            </h3>
+            <p
+              className="text-[14px] leading-relaxed mb-6"
+              style={{ color: 'var(--admin-text-muted)', fontFamily: 'Inter, sans-serif' }}
+            >
+              If you notice any suspicious activity or have security concerns, contact us immediately.
+            </p>
+            <div className="space-y-3">
+              <div className="flex items-center gap-3">
+                <Mail size={18} className="text-red-600" />
+                <a
+                  href="mailto:security@farmhub.com"
+                  className="text-[14px] font-medium text-red-600 hover:underline"
+                  style={{ fontFamily: 'Inter, sans-serif' }}
+                >
+                  security@farmhub.com
+                </a>
+              </div>
+              <div className="flex items-center gap-3">
+                <Clock size={18} className="text-red-600" />
+                <span
+                  className="text-[13px]"
+                  style={{ color: 'var(--admin-text-muted)', fontFamily: 'Inter, sans-serif' }}
+                >
+                  Response within 24 hours
                 </span>
               </div>
-              <Switch
-                disabled={loadingPrefs}
-                checked={loginAlerts}
-                onCheckedChange={setLoginAlerts}
-              />
             </div>
-
-            <Button
-              type="button"
-              disabled={loadingPrefs || savingPrefs}
-              onClick={handleSavePrefs}
-              className="w-full h-12 rounded-xl text-sm font-semibold"
-              style={{ 
-                backgroundColor: 'var(--admin-bg-gray)',
-                color: 'var(--admin-text-dark)'
-              }}
-            >
-              {savingPrefs ? 'Saving...' : 'Save Changes'}
-            </Button>
           </div>
         </div>
-      </div>
-
-      {/* Active Sessions */}
-      <div 
-        className="rounded-[24px] border bg-white p-8 shadow-sm"
-        style={{ borderColor: 'var(--admin-border)' }}
-      >
-        <div className="flex items-center justify-between mb-6">
-          <div className="flex items-center gap-3">
-            <div className="h-12 w-12 rounded-full bg-green-50 flex items-center justify-center">
-              <Monitor size={24} className="text-green-600" />
-            </div>
-            <div>
-              <h2 className="text-base font-semibold" style={{ color: 'var(--admin-text-dark)' }}>
-                Active Sessions
-              </h2>
-              <p className="text-xs mt-1" style={{ color: 'var(--admin-text-muted)' }}>
-                Manage devices logged into your account
-              </p>
-            </div>
-          </div>
-          {sessions.length > 1 && (
-            <Button
-              type="button"
-              variant="outline"
-              className="h-10 rounded-xl text-sm font-semibold"
-              style={{ 
-                borderColor: 'var(--admin-red)',
-                color: 'var(--admin-red)'
-              }}
-              onClick={handleLogoutAll}
-            >
-              <LogOut size={16} className="mr-2" />
-              Logout All
-            </Button>
-          )}
-        </div>
-
-        {loadingSessions ? (
-          <p className="text-sm" style={{ color: 'var(--admin-text-muted)' }}>Loading sessions...</p>
-        ) : sessions.length === 0 ? (
-          <p className="text-sm" style={{ color: 'var(--admin-text-muted)' }}>No active sessions</p>
-        ) : (
-          <div className="space-y-3">
-            {sessions.map((session) => {
-              const isDesktop = session.device.toLowerCase().includes('windows') || session.device.toLowerCase().includes('mac') || session.device.toLowerCase().includes('desktop');
-              const DeviceIcon = isDesktop ? Monitor : Smartphone;
-              
-              return (
-                <div
-                  key={session.id}
-                  className="flex items-center justify-between p-4 rounded-xl border"
-                  style={{ borderColor: 'var(--admin-border)' }}
-                >
-                  <div className="flex items-center gap-4">
-                    <div className="h-12 w-12 rounded-full bg-slate-50 flex items-center justify-center">
-                      <DeviceIcon size={20} className="text-slate-600" />
-                    </div>
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <p className="text-sm font-semibold" style={{ color: 'var(--admin-text-dark)' }}>
-                          {session.device}
-                        </p>
-                        {session.current && (
-                          <span 
-                            className="text-xs px-2 py-1 rounded-full font-semibold"
-                            style={{ 
-                              backgroundColor: 'rgba(75, 175, 71, 0.1)',
-                              color: 'var(--admin-primary)'
-                            }}
-                          >
-                            Current
-                          </span>
-                        )}
-                      </div>
-                      <p className="text-xs mt-1" style={{ color: 'var(--admin-text-muted)' }}>
-                        {session.browser} • {session.location}
-                      </p>
-                      <p className="text-xs mt-1" style={{ color: 'var(--admin-text-muted)' }}>
-                        Last active: {new Date(session.lastActive).toLocaleString()}
-                      </p>
-                    </div>
-                  </div>
-                  {!session.current && (
-                    <Button
-                      type="button"
-                      variant="outline"
-                      className="h-10 rounded-xl text-sm font-semibold"
-                      style={{ 
-                        borderColor: 'var(--admin-border)',
-                        color: 'var(--admin-text-dark)'
-                      }}
-                      onClick={() => handleLogoutSession(session.id)}
-                    >
-                      <LogOut size={14} className="mr-2" />
-                      Logout
-                    </Button>
-                  )}
-                </div>
-              );
-            })}
-          </div>
-        )}
       </div>
     </div>
   );

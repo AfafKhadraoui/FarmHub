@@ -19,6 +19,9 @@ const coveredByYourGrace = Covered_By_Your_Grace({
 export const metadata: Metadata = {
   title: 'FarmHub',
   description: 'Smart Farm Management Platform',
+  icons: {
+    icon: '/images/website_logo.png',
+  },
 };
 
 export default function RootLayout({
@@ -27,7 +30,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en">
+    <html lang="en" className="scroll-smooth scroll-pt-[140px]">
       <head>
         <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0" />
       </head>

@@ -71,8 +71,8 @@ export default function Footer() {
               </div>
               <div className="flex items-center gap-3 text-gray-400">
                 <span className="text-orange-400">✉️</span>
-                <a href="mailto:ambed@agrios.com" className="hover:text-green-500 transition-colors">
-                  ambed@agrios.com
+                <a href="mailto:support@farmhub.com" className="hover:text-green-500 transition-colors">
+                  support@farmhub.com
                 </a>
               </div>
               <div className="flex items-center gap-3 text-gray-400">

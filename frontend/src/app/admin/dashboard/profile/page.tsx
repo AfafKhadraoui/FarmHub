@@ -22,7 +22,7 @@ export default function ProfileRoute() {
         rel="stylesheet"
       />
 
-      <div className="min-h-screen bg-[var(--admin-bg)]">
+      <div className="min-h-screen bg-white">
         <Sidebar
           activePage="profile"
           onPageChange={(page) =>

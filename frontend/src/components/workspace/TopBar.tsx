@@ -1,9 +1,9 @@
 "use client";
 
 import React, { useState, useRef, useEffect } from "react";
-import { Search, Bell } from "lucide-react";
+import { Bell } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
-import { useProfile } from "@/hooks/useProfile";
+import { useProfile } from "@/context/ProfileContext";
 import { NotificationsPanel } from "./NotificationsPanel";
 import { ProfileDropdown } from "./ProfileDropdown";
 
@@ -16,11 +16,9 @@ interface TopBarProps {
 export function TopBar({ userRole = "worker" }: TopBarProps) {
   const [showNotifications, setShowNotifications] = useState(false);
   const [showProfile, setShowProfile] = useState(false);
-  const [showSearch, setShowSearch] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
   const { user } = useAuth();
   const { profile } = useProfile();
-
   const bellRef = useRef<HTMLDivElement>(null);
   const profileRef = useRef<HTMLDivElement>(null);
 
@@ -56,26 +54,12 @@ export function TopBar({ userRole = "worker" }: TopBarProps) {
     if (!user) return "User";
     return user.role === "admin" ? "Farm Admin" : "Worker";
   };
+  const displayName = profile?.name || user?.name || "User";
+  const displayEmail = profile?.email || user?.email;
+
 
   return (
-    <div className="h-[72px] bg-white border-b border-[#E5E7EB] flex items-center justify-between px-8">
-      {/* Left - Empty space */}
-      <div className="flex-1" />
-
-      {/* Center - Search Bar */}
-      <div className="relative w-[400px]">
-        <Search
-          className="absolute left-4 top-1/2 transform -translate-y-1/2 text-[#9CA3AF]"
-          size={20}
-        />
-        <input
-          type="text"
-          placeholder="Search..."
-          onFocus={() => setShowSearch(true)}
-          className="w-full h-11 pl-12 pr-4 bg-white border border-[#E5E7EB] rounded-lg focus:outline-none focus:border-[#4CAF50] focus:ring-[3px] focus:ring-[#4CAF5019] transition-all cursor-pointer"
-        />
-      </div>
-
+    <div className="h-[72px] bg-white border-b border-[#E5E7EB] flex items-center justify-end px-8">
       {/* Right - Notifications + Profile */}
       <div className="flex-1 flex items-center justify-end gap-6">
         {/* Notification Bell */}
@@ -108,7 +92,7 @@ export function TopBar({ userRole = "worker" }: TopBarProps) {
         >
           <div className="w-12 h-12 rounded-full bg-linear-to-br from-[#4CAF50] to-[#81C784] flex items-center justify-center">
             <span className="text-white font-bold">
-              {getInitials(profile?.name || user?.name)}
+              {getInitials(displayName)}
             </span>
           </div>
           <div className="flex flex-col">
@@ -121,11 +105,6 @@ export function TopBar({ userRole = "worker" }: TopBarProps) {
             isOpen={showProfile}
             onClose={() => setShowProfile(false)}
             triggerRef={profileRef as React.RefObject<HTMLElement>}
-            userName={profile?.name || user?.name}
-            userRole={getUserRole()}
-            userEmail={profile?.email || user?.email}
-            userInitials={getInitials(profile?.name || user?.name)}
-            userRoleType={isAdmin ? "admin" : "worker"}
           />
         </div>
       </div>

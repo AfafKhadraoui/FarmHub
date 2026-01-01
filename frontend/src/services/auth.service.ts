@@ -70,9 +70,15 @@ async function registerWorker(data: RegisterWorkerRequest): Promise<RegisterResp
   return response.data;
 }
 
-// Logout (client-side only - clear localStorage)
+// Logout (client-side only - clear localStorage and cookies)
 function logout(): void {
   localStorage.removeItem('token');
+  localStorage.removeItem('accessToken');
+  
+  // Clear cookies with common paths to ensure they are removed
+  document.cookie = "token=; path=/; expires=Thu, 01 Jan 1970 00:00:01 GMT";
+  document.cookie = "accessToken=; path=/; expires=Thu, 01 Jan 1970 00:00:01 GMT";
+  
   // await api.post('/api/auth/logout');
 }
 

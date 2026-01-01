@@ -25,6 +25,8 @@ import { TaskFormModal } from './TaskFormModal';
 import api from '@/lib/api';
 import { deleteTask as serviceDeleteTask } from '@/services/task.service';
 import { loadWorkersCache, getWorkerFromCache } from '@/services/worker.service';
+import DeleteConfirmationModal from '../../common/DeleteConfirmationModal';
+import { toast } from 'sonner';
 
 interface TaskCardProps {
   mode: 'admin' | 'worker';
@@ -144,11 +146,14 @@ export function TaskCard({
   
   const { Icon, bg, color } = getTaskIcon(title);
 
-  const handleDelete = async () => {
-    if (!confirm(`Are you sure you want to delete "${title}"?`)) {
-      return;
-    }
+  // Delete Modal State
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
 
+  const handleDeleteClick = () => {
+    setShowDeleteModal(true);
+  }
+
+  const handleConfirmDelete = async () => {
     setIsDeleting(true);
     try {
       // Use shared service which enforces any client-side contracts
@@ -162,14 +167,16 @@ export function TaskCard({
       }
 
       onDelete?.();
+      toast.success('Task deleted successfully');
       // Soft refresh current route to update lists
       router.refresh();
     } catch (error: any) {
       console.error('Failed to delete task:', error);
       const message = error?.response?.data?.message || error?.message || 'Failed to delete task. Please try again.';
-      alert(message);
+      toast.error(message);
     } finally {
       setIsDeleting(false);
+      setShowDeleteModal(false);
     }
   };
 
@@ -322,7 +329,7 @@ export function TaskCard({
                   borderColor: 'var(--admin-red)',
                   color: 'var(--admin-red)'
                 }}
-                onClick={handleDelete}
+                onClick={handleDeleteClick}
                 disabled={isDeleting}
               >
                 {isDeleting ? 'Deleting...' : 'Delete'}
@@ -348,27 +355,39 @@ export function TaskCard({
             onClose={() => setShowAddNoteModal(false)}
             taskId={id}
             taskTitle={title}
+            currentStatus={status}
             onSuccess={handleSuccess}
           />
         </>
       )}
 
-          {mode === 'admin' && (
-        <TaskFormModal
-          isOpen={showEditModal}
-          onClose={() => setShowEditModal(false)}
-          onSuccess={handleEditSuccess}
-          initialData={{
-            id: id,
-            title: title,
-            description: task.description || '',
-            priority: priority.toLowerCase() as 'low' | 'medium' | 'high',
-            dueDate: due ? new Date(due).toISOString().slice(0, 16) : '',
-            fieldId: task.fieldId?.toString() || '',
-                assignedWorkers: resolvedAssignedWorkers,
-                assignedWorkerIds: assignedWorkerIds,
-          }}
-        />
+      {mode === 'admin' && (
+        <>
+          <TaskFormModal
+            isOpen={showEditModal}
+            onClose={() => setShowEditModal(false)}
+            onSuccess={handleEditSuccess}
+            initialData={{
+              id: id,
+              title: title,
+              description: task.description || '',
+              priority: priority.toLowerCase() as 'low' | 'medium' | 'high',
+              dueDate: due ? new Date(due).toISOString().slice(0, 16) : '',
+              fieldId: task.fieldId?.toString() || '',
+              assignedWorkers: resolvedAssignedWorkers,
+              assignedWorkerIds: assignedWorkerIds,
+            }}
+          />
+          
+          <DeleteConfirmationModal
+            isOpen={showDeleteModal}
+            onClose={() => setShowDeleteModal(false)}
+            onConfirm={handleConfirmDelete}
+            title="Delete Task"
+            description={`Are you sure you want to delete "${title}"? This action cannot be undone.`}
+            isDeleting={isDeleting}
+          />
+        </>
       )}
     </>
   );

@@ -12,6 +12,7 @@ import {
   Clock,
 } from "lucide-react";
 import { useEffect, useState } from "react";
+import DeleteConfirmationModal from "../../common/DeleteConfirmationModal";
 
 interface FarmDetails {
   id: number;
@@ -87,10 +88,16 @@ export default function FarmDetailsPage({
     fetchFarm();
   }, [farmId]);
 
-  const handleDelete = async () => {
-    if (!confirm("Are you sure you want to delete this farm?")) return;
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
 
+  const handleDeleteClick = () => {
+    setIsDeleteModalOpen(true);
+  };
+
+  const handleConfirmDelete = async () => {
     try {
+      setIsDeleting(true);
       const token =
         typeof window !== "undefined"
           ? localStorage.getItem("accessToken")
@@ -115,6 +122,8 @@ export default function FarmDetailsPage({
     } catch (err) {
       console.error(err);
       alert("Failed to delete farm");
+      setIsDeleting(false);
+      setIsDeleteModalOpen(false);
     }
   };
 
@@ -160,7 +169,7 @@ export default function FarmDetailsPage({
         </button>
 
         <button
-          onClick={handleDelete}
+          onClick={handleDeleteClick}
           className="flex items-center gap-2 px-4 py-2 rounded-lg border border-red-200 text-red-600 hover:bg-red-50 transition-all"
           style={{
             fontFamily: "Inter, sans-serif",
@@ -171,6 +180,15 @@ export default function FarmDetailsPage({
           <Trash2 size={16} />
           Delete
         </button>
+
+        <DeleteConfirmationModal 
+          isOpen={isDeleteModalOpen}
+          onClose={() => setIsDeleteModalOpen(false)}
+          onConfirm={handleConfirmDelete}
+          title="Delete Farm"
+          description="Are you sure you want to delete this farm? This action will permanently remove all associated fields, tasks, and worker assignments."
+          isDeleting={isDeleting}
+        />
       </div>
 
       {/* Header Card */}

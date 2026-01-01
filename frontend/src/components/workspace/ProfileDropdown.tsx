@@ -2,35 +2,37 @@ import React, { useEffect, useRef, useState } from "react";
 import Link from 'next/link';
 import { useRouter } from "next/navigation";
 import { User, Settings, Lock, Bell, HelpCircle, LogOut } from "lucide-react";
-import { useProfile } from "@/hooks/useProfile";
+import { useProfile } from "@/context/ProfileContext";
 import { Modal } from "./modals/Modal";
+import { authService } from "@/services/auth.service";
 
 interface ProfileDropdownProps {
   isOpen: boolean;
   onClose: () => void;
   triggerRef: React.RefObject<HTMLElement>;
-  userName?: string;
-  userRole?: string;
-  userEmail?: string;
-  userInitials?: string;
-  userRoleType?: "admin" | "worker";
 }
 
 export function ProfileDropdown({
   isOpen,
   onClose,
   triggerRef,
-  userName = "Ahmed Khalil",
-  userRole = "Farm Admin",
-  userEmail = "ahmed@email.com",
-  userInitials = "AK",
-  userRoleType = "worker",
 }: ProfileDropdownProps) {
   const router = useRouter();
   const dropdownRef = useRef<HTMLDivElement>(null);
   const [showLogoutModal, setShowLogoutModal] = useState(false);
   const { profile } = useProfile();
-  const isAdmin = userRoleType === "admin" || profile?.role?.toLowerCase() === "admin";
+  
+  const getInitials = (name?: string) => {
+    if (!name) return "U";
+    return name
+      .split(" ")
+      .map(n => n[0])
+      .join("")
+      .toUpperCase()
+      .slice(0, 2);
+  };
+
+  const isAdmin = profile?.role?.toLowerCase() === "admin";
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -61,15 +63,22 @@ export function ProfileDropdown({
     };
   }, [isOpen, onClose, triggerRef]);
 
-  const handleLogout = () => {
+  const handleLogout = (e: React.MouseEvent) => {
+    e.stopPropagation(); // Prevent event from bubbling up
     setShowLogoutModal(true);
   };
 
+
   const confirmLogout = () => {
     setShowLogoutModal(false);
-    localStorage.removeItem("accessToken");
-    document.cookie = "token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
+    onClose(); // Close dropdown
+    authService.logout();
     router.push("/login");
+  };
+
+  const handleModalClose = () => {
+    setShowLogoutModal(false);
+    // Don't close dropdown when canceling modal
   };
 
   if (!isOpen) return null;
@@ -85,14 +94,14 @@ export function ProfileDropdown({
         <div className="p-5 border-b border-[#E5E7EB] bg-linear-to-br from-[#E8F5E9] to-white">
           <div className="flex items-center gap-4">
             <div className="w-16 h-16 bg-linear-to-br from-[#4CAF50] to-[#388E3C] rounded-full flex items-center justify-center text-white font-bold text-[22px] shrink-0">
-              {userInitials}
+              {getInitials(profile?.name)}
             </div>
             <div className="flex-1 min-w-0">
               <h3 className="font-bold text-[#1F2937] text-[16px] truncate">
-                {userName}
+                {profile?.name || "User"}
               </h3>
-              <p className="text-[#6B7280] text-[13px] truncate">{userRole}</p>
-              <p className="text-[#9CA3AF] text-[12px] truncate">{userEmail}</p>
+              <p className="text-[#6B7280] text-[13px] truncate">{profile?.role === "admin" ? "Farm Admin" : "Worker"}</p>
+              <p className="text-[#9CA3AF] text-[12px] truncate">{profile?.email}</p>
             </div>
           </div>
         </div>
@@ -188,14 +197,14 @@ export function ProfileDropdown({
       {/* Logout Confirmation Modal */}
       <Modal
         isOpen={showLogoutModal}
-        onClose={() => setShowLogoutModal(false)}
+        onClose={handleModalClose}
         title=""
         width="400px"
         showCloseButton={false}
         footer={
           <>
             <button
-              onClick={() => setShowLogoutModal(false)}
+              onClick={handleModalClose}
               className="h-11 px-6 bg-white border border-[#D1D5DB] text-[#4B5563] rounded-lg font-semibold hover:bg-[#F9FAFB] transition-all"
             >
               Cancel

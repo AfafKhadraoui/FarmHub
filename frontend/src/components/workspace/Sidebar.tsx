@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useEffect } from "react";
 import {
   Home,
   MapPin,
@@ -13,6 +13,7 @@ import {
   HelpCircle,
 } from "lucide-react";
 import { useRouter, usePathname } from "next/navigation";
+import { useFarmSettings } from "@/hooks/useFarmSettings"; // Service from SettingsPage
 
 interface NavItemProps {
   icon: React.ReactNode;
@@ -51,11 +52,17 @@ export function Sidebar({
   const router = useRouter();
   const pathname = usePathname();
 
+  // Fetch farm data using the same hook as the Settings page
+  const { farmSettings, fetchFarmSettings } = useFarmSettings();
+
+  useEffect(() => {
+    // Initial fetch to populate the farm name in the sidebar
+    fetchFarmSettings();
+  }, [fetchFarmSettings]);
+
+  // Improved active state logic to handle the /workspace/ prefix
   const isActive = (path: string) => {
-    if (path === "/dashboard") {
-      return pathname === "/dashboard";
-    }
-    return pathname.startsWith(path);
+    return pathname.includes(path);
   };
 
   return (
@@ -79,14 +86,15 @@ export function Sidebar({
               <path d="M8 14L20 20L32 14" />
             </svg>
           </div>
-          <div className="mt-2 font-semibold text-[#6B7280]">{farmName}</div>
+          {/* Dynamic Farm Name from Database */}
+          <div className="mt-2 font-semibold text-[#6B7280] text-center px-2">
+            {farmSettings?.name || farmName}
+          </div>
         </div>
       </div>
 
-      {/* Separator */}
       <div className="h-px bg-[#E5E7EB] mx-5 mb-2" />
 
-      {/* Navigation Items */}
       <nav className="flex-1 px-5">
         {userRole === "admin" ? (
           <>
@@ -129,7 +137,6 @@ export function Sidebar({
           </>
         ) : (
           <>
-            {/* Worker Navigation - Only 4 items (no Analytics) */}
             <NavItem
               icon={<Home size={20} strokeWidth={2} />}
               label="My Dashboard"
@@ -158,17 +165,18 @@ export function Sidebar({
         )}
       </nav>
 
-      {/* Bottom Items */}
       <div className="px-5 pb-5">
         <div className="h-px bg-[#E5E7EB] mb-4" />
         <NavItem
           icon={<User size={20} strokeWidth={2} />}
           label="My Profile"
+          isActive={isActive("/profile")}
           onClick={() => router.push("/profile")}
         />
         <NavItem
           icon={<HelpCircle size={20} strokeWidth={2} />}
           label="Help"
+          isActive={isActive("/help")}
           onClick={() => router.push("/help")}
         />
       </div>
