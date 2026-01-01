@@ -1,28 +1,78 @@
-import api from "@/lib/api";
+// src/services/task.service.ts
+import api from '@/lib/api';
+import {
+  TaskStatistics,
+  TaskListResponse,
+} from '@/types/task.types';
 
-export const taskService = {
-  getAll: async () => {
-    const response = await api.get("/api/tasks");
-    return response.data;
-  },
+/** Shared stats (backend scopes by role). */
+export async function fetchTaskStatistics() {
+  const res = await api.get<TaskStatistics>('/tasks/statistics');
+  return res.data;
+}
 
-  getById: async (id: number) => {
-    const response = await api.get(`/api/tasks/${id}`);
-    return response.data;
-  },
+/** Admin list – farm‑wide tasks (FarmHub docs). */
+export interface AdminTasksParams {
+  page?: number;
+  limit?: number;
+  status?: 'pending' | 'inprogress' | 'completed';
+  priority?: 'low' | 'medium' | 'high';
+  fieldId?: number;
+  search?: string;
+  orderBy?: 'dueDate' | 'createdAt' | 'priority';
+  order?: 'asc' | 'desc';
+}
 
-  create: async (data: any) => {
-    const response = await api.post("/api/tasks", data);
-    return response.data;
-  },
+export async function fetchAdminTasks(params: AdminTasksParams = {}) {
+  const res = await api.get<TaskListResponse>('/tasks', { params });
+  return res.data;
+}
 
-  update: async (id: number, data: any) => {
-    const response = await api.put(`/api/tasks/${id}`, data);
-    return response.data;
-  },
+/** Worker list – assigned tasks (worker_api_docs `/tasks`). */
+export interface WorkerTasksParams {
+  status?:
+    | 'ALL'
+    | 'TODO'
+    | 'PENDING'
+    | 'INPROGRESS'
+    | 'COMPLETED'
+    | 'OVERDUE';
+  page?: number;
+  limit?: number;
+  sortBy?: 'dueDate' | 'priority' | 'createdAt';
+  sortOrder?: 'ASC' | 'DESC';
+  fieldId?: string;
+  dateFrom?: string;
+  dateTo?: string;
+}
 
-  delete: async (id: number) => {
-    const response = await api.delete(`/api/tasks/${id}`);
-    return response.data;
-  },
-};
+export async function fetchWorkerTasks(params: WorkerTasksParams = {}) {
+  const res = await api.get('/tasks', { params });
+  return res.data as {
+    tasks: any[];
+    pagination: {
+      currentPage: number;
+      totalPages: number;
+      totalItems: number;
+      itemsPerPage: number;
+    };
+  };
+}
+
+/** Create task (only admin/farmer) */
+export async function createTask(data: any) {
+  const res = await api.post('/tasks', data);
+  return res.data;
+}
+
+/** Delete task (only admin/farmer) */
+export async function deleteTask(id: number) {
+  const res = await api.delete(`/tasks/${id}`);
+  return res.data;
+}
+
+/** Update task status */
+export async function updateTaskStatus(id: number, status: string, notes?: string) {
+  const res = await api.patch(`/tasks/${id}/status`, { status, notes });
+  return res.data;
+}

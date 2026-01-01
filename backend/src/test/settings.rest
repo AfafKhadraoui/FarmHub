@@ -1,0 +1,132 @@
+@baseUrl = http://localhost:5000
+###
+###testing login to get token
+POST {{baseUrl}}/api/auth/register
+Content-Type: application/json
+
+{
+  "role": "admin",
+  "name": "user3",
+  "email": "user3farmer@gmail.com",
+  "password": "Password123!",
+  "phone": "+1234567890",
+  "farmName": "User3 Farm",
+  "location": "123 Farm Lane"
+}
+###
+POST {{baseUrl}}/api/auth/register
+Content-Type: application/json
+
+{
+  "role": "worker",
+  "name": "user3",
+  "email": "user3worker@gmail.com",
+  "password": "Password123!",
+  "phone": "+1234567890",
+  "joinCode": "FARM-FX3D63"
+}
+###
+# ==========================================
+# SCENARIO A: FARMER (ADMIN)
+# ==========================================
+
+# 1. Login
+# @name farmerlogin
+POST {{baseUrl}}/api/auth/login
+Content-Type: application/json
+
+{
+  "email": "user3farmer@gmail.com",
+  "password": "Password123!"
+}
+
+###
+@token = {{farmerlogin.response.body.data.token}}
+
+# 2. Farm Settings
+GET {{baseUrl}}/api/settings/farm
+Authorization: Bearer {{token}}
+
+###
+PUT {{baseUrl}}/api/settings/farm
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "name": "Updated Green Valley",
+  "location": "Oran, Algeria"
+}
+
+###
+# 3. Notification Preferences
+GET {{baseUrl}}/api/settings/notification-preferences
+Authorization: Bearer {{token}}
+
+###
+PUT {{baseUrl}}/api/settings/notification-preferences
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "taskCompletion": true,
+  "taskOverdue": true,
+  "newWorkerJoined": false
+}
+
+###
+# ==========================================
+# SCENARIO B: WORKER 
+# Testing the Avatar & Stats logic
+# ==========================================
+
+# 1. Login as Worker
+# @name workerlogin
+POST {{baseUrl}}/api/auth/login
+Content-Type: application/json
+
+{
+  "email": "user3worker@gmail.com",
+  "password": "Password123!"
+}
+
+###
+@workerToken = {{workerlogin.response.body.data.token}}
+
+# 2. Get Worker Profile 
+# SHOULD RETURN: assignedFarms, statistics, and avatar
+GET {{baseUrl}}/api/profile
+Authorization: Bearer {{workerToken}}
+
+###
+# 3. Update Worker Profile (PATCH)
+# Testing the new Avatar update
+PATCH {{baseUrl}}/api/profile
+Authorization: Bearer {{workerToken}}
+Content-Type: application/json
+
+{
+  "phone": "+213 555 999 000",
+  "avatar": "https://example.com/new-avatar.jpg"
+}
+
+###
+#delete farm created for testing
+DELETE {{baseUrl}}/api/settings/farm
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "password": "WrongPassword",
+  "confirmation": "DELETE MY FARM"
+}
+###
+### CHANGE PASSWORD
+PUT {{baseUrl}}/api/settings/change-password
+Authorization: Bearer {{token}}
+Content-Type: application/json  
+
+{
+  "currentPassword": "Password123!",
+  "newPassword": "NewPassword123!",
+  "confirmationPassword": "NewPassword123!"
+}

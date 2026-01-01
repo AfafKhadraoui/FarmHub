@@ -1,0 +1,134 @@
+@baseUrl = http://localhost:5000
+###testing login to get token
+POST {{baseUrl}}/api/auth/register
+Content-Type: application/json
+
+{
+  "role": "admin",
+  "name": "Ilyas",
+  "email": "ilyas@gmail.com",
+  "password": "Password123!",
+  "phone": "+1234567890",
+  "farmName": "Ilyas Farm",
+  "location": "123 Farm Lane"
+}
+### login to ilyas's account
+# @name login
+POST {{baseUrl}}/api/auth/login
+Content-Type: application/json
+
+{
+  "email": "ilyas@gmail.com",
+  "password": "Password123!"
+}
+###
+@token = {{login.response.body.data.token}}
+
+### POST /fileds (to create a field )
+POST {{baseUrl}}/fields
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "name":"Field 1 owned by the farmer ilyas",
+  "size":10,
+  "cropType":"Potatoes",
+  "status":"planted"
+}
+###
+### POST /fileds (to create a field )
+POST {{baseUrl}}/fields
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "name":"Field 2 owned by the farmer ilyas",
+  "size":12,
+  "cropType":"Tomatoes",
+  "status":"idle"
+}
+###
+### GET /fields (list fields with pagination)
+GET {{baseUrl}}/fields/paginated?page=1&limit=10
+Authorization: Bearer {{token}}
+
+###
+### GET /fields (filter fields)//to be modified according to filter params
+GET {{baseUrl}}/fields?page=1&limit=10
+Authorization: Bearer {{token}}
+###
+### PUT /fields/:id (update fields)
+// FieldStatus {
+//   idle
+//   planted
+//   growing
+//   harvesting
+// }
+PUT {{baseUrl}}/fields/5
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "name":"Field 2 owned by the farmer ilyas after modification",
+  "size":11.5,
+  "cropType":"Tomatoes",
+  "status":"planted",
+  "notes":"Adjusted size and revalidated planting status"
+}
+
+### PUT /fields/:id (new season - crop change triggers versioning)
+PUT {{baseUrl}}/fields/6
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "name":"Field 2 new crop season",
+  "size":11.5,
+  "cropType":"Corn",
+  "status":"planted",
+  "notes":"Starting new crop season; archived previous cycle"
+}
+### DELETE /fields/:id
+DELETE {{baseUrl}}/fields/8
+Authorization: Bearer {{token}}
+###
+### GET /fields/search?fieldname=value
+GET {{baseUrl}}/fields/search?fieldname=ilyas
+Authorization: Bearer {{token}}
+###
+### GET /fields/details/:id
+GET {{baseUrl}}/fields/details/6
+Authorization: Bearer {{token}}
+###
+### GET /fields/filter?status=value
+GET {{baseUrl}}/fields/filter?status=planted
+Authorization: Bearer {{token}}
+###
+### ==========================================
+### FIELD HISTORY WIDGET (Summary)
+### ==========================================
+GET {{baseUrl}}/fields/5/history/summary
+Authorization: Bearer {{token}}
+
+### ==========================================
+### FIELD FULL HISTORY (With Filters)
+### ==========================================
+# filter options: all, tasks, maintenance, updates, status
+GET {{baseUrl}}/fields/5/history?filter=all
+Authorization: Bearer {{token}}
+
+### History filter: tasks only
+GET {{baseUrl}}/fields/5/history?filter=tasks
+Authorization: Bearer {{token}}
+
+### History filter: maintenance only
+GET {{baseUrl}}/fields/5/history?filter=maintenance
+Authorization: Bearer {{token}}
+
+### History filter: updates only
+GET {{baseUrl}}/fields/5/history?filter=updates
+Authorization: Bearer {{token}}
+
+### History filter: status only
+GET {{baseUrl}}/fields/5/history?filter=status
+Authorization: Bearer {{token}}

@@ -1,0 +1,183 @@
+@baseUrl = http://localhost:5000
+###admin created by seed
+# @name login
+POST {{baseUrl}}/api/auth/login
+Content-Type: application/json
+
+{
+  "email": "admin@farmhub.com",
+  "password": "Admin123"
+}
+###
+###login as platform admin created by loubna
+# @name login
+POST {{baseUrl}}/api/auth/login
+Content-Type: application/json
+
+{
+  "email": "superadmin@farmhub.com",
+  "password": "Admin1234"
+}
+###
+@token = {{login.response.body.data.token}}
+
+### HEALTH CHECK (optional)
+GET {{baseUrl}}/
+# Use if you have a root health route
+
+###
+
+### GET /admin/metrics
+GET {{baseUrl}}/admin/metrics
+Authorization: Bearer {{token}}
+
+###
+
+### GET /admin/profile 
+GET {{baseUrl}}/admin/profile
+Authorization: Bearer {{token}}
+
+###
+
+### PATCH /admin/profile 
+PATCH {{baseUrl}}/admin/profile
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "name": "Updated Platform Admin",
+  "phone": "+1234567890",
+  "bio": "Updated bio from REST Client"
+}
+
+###
+
+### POST /admin/profile/avatar
+# Requires you to have a file avatar.jpg in tests/files/avatar.jpg
+POST {{baseUrl}}/admin/profile/avatar
+Authorization: Bearer {{token}}
+Content-Type: multipart/form-data; boundary=boundary
+
+--boundary
+Content-Disposition: form-data; name="avatar"; filename="avatar.jpg"
+Content-Type: image/jpeg
+
+< ./tests/files/avatar.jpg
+--boundary--
+
+###
+
+### GET /admin/notifications (all)
+GET {{baseUrl}}/admin/notifications
+Authorization: Bearer {{token}}
+
+###
+
+### GET /admin/notifications (unread only)
+GET {{baseUrl}}/admin/notifications?unreadOnly=true
+Authorization: Bearer {{token}}
+
+###
+
+### PATCH /admin/notifications/:id/read
+# Use an id returned from GET /admin/notifications, e.g. notif-1  
+PATCH {{baseUrl}}/admin/notifications/notif-1/read
+Authorization: Bearer {{token}}
+
+###
+
+### PATCH /admin/notifications/read-all
+PATCH {{baseUrl}}/admin/notifications/read-all
+Authorization: Bearer {{token}}
+
+###
+
+### DELETE /admin/notifications/:id
+# Use an id returned from GET /admin/notifications, e.g. notif-2
+DELETE {{baseUrl}}/admin/notifications/notif-2
+Authorization: Bearer {{token}}
+
+###
+###delete all notifications
+### DELETE /admin/notifications/all
+DELETE {{baseUrl}}/admin/notifications/all
+Authorization: Bearer {{token}}  
+###
+### GET /admin/farms (paginated, no search)
+GET {{baseUrl}}/admin/farms?page=1&limit=10
+Authorization: Bearer {{token}}
+
+###
+
+### GET /admin/farms (with search)
+GET {{baseUrl}}/admin/farms?page=1&limit=10&search=Green
+Authorization: Bearer {{token}}
+
+###
+
+### GET /admin/farms/recent
+GET {{baseUrl}}/admin/farms/recent?limit=5
+Authorization: Bearer {{token}}
+
+###
+
+### GET /admin/farms/:id
+# Adjust id to one of your seeded farms, e.g. 1 or 2
+GET {{baseUrl}}/admin/farms/3
+Authorization: Bearer {{token}}
+
+###
+
+### GET /admin/users (all)
+GET {{baseUrl}}/admin/users?page=1&limit=10
+Authorization: Bearer {{token}}
+
+###
+
+### GET /admin/users filtered by role & farm
+# Adjust farmId to match an existing farm (e.g. 1)
+GET {{baseUrl}}/admin/users?page=1&limit=10&role=worker&farmId=1&search=Worker
+Authorization: Bearer {{token}}
+
+###
+
+### GET /admin/users/:id
+# Adjust id to a real user id, e.g. 2 or 3 from seed 
+GET {{baseUrl}}/admin/users/37
+Authorization: Bearer {{token}}
+
+###
+
+### GET /admin/analytics/farm-growth 
+GET {{baseUrl}}/admin/analytics/farm-growth?months=6
+Authorization: Bearer {{token}}
+
+###
+
+### GET /admin/analytics
+GET {{baseUrl}}/admin/analytics
+Authorization: Bearer {{token}}
+
+###
+
+### GET /admin/activities
+GET {{baseUrl}}/admin/activities?limit=10
+Authorization: Bearer {{token}}
+
+###
+
+### GET /admin/search (all types)
+GET {{baseUrl}}/admin/search?q=Green&type=all
+Authorization: Bearer {{token}}
+
+###
+
+### GET /admin/search (farms only)
+GET {{baseUrl}}/admin/search?q=Green&type=farms
+Authorization: Bearer {{token}}
+
+###
+
+### GET /admin/search (users only)
+GET {{baseUrl}}/admin/search?q=Ahmed&type=users
+Authorization: Bearer {{token}}
