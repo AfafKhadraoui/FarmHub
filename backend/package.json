@@ -3,14 +3,9 @@
   "version": "1.0.0",
   "main": "server.js",
   "type": "commonjs",
-  "prisma": {
-    "seed": "node prisma/seed.js"
-  },
   "scripts": {
     "start": "node src/server.js",
     "dev": "nodemon src/server.js",
-    "seed1": "node prisma/seed1.js",
-    "verify-seed": "node prisma/verify-seed.js",
     "reset-db": "npx prisma migrate reset --force --skip-seed"
   },
   "keywords": [],
