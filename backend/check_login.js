@@ -3,8 +3,8 @@ const bcrypt = require("bcryptjs");
 const prisma = new PrismaClient();
 
 async function check() {
-    const email = "admin@farmhub.com";
-    const password = "Admin123"; // Expected password from seed.js
+    const email = "admin@farmhub.com"
+    const password = "Admin123";
 
     console.log(`Checking for user: ${email}`);
     const user = await prisma.user.findUnique({ where: { email } });

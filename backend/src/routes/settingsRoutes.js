@@ -2,6 +2,8 @@ const express = require("express");
 const router = express.Router();
 const settingsController = require("../controllers/settingsController");
 const { authenticateToken } = require("../middleware/authMiddleware");
+const multer = require("multer");
+const upload = multer();
 
 // all routes require login
 router.use(authenticateToken);
@@ -25,5 +27,8 @@ router.get("/profile", settingsController.getUserProfile);
 // Support both PUT (Farmer) and PATCH (Worker requirement)
 router.patch("/profile", settingsController.updateUserProfile);
 router.put("/profile", settingsController.updateUserProfile);
+
+// POST /profile/avatar - Upload avatar for any authenticated user
+router.post("/profile/avatar", upload.single("avatar"), settingsController.uploadUserAvatar);
 
 module.exports = router;
