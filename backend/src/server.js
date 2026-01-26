@@ -46,8 +46,25 @@ cron.schedule("0 8 * * *", async () => {
 // Parse URL-encoded bodies
 app.use(express.urlencoded({ extended: true }));
 
-// Serve uploads folder (static files)
-app.use("/uploads", express.static(path.join(__dirname, "../uploads")));
+// Serve uploads folder (static files) with proper headers
+app.use("/uploads", (req, res, next) => {
+  res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  next();
+}, express.static(path.join(__dirname, "../uploads"), {
+  setHeaders: (res, filePath) => {
+    // Set proper content-type based on file extension
+    if (filePath.endsWith('.jpg') || filePath.endsWith('.jpeg')) {
+      res.setHeader('Content-Type', 'image/jpeg');
+    } else if (filePath.endsWith('.png')) {
+      res.setHeader('Content-Type', 'image/png');
+    } else if (filePath.endsWith('.gif')) {
+      res.setHeader('Content-Type', 'image/gif');
+    } else if (filePath.endsWith('.webp')) {
+      res.setHeader('Content-Type', 'image/webp');
+    }
+  }
+}));
 
 // CORS: allow Next.js (http://localhost:3000) + send cookies
 app.use(

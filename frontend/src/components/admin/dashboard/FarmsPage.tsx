@@ -56,9 +56,9 @@ export default function FarmsPage() {
     totalPages: 0,
   });
   const [searchTerm, setSearchTerm] = useState("");
-  const [filterStatus, setFilterStatus] = useState<"all" | "active" | "inactive">(
-    "all"
-  );
+  const [filterStatus, setFilterStatus] = useState<
+    "all" | "active" | "inactive"
+  >("all");
   const [selectedFarmId, setSelectedFarmId] = useState<number | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -86,7 +86,7 @@ export default function FarmsPage() {
             "Content-Type": "application/json",
             ...(token ? { Authorization: `Bearer ${token}` } : {}),
           },
-        }
+        },
       );
 
       if (!res.ok) {
@@ -142,7 +142,10 @@ export default function FarmsPage() {
     return (
       <FarmDetailsPage
         farmId={selectedFarmId}
-        onBack={() => setSelectedFarmId(null)}
+        onBack={() => {
+          setSelectedFarmId(null);
+          fetchFarms(pagination.page, searchTerm); // Refresh the list
+        }}
       />
     );
   }
@@ -390,9 +393,7 @@ export default function FarmsPage() {
             </span>
             <button
               onClick={() => handlePageChange(pagination.page + 1)}
-              disabled={
-                pagination.page === pagination.totalPages || loading
-              }
+              disabled={pagination.page === pagination.totalPages || loading}
               className="px-4 py-2 border border-[var(--admin-border)] rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 transition"
             >
               Next

@@ -1,6 +1,9 @@
 const { PrismaClient } = require("@prisma/client");
 const prisma = new PrismaClient();
 const bcrypt = require("bcryptjs");
+const fs = require("fs");
+const path = require("path");
+
 //  FARM SETTINGS (farmer Only)
 
 exports.getFarmSettings = async (req, res) => {
@@ -161,7 +164,7 @@ exports.getUserProfile = async (req, res) => {
         phone: user.phone,
         role: user.role,
         farmId: user.farmId,
-        avatar: user.avatar,
+        avatar: user.avatar ? `${user.avatar}?t=${Date.now()}` : user.avatar,
         createdAt: user.createdAt,
       });
     }
@@ -176,12 +179,12 @@ exports.getUserProfile = async (req, res) => {
     // Format Assigned Farms
     const assignedFarms = user.userFarm
       ? [
-          {
-            id: `farm_${user.userFarm.id}`,
-            name: user.userFarm.name,
-            owner: user.userFarm.createdBy,
-          },
-        ]
+        {
+          id: `farm_${user.userFarm.id}`,
+          name: user.userFarm.name,
+          owner: user.userFarm.createdBy,
+        },
+      ]
       : [];
 
     res.json({
@@ -189,7 +192,7 @@ exports.getUserProfile = async (req, res) => {
       name: user.name,
       email: user.email,
       phone: user.phone,
-      avatar: user.avatar || "/avatars/default.jpg",
+      avatar: user.avatar ? `${user.avatar}?t=${Date.now()}` : "/avatars/default.jpg",
       role: "WORKER",
       // Removed specialization
       joinedDate: user.createdAt,
@@ -270,5 +273,44 @@ exports.changePassword = async (req, res) => {
   } catch (error) {
     console.error(error);
     return res.status(500).json({ error: "Failed to change password" });
+  }
+};
+
+exports.uploadUserAvatar = async (req, res) => {
+  try {
+    const userId = req.user.id;
+
+    if (!req.file) {
+      return res.status(400).json({ error: "Avatar file is required" });
+    }
+
+    // Create uploads directory if it doesn't exist
+    const uploadsDir = path.join(__dirname, "../../uploads");
+    if (!fs.existsSync(uploadsDir)) {
+      fs.mkdirSync(uploadsDir, { recursive: true });
+    }
+
+    // Get file extension from original filename
+    const ext = path.extname(req.file.originalname) || '.jpg';
+    const fileName = `user-${userId}${ext}`;
+
+    const filePath = path.join(uploadsDir, fileName);
+    fs.writeFileSync(filePath, req.file.buffer);
+
+    const avatarUrl = `/uploads/${fileName}?t=${Date.now()}`;
+
+    // Update user's avatar in database (without timestamp)
+    await prisma.user.update({
+      where: { id: userId },
+      data: { avatar: `/uploads/${fileName}` },
+    });
+
+    res.json({
+      avatarUrl,
+      message: "Avatar uploaded successfully",
+    });
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ error: "Failed to upload avatar" });
   }
 };

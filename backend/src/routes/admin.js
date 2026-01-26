@@ -66,6 +66,7 @@ router.get("/profile", authenticate, requirePlatformAdmin, async (req, res) => {
   try {
     const user = await prisma.user.findUnique({
       where: { id: req.user.id },
+      include: { userFarm: true },
     });
 
     if (!user) {
@@ -79,8 +80,11 @@ router.get("/profile", authenticate, requirePlatformAdmin, async (req, res) => {
       role: user.role,
       phone: user.phone,
       bio: null, // not in schema; adjust if you add it
-      avatarUrl: null, // not in schema; adjust if you add it
+      avatarUrl: user.avatar ? `${user.avatar}?t=${Date.now()}` : null,
       createdAt: user.createdAt,
+      farmName: user.userFarm?.name || null,
+      farmLocation: user.userFarm?.location || null,
+      farmId: user.farmId,
     });
   } catch (err) {
     console.error(err);
@@ -97,30 +101,52 @@ router.patch(
     body("name").optional().isString().isLength({ min: 3, max: 255 }),
     body("phone").optional().isString().isLength({ min: 5, max: 20 }),
     body("bio").optional().isString().isLength({ max: 500 }),
+    body("farmName").optional().isString().isLength({ min: 1, max: 255 }),
+    body("farmLocation").optional().isString().isLength({ min: 1, max: 255 }),
   ],
   handleValidationErrors,
   async (req, res) => {
     try {
-      const { name, phone, bio } = req.body;
+      const { name, phone, bio, farmName, farmLocation } = req.body;
 
-      // bio, avatarUrl do not exist in schema; remove or add them to User first.
-     const updated = await prisma.user.update({
-       where: { id: req.user.id },
-       data: {
-         ...(name !== undefined ? { name } : {}),
-         ...(phone !== undefined ? { phone } : {}),
-       },
-     });
+      // Update user info
+      const updated = await prisma.user.update({
+        where: { id: req.user.id },
+        data: {
+          ...(name !== undefined ? { name } : {}),
+          ...(phone !== undefined ? { phone } : {}),
+        },
+      });
+
+      // Update farm info if farmId exists and farm fields are provided
+      if (updated.farmId && (farmName !== undefined || farmLocation !== undefined)) {
+        await prisma.farm.update({
+          where: { id: updated.farmId },
+          data: {
+            ...(farmName !== undefined ? { name: farmName } : {}),
+            ...(farmLocation !== undefined ? { location: farmLocation } : {}),
+          },
+        });
+      }
+
+      // Fetch updated data with farm info
+      const userWithFarm = await prisma.user.findUnique({
+        where: { id: req.user.id },
+        include: { userFarm: true },
+      });
 
       res.json({
-        id: updated.id,
-        name: updated.name,
-        email: updated.email,
-        role: updated.role,
-        phone: updated.phone,
+        id: userWithFarm.id,
+        name: userWithFarm.name,
+        email: userWithFarm.email,
+        role: userWithFarm.role,
+        phone: userWithFarm.phone,
         bio: bio ?? null,
-        avatarUrl: null,
-        createdAt: updated.createdAt,
+        avatarUrl: userWithFarm.avatar ? `${userWithFarm.avatar}?t=${Date.now()}` : null,
+        createdAt: userWithFarm.createdAt,
+        farmName: userWithFarm.userFarm?.name || null,
+        farmLocation: userWithFarm.userFarm?.location || null,
+        farmId: userWithFarm.farmId,
       });
     } catch (err) {
       console.error(err);
@@ -158,14 +184,26 @@ router.post(
       if (!req.file) {
         return sendError(res, 400, "NO_FILE", "Avatar file is required");
       }
+
+      // Get file extension from original filename
+      const ext = path.extname(req.file.originalname) || '.jpg';
+      const fileName = `admin-${req.user.id}${ext}`;
+
       const filePath = path.join(
         __dirname,
         "../../uploads",
-        `admin-${req.user.id}.jpg`
+        fileName
       );
       fs.writeFileSync(filePath, req.file.buffer);
 
-      const avatarUrl = `/uploads/admin-${req.user.id}.jpg`;
+      const avatarUrl = `/uploads/${fileName}?t=${Date.now()}`;
+
+      // Update database with avatar URL (without timestamp)
+      await prisma.user.update({
+        where: { id: req.user.id },
+        data: { avatar: `/uploads/${fileName}` },
+      });
+
       res.json({
         avatarUrl,
         message: "Avatar uploaded successfully",

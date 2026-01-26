@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from "react";
-import Link from 'next/link';
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { User, Settings, Lock, Bell, HelpCircle, LogOut } from "lucide-react";
 import { useProfile } from "@/context/ProfileContext";
@@ -21,18 +21,26 @@ export function ProfileDropdown({
   const dropdownRef = useRef<HTMLDivElement>(null);
   const [showLogoutModal, setShowLogoutModal] = useState(false);
   const { profile } = useProfile();
-  
+
   const getInitials = (name?: string) => {
     if (!name) return "U";
     return name
       .split(" ")
-      .map(n => n[0])
+      .map((n) => n[0])
       .join("")
       .toUpperCase()
       .slice(0, 2);
   };
 
   const isAdmin = profile?.role?.toLowerCase() === "admin";
+
+  // Convert relative avatar URL to absolute URL
+  const getAvatarUrl = (avatar?: string | null) => {
+    if (!avatar) return null;
+    if (avatar.startsWith("http")) return avatar;
+    const apiBase = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000";
+    return `${apiBase}${avatar}`;
+  };
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -68,7 +76,6 @@ export function ProfileDropdown({
     setShowLogoutModal(true);
   };
 
-
   const confirmLogout = () => {
     setShowLogoutModal(false);
     onClose(); // Close dropdown
@@ -93,15 +100,31 @@ export function ProfileDropdown({
         {/* Header - User Info */}
         <div className="p-5 border-b border-[#E5E7EB] bg-linear-to-br from-[#E8F5E9] to-white">
           <div className="flex items-center gap-4">
-            <div className="w-16 h-16 bg-linear-to-br from-[#4CAF50] to-[#388E3C] rounded-full flex items-center justify-center text-white font-bold text-[22px] shrink-0">
-              {getInitials(profile?.name)}
-            </div>
+            {getAvatarUrl(profile?.avatar) ? (
+              <img
+                key={profile?.avatar}
+                src={getAvatarUrl(profile?.avatar)!}
+                alt={profile.name}
+                className="w-16 h-16 rounded-full object-cover shrink-0"
+                onError={(e) => {
+                  e.currentTarget.style.display = "none";
+                }}
+              />
+            ) : (
+              <div className="w-16 h-16 bg-linear-to-br from-[#4CAF50] to-[#388E3C] rounded-full flex items-center justify-center text-white font-bold text-[22px] shrink-0">
+                {getInitials(profile?.name)}
+              </div>
+            )}
             <div className="flex-1 min-w-0">
               <h3 className="font-bold text-[#1F2937] text-[16px] truncate">
                 {profile?.name || "User"}
               </h3>
-              <p className="text-[#6B7280] text-[13px] truncate">{profile?.role === "admin" ? "Farm Admin" : "Worker"}</p>
-              <p className="text-[#9CA3AF] text-[12px] truncate">{profile?.email}</p>
+              <p className="text-[#6B7280] text-[13px] truncate">
+                {profile?.role === "admin" ? "Farm Admin" : "Worker"}
+              </p>
+              <p className="text-[#9CA3AF] text-[12px] truncate">
+                {profile?.email}
+              </p>
             </div>
           </div>
         </div>
@@ -128,7 +151,9 @@ export function ProfileDropdown({
               className="w-full h-11 px-5 flex items-center gap-3 text-[#374151] hover:bg-[#F9FAFB] transition-colors"
             >
               <Settings size={20} className="text-[#6B7280]" />
-              <span className="text-[13px] font-semibold">Account Settings</span>
+              <span className="text-[13px] font-semibold">
+                Account Settings
+              </span>
             </button>
           )}
 
