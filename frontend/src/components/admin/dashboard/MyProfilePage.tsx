@@ -1,7 +1,7 @@
 "use client";
 
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { adminProfileService } from '../../../services/admin.profile.service';
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { adminProfileService } from "../../../services/admin.profile.service";
 import {
   User,
   Mail,
@@ -13,10 +13,12 @@ import {
   LogOut,
   Phone,
   Camera,
+  MapPin,
+  Building2,
 } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
-import { useRouter } from 'next/navigation';
-import { CustomAlert } from '@/components/workspace/CustomAlert'; // Updated import path
+import { useRouter } from "next/navigation";
+import { CustomAlert } from "@/components/workspace/CustomAlert"; // Updated import path
 
 export default function MyProfilePage() {
   const [isEditing, setIsEditing] = useState(false);
@@ -42,16 +44,22 @@ export default function MyProfilePage() {
   };
 
   // Fetch profile data
-  const { data: profile, isLoading, error } = useQuery({
-    queryKey: ['admin-profile'],
+  const {
+    data: profile,
+    isLoading,
+    error,
+  } = useQuery({
+    queryKey: ["admin-profile"],
     queryFn: adminProfileService.getProfile,
   });
 
   // Edit form state
   const [editData, setEditData] = useState({
-    name: '',
-    phone: '',
-    bio: '',
+    name: "",
+    phone: "",
+    bio: "",
+    farmName: "",
+    farmLocation: "",
   });
 
   // Update form when profile loads
@@ -59,8 +67,10 @@ export default function MyProfilePage() {
     if (profile) {
       setEditData({
         name: profile.name,
-        phone: profile.phone || '',
-        bio: profile.bio || '',
+        phone: profile.phone || "",
+        bio: profile.bio || "",
+        farmName: profile.farmName || "",
+        farmLocation: profile.farmLocation || "",
       });
       setAvatarPreview(profile.avatarUrl);
     }
@@ -70,38 +80,54 @@ export default function MyProfilePage() {
   const updateMutation = useMutation({
     mutationFn: (data: any) => adminProfileService.updateProfile(data),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['admin-profile'] });
+      queryClient.invalidateQueries({ queryKey: ["admin-profile"] });
       setIsEditing(false);
       showAlert("success", "Profile updated successfully!");
     },
     onError: (error: any) => {
-      showAlert("error", 'Failed to update profile: ' + (error.response?.data?.error || error.message));
+      showAlert(
+        "error",
+        "Failed to update profile: " +
+          (error.response?.data?.error || error.message),
+      );
     },
   });
 
-  // Avatar upload mutation
-  const avatarMutation = useMutation({
-    mutationFn: (file: File) => adminProfileService.uploadAvatar(file),
-    onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: ['admin-profile'] });
-      setAvatarPreview(data.avatarUrl);
-      showAlert("success", "Avatar uploaded successfully!");
-    },
-    onError: (error: any) => {
-      showAlert("error", 'Failed to upload avatar: ' + (error.response?.data?.error || error.message));
-    },
-  });
+  // Avatar upload mutation - removed to handle with save button
+  const [pendingAvatarFile, setPendingAvatarFile] = useState<File | null>(null);
 
-  const handleSave = () => {
-    updateMutation.mutate(editData);
+  const handleSave = async () => {
+    try {
+      // First upload avatar if there's a pending file
+      if (pendingAvatarFile) {
+        const formData = new FormData();
+        formData.append("avatar", pendingAvatarFile);
+
+        await adminProfileService.uploadAvatar(pendingAvatarFile);
+        setPendingAvatarFile(null);
+      }
+
+      // Then update profile data
+      await updateMutation.mutateAsync(editData);
+    } catch (error: any) {
+      showAlert(
+        "error",
+        "Failed to save changes: " +
+          (error.response?.data?.error || error.message),
+      );
+    }
   };
 
   const handleCancel = () => {
     setEditData({
-      name: profile?.name || '',
-      phone: profile?.phone || '',
-      bio: profile?.bio || '',
+      name: profile?.name || "",
+      phone: profile?.phone || "",
+      bio: profile?.bio || "",
+      farmName: profile?.farmName || "",
+      farmLocation: profile?.farmLocation || "",
     });
+    setAvatarPreview(profile?.avatarUrl || null);
+    setPendingAvatarFile(null);
     setIsEditing(false);
   };
 
@@ -109,11 +135,11 @@ export default function MyProfilePage() {
     const file = e.target.files?.[0];
     if (file) {
       if (file.size > 5 * 1024 * 1024) {
-        showAlert("error", 'File size must be less than 5MB');
+        showAlert("error", "File size must be less than 5MB");
         return;
       }
-      if (!file.type.startsWith('image/')) {
-        showAlert("error", 'Please select an image file');
+      if (!file.type.startsWith("image/")) {
+        showAlert("error", "Please select an image file");
         return;
       }
 
@@ -123,15 +149,22 @@ export default function MyProfilePage() {
       };
       reader.readAsDataURL(file);
 
-      avatarMutation.mutate(file);
+      setPendingAvatarFile(file);
+      setIsEditing(true); // Auto-enable editing mode when uploading avatar
     }
   };
 
   const handleLogout = () => {
-    localStorage.removeItem('token');
-    router.push('/admin/login');
+    localStorage.removeItem("token");
+    router.push("/admin/login");
   };
-
+  // Convert relative avatar URL to absolute URL
+  const getAvatarUrl = (avatar?: string | null) => {
+    if (!avatar) return null;
+    if (avatar.startsWith("http")) return avatar;
+    const apiBase = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000";
+    return `${apiBase}${avatar}`;
+  };
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -143,8 +176,13 @@ export default function MyProfilePage() {
   if (error) {
     return (
       <div className="bg-red-50 border border-red-200 rounded-lg p-6">
-        <p className="text-red-600">Failed to load profile. Please make sure you're logged in.</p>
-        <button onClick={() => router.push('/admin/login')} className="mt-4 text-blue-600 underline">
+        <p className="text-red-600">
+          Failed to load profile. Please make sure you're logged in.
+        </p>
+        <button
+          onClick={() => router.push("/admin/login")}
+          className="mt-4 text-blue-600 underline"
+        >
           Go to Login
         </button>
       </div>
@@ -164,10 +202,16 @@ export default function MyProfilePage() {
       {/* Header Info - Kept as requested */}
       <div className="flex items-center justify-between mt-6">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900" style={{ fontFamily: "Inter, sans-serif" }}>
+          <h1
+            className="text-3xl font-bold text-gray-900"
+            style={{ fontFamily: "Inter, sans-serif" }}
+          >
             My Profile
           </h1>
-          <p className="text-gray-600 mt-1" style={{ fontFamily: "Inter, sans-serif" }}>
+          <p
+            className="text-gray-600 mt-1"
+            style={{ fontFamily: "Inter, sans-serif" }}
+          >
             Manage your account information
           </p>
         </div>
@@ -177,7 +221,10 @@ export default function MyProfilePage() {
             className="flex items-center gap-2 px-4 py-2 bg-[#4baf47] text-white rounded-lg hover:bg-[#3d9639] transition-colors"
           >
             <Edit2 size={18} strokeWidth={2} />
-            <span className="text-sm font-medium" style={{ fontFamily: "Inter, sans-serif" }}>
+            <span
+              className="text-sm font-medium"
+              style={{ fontFamily: "Inter, sans-serif" }}
+            >
               Edit Profile
             </span>
           </button>
@@ -188,7 +235,10 @@ export default function MyProfilePage() {
               className="flex items-center gap-2 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
             >
               <X size={18} strokeWidth={2} />
-              <span className="text-sm font-medium" style={{ fontFamily: "Inter, sans-serif" }}>
+              <span
+                className="text-sm font-medium"
+                style={{ fontFamily: "Inter, sans-serif" }}
+              >
                 Cancel
               </span>
             </button>
@@ -198,8 +248,11 @@ export default function MyProfilePage() {
               className="flex items-center gap-2 px-4 py-2 bg-[#4baf47] text-white rounded-lg hover:bg-[#3d9639] transition-colors disabled:opacity-50"
             >
               <Save size={18} strokeWidth={2} />
-              <span className="text-sm font-medium" style={{ fontFamily: "Inter, sans-serif" }}>
-                {updateMutation.isPending ? 'Saving...' : 'Save Changes'}
+              <span
+                className="text-sm font-medium"
+                style={{ fontFamily: "Inter, sans-serif" }}
+              >
+                {updateMutation.isPending ? "Saving..." : "Save Changes"}
               </span>
             </button>
           </div>
@@ -212,8 +265,16 @@ export default function MyProfilePage() {
           <div className="absolute bottom-[-60px] left-10">
             <div className="relative group">
               <div className="w-[120px] h-[120px] rounded-full bg-white border-4 border-white shadow-[0px_4px_16px_rgba(0,0,0,0.2)]">
-                {avatarPreview ? (
-                  <img src={avatarPreview} alt={profile?.name} className="w-full h-full rounded-full object-cover" />
+                {getAvatarUrl(avatarPreview || profile?.avatarUrl) ? (
+                  <img
+                    key={avatarPreview || profile?.avatarUrl}
+                    src={getAvatarUrl(avatarPreview || profile?.avatarUrl)!}
+                    alt={profile?.name}
+                    className="w-full h-full rounded-full object-cover"
+                    onError={(e) => {
+                      e.currentTarget.style.display = "none";
+                    }}
+                  />
                 ) : (
                   <div className="w-full h-full rounded-full bg-gradient-to-br from-[#4baf47] to-[#ff6b00] flex items-center justify-center">
                     <User size={48} className="text-white" strokeWidth={2.5} />
@@ -222,16 +283,22 @@ export default function MyProfilePage() {
               </div>
               <button
                 onClick={() => fileInputRef.current?.click()}
-                disabled={avatarMutation.isPending}
+                disabled={updateMutation.isPending}
                 className="absolute inset-0 rounded-full bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center cursor-pointer disabled:cursor-not-allowed"
               >
-                {avatarMutation.isPending ? (
+                {updateMutation.isPending ? (
                   <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white" />
                 ) : (
                   <Camera size={32} className="text-white" strokeWidth={2} />
                 )}
               </button>
-              <input ref={fileInputRef} type="file" accept="image/*" onChange={handleAvatarChange} className="hidden" />
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                onChange={handleAvatarChange}
+                className="hidden"
+              />
             </div>
           </div>
         </div>
@@ -242,14 +309,19 @@ export default function MyProfilePage() {
           <div className="space-y-6">
             {/* Name */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2" style={{ fontFamily: "Inter, sans-serif" }}>
+              <label
+                className="block text-sm font-medium text-gray-700 mb-2"
+                style={{ fontFamily: "Inter, sans-serif" }}
+              >
                 Full Name
               </label>
               {isEditing ? (
                 <input
                   type="text"
                   value={editData.name}
-                  onChange={(e) => setEditData({ ...editData, name: e.target.value })}
+                  onChange={(e) =>
+                    setEditData({ ...editData, name: e.target.value })
+                  }
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#4baf47] focus:border-transparent"
                 />
               ) : (
@@ -262,73 +334,146 @@ export default function MyProfilePage() {
 
             {/* Email (read-only) */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Email Address</label>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Email Address
+              </label>
               <div className="flex items-center gap-3 px-4 py-2 bg-gray-50 rounded-lg">
                 <Mail size={18} className="text-gray-400" />
                 <span className="text-gray-900">{profile?.email}</span>
               </div>
-              <p className="text-xs text-gray-500 mt-1">Email cannot be changed</p>
+              <p className="text-xs text-gray-500 mt-1">
+                Email cannot be changed
+              </p>
             </div>
 
             {/* Phone */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Phone Number</label>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Phone Number
+              </label>
               {isEditing ? (
                 <input
                   type="tel"
                   value={editData.phone}
-                  onChange={(e) => setEditData({ ...editData, phone: e.target.value })}
+                  onChange={(e) =>
+                    setEditData({ ...editData, phone: e.target.value })
+                  }
                   placeholder="Optional"
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#4baf47] focus:border-transparent"
                 />
               ) : (
                 <div className="flex items-center gap-3 px-4 py-2 bg-gray-50 rounded-lg">
                   <Phone size={18} className="text-gray-400" />
-                  <span className="text-gray-900">{profile?.phone || 'Not provided'}</span>
+                  <span className="text-gray-900">
+                    {profile?.phone || "Not provided"}
+                  </span>
+                </div>
+              )}
+            </div>
+
+            {/* Farm Name */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Farm Name
+              </label>
+              {isEditing ? (
+                <input
+                  type="text"
+                  value={editData.farmName}
+                  onChange={(e) =>
+                    setEditData({ ...editData, farmName: e.target.value })
+                  }
+                  placeholder="Enter farm name"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#4baf47] focus:border-transparent"
+                />
+              ) : (
+                <div className="flex items-center gap-3 px-4 py-2 bg-gray-50 rounded-lg">
+                  <Building2 size={18} className="text-gray-400" />
+                  <span className="text-gray-900">
+                    {profile?.farmName || "Not provided"}
+                  </span>
+                </div>
+              )}
+            </div>
+
+            {/* Farm Location */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Farm Location
+              </label>
+              {isEditing ? (
+                <input
+                  type="text"
+                  value={editData.farmLocation}
+                  onChange={(e) =>
+                    setEditData({ ...editData, farmLocation: e.target.value })
+                  }
+                  placeholder="Enter farm location"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#4baf47] focus:border-transparent"
+                />
+              ) : (
+                <div className="flex items-center gap-3 px-4 py-2 bg-gray-50 rounded-lg">
+                  <MapPin size={18} className="text-gray-400" />
+                  <span className="text-gray-900">
+                    {profile?.farmLocation || "Not provided"}
+                  </span>
                 </div>
               )}
             </div>
 
             {/* Role (read-only) */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Role</label>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Role
+              </label>
               <div className="flex items-center gap-3 px-4 py-2 bg-gray-50 rounded-lg">
                 <Shield size={18} className="text-gray-400" />
                 <span className="text-gray-900">
-                  {profile?.role === 'platform_admin' ? 'Platform Administrator' : profile?.role}
+                  {profile?.role === "platform_admin"
+                    ? "Platform Administrator"
+                    : profile?.role}
                 </span>
               </div>
             </div>
 
             {/* Member Since (read-only) */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Member Since</label>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Member Since
+              </label>
               <div className="flex items-center gap-3 px-4 py-2 bg-gray-50 rounded-lg">
                 <Calendar size={18} className="text-gray-400" />
                 <span className="text-gray-900">
-                  {new Date(profile?.createdAt || '').toLocaleDateString('en-US', {
-                    year: 'numeric',
-                    month: 'long',
-                    day: 'numeric',
-                  })}
+                  {new Date(profile?.createdAt || "").toLocaleDateString(
+                    "en-US",
+                    {
+                      year: "numeric",
+                      month: "long",
+                      day: "numeric",
+                    },
+                  )}
                 </span>
               </div>
             </div>
 
             {/* Bio */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Bio</label>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Bio
+              </label>
               {isEditing ? (
                 <textarea
                   value={editData.bio}
-                  onChange={(e) => setEditData({ ...editData, bio: e.target.value })}
+                  onChange={(e) =>
+                    setEditData({ ...editData, bio: e.target.value })
+                  }
                   rows={4}
                   placeholder="Tell us about yourself..."
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#4baf47] focus:border-transparent resize-none"
                 />
               ) : (
                 <p className="px-4 py-2 bg-gray-50 rounded-lg text-gray-900">
-                  {profile?.bio || 'No bio provided yet.'}
+                  {profile?.bio || "No bio provided yet."}
                 </p>
               )}
             </div>
@@ -340,7 +485,9 @@ export default function MyProfilePage() {
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
         <div className="flex items-center justify-between">
           <div>
-            <h3 className="text-lg font-semibold text-gray-900 mb-1">Account Actions</h3>
+            <h3 className="text-lg font-semibold text-gray-900 mb-1">
+              Account Actions
+            </h3>
             <p className="text-gray-600 text-sm">Sign out of your account</p>
           </div>
           <button
@@ -361,10 +508,13 @@ export default function MyProfilePage() {
               <div className="w-12 h-12 rounded-full bg-red-100 flex items-center justify-center">
                 <LogOut size={24} className="text-red-600" strokeWidth={2} />
               </div>
-              <h3 className="text-xl font-bold text-gray-900">Confirm Logout</h3>
+              <h3 className="text-xl font-bold text-gray-900">
+                Confirm Logout
+              </h3>
             </div>
             <p className="text-gray-600 mb-6">
-              Are you sure you want to logout? You will need to sign in again to access your account.
+              Are you sure you want to logout? You will need to sign in again to
+              access your account.
             </p>
             <div className="flex gap-3">
               <button

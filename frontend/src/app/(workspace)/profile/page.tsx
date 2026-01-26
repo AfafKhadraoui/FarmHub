@@ -12,10 +12,12 @@ import { PerformanceStats } from "@/components/workspace/profile/PerformanceStat
 import { SecuritySettings } from "@/components/workspace/profile/SecuritySettings";
 import { LogoutModal } from "@/components/workspace/modals/LogoutModal";
 import { authService } from "@/services/auth.service";
+import { profileService } from "@/services/profile.service";
 
 export default function ProfilePage() {
   const { user } = useAuth();
-  const { profile, isLoading, error, refresh, update, changePassword } = useProfile();
+  const { profile, isLoading, error, refresh, update, changePassword } =
+    useProfile();
   const router = useRouter();
 
   const [isEditing, setIsEditing] = useState(false);
@@ -23,7 +25,13 @@ export default function ProfilePage() {
   const [showLogoutModal, setShowLogoutModal] = useState(false);
   const [showChangePasswordModal, setShowChangePasswordModal] = useState(false);
   const [formData, setFormData] = useState({ name: "", phone: "" });
-  const [alert, setAlert] = useState({ isOpen: false, type: "success" as "success" | "error", message: "" });
+  const [alert, setAlert] = useState({
+    isOpen: false,
+    type: "success" as "success" | "error",
+    message: "",
+  });
+  const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
+  const [pendingAvatarFile, setPendingAvatarFile] = useState<File | null>(null);
 
   // Initialize profile data
   useEffect(() => {
@@ -31,22 +39,32 @@ export default function ProfilePage() {
 
     setFormData({
       name: profile.name || "",
-      phone: profile.phone || ""
+      phone: profile.phone || "",
     });
 
+    // Don't set avatarPreview from profile.avatar - let it be null
+    // avatarPreview should only be used for newly uploaded files (preview before save)
+    setAvatarPreview(null);
   }, [profile]);
 
   const showAlert = (type: "success" | "error", message: string) => {
     setAlert({ isOpen: true, type, message });
-    setTimeout(() => setAlert(prev => ({ ...prev, isOpen: false })), 3000);
+    setTimeout(() => setAlert((prev) => ({ ...prev, isOpen: false })), 3000);
   };
 
   const handleSave = async () => {
     setSaving(true);
     try {
+      // First upload avatar if there's a pending file
+      if (pendingAvatarFile) {
+        await profileService.uploadAvatar(pendingAvatarFile);
+        setPendingAvatarFile(null);
+      }
+
+      // Then update profile data
       const res = await update({
         name: formData.name,
-        phone: formData.phone
+        phone: formData.phone,
       });
 
       if (res.success) {
@@ -66,6 +84,20 @@ export default function ProfilePage() {
   const handleCancel = () => {
     setIsEditing(false);
     setFormData({ name: profile?.name || "", phone: profile?.phone || "" });
+    setAvatarPreview(profile?.avatar || null);
+    setPendingAvatarFile(null);
+  };
+
+  const handleAvatarUpload = async (file: File) => {
+    // Just preview and store the file, don't upload yet
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      setAvatarPreview(reader.result as string);
+    };
+    reader.readAsDataURL(file);
+
+    setPendingAvatarFile(file);
+    setIsEditing(true); // Auto-enable editing mode when uploading avatar
   };
 
   const handleLogout = () => {
@@ -88,7 +120,10 @@ export default function ProfilePage() {
     return (
       <div className="py-12 max-w-3xl mx-auto text-center">
         <div className="mb-4 text-red-600">Failed to load profile: {error}</div>
-        <button onClick={refresh} className="h-10 px-6 bg-[#4CAF50] text-white rounded-lg font-semibold hover:bg-[#388E3C] transition-all">
+        <button
+          onClick={refresh}
+          className="h-10 px-6 bg-[#4CAF50] text-white rounded-lg font-semibold hover:bg-[#388E3C] transition-all"
+        >
           Retry
         </button>
       </div>
@@ -97,7 +132,7 @@ export default function ProfilePage() {
 
   if (!profile) return null;
 
-  const isWorker = profile.role?.toLowerCase() === 'worker';
+  const isWorker = profile.role?.toLowerCase() === "worker";
 
   return (
     <>
@@ -112,6 +147,8 @@ export default function ProfilePage() {
         onSave={handleSave}
         onCancel={handleCancel}
         onFormChange={setFormData}
+        onAvatarUpload={handleAvatarUpload}
+        avatarPreview={avatarPreview}
       />
 
       {isWorker && <PerformanceStats profile={profile} />}
@@ -136,7 +173,7 @@ export default function ProfilePage() {
 
       <CustomAlert
         isOpen={alert.isOpen}
-        onClose={() => setAlert(prev => ({ ...prev, isOpen: false }))}
+        onClose={() => setAlert((prev) => ({ ...prev, isOpen: false }))}
         type={alert.type}
         message={alert.message}
       />

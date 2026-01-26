@@ -24,7 +24,7 @@ import { CreateTaskModal } from "@/components/workspace/modals/CreateTaskModal";
 import { EditTaskModal } from "@/components/workspace/modals/EditTaskModal";
 import { fieldService } from "@/services/field.service";
 import { deleteTask, updateTaskStatus } from "@/services/task.service";
-import { TaskCard } from '@/components/workspace/tasks/TaskCard';
+import { TaskCard } from "@/components/workspace/tasks/TaskCard";
 
 export default function FieldDetailPage({
   params,
@@ -98,14 +98,16 @@ export default function FieldDetailPage({
     const handler = (ev: any) => {
       const detail = ev?.detail ?? {};
       const taskId = detail.id;
-      const status = (detail.status || '').toString().toLowerCase();
+      const status = (detail.status || "").toString().toLowerCase();
       if (!taskId) return;
 
       // If task completed, remove from local list; otherwise update status locally
       setFieldData((prev: any) => {
         if (!prev) return prev;
-        const tasks = (prev.tasks || []).map((t: any) => (t.id === taskId ? { ...t, status } : t));
-        const filtered = tasks.filter((t: any) => t.status !== 'completed');
+        const tasks = (prev.tasks || []).map((t: any) =>
+          t.id === taskId ? { ...t, status } : t,
+        );
+        const filtered = tasks.filter((t: any) => t.status !== "completed");
         return { ...prev, tasks: filtered };
       });
 
@@ -113,8 +115,9 @@ export default function FieldDetailPage({
       fetchData(true);
     };
 
-    window.addEventListener('task:updated', handler as EventListener);
-    return () => window.removeEventListener('task:updated', handler as EventListener);
+    window.addEventListener("task:updated", handler as EventListener);
+    return () =>
+      window.removeEventListener("task:updated", handler as EventListener);
   }, [id]);
 
   // Map a field task into the canonical TaskCard shape
@@ -122,7 +125,7 @@ export default function FieldDetailPage({
     id: t.id,
     title: t.title,
     status: t.status,
-    priority: t.priority ?? 'MEDIUM',
+    priority: t.priority ?? "MEDIUM",
     dueDate: t.dueDate ?? t.due_time ?? t.dueDateTime ?? null,
     dueTime: t.dueTime ?? t.due_time ?? null,
     fieldName: fieldData?.name ?? (t.field && t.field.name) ?? null,
@@ -130,7 +133,7 @@ export default function FieldDetailPage({
     assignedWorkers: t.assignedWorkers ?? [],
     assignedWorkerIds: t.assignedWorkerIds ?? [],
     taskAssignments: t.taskAssignments ?? [],
-    description: t.description ?? '',
+    description: t.description ?? "",
     ...t,
   });
 
@@ -139,11 +142,15 @@ export default function FieldDetailPage({
     try {
       setIsProcessing(true);
       await deleteTask(deletingTaskId);
-      fetchData(true); // Silent refresh to prevent scroll
+      await fetchData(true); // Silent refresh to prevent scroll
       setDeletingTaskId(null);
+      (window as any).showToast?.("Task deleted successfully!", "success");
     } catch (err) {
       console.error("Failed to delete task:", err);
-      alert("Failed to delete task. Please try again.");
+      (window as any).showToast?.(
+        "Failed to delete task. Please try again.",
+        "error",
+      );
     } finally {
       setIsProcessing(false);
     }
@@ -178,7 +185,7 @@ export default function FieldDetailPage({
       setFieldData((prev: any) => ({
         ...prev,
         tasks: prev.tasks.map((t: any) =>
-          t.id === taskId ? { ...t, status: newStatus } : t
+          t.id === taskId ? { ...t, status: newStatus } : t,
         ),
       }));
 
@@ -339,7 +346,6 @@ export default function FieldDetailPage({
       {/* PART 31: Information Cards (2 Columns) */}
       {/* Kept layout intact; active tasks list renders below in PART 32. */}
 
-
       {/* PART 32: Active Tasks Section - Admin/Farmer or Worker assigned tasks */}
       <div className="mt-8">
         <div className="flex items-center justify-between mb-6">
@@ -364,13 +370,15 @@ export default function FieldDetailPage({
 
         <div className="bg-white border border-[#E5E7EB] rounded-2xl p-8 shadow-sm">
           {activeTasks.length === 0 ? (
-            <p className="text-[#6B7280] italic text-center py-4">No active tasks</p>
+            <p className="text-[#6B7280] italic text-center py-4">
+              No active tasks
+            </p>
           ) : (
             <div className="space-y-4">
               {activeTasks.map((task: any) => (
                 <TaskCard
                   key={task.id}
-                  mode={isWorker ? 'worker' : 'admin'}
+                  mode={isWorker ? "worker" : "admin"}
                   task={mapFieldTaskToTaskCard(task)}
                   onUpdateStatus={() => fetchData(true)}
                 />

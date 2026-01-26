@@ -57,6 +57,13 @@ export function TopBar({ userRole = "worker" }: TopBarProps) {
   const displayName = profile?.name || user?.name || "User";
   const displayEmail = profile?.email || user?.email;
 
+  // Convert relative avatar URL to absolute URL
+  const getAvatarUrl = (avatar?: string | null) => {
+    if (!avatar) return null;
+    if (avatar.startsWith("http")) return avatar;
+    const apiBase = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000";
+    return `${apiBase}${avatar}`;
+  };
 
   return (
     <div className="h-[72px] bg-white border-b border-[#E5E7EB] flex items-center justify-end px-8">
@@ -90,11 +97,24 @@ export function TopBar({ userRole = "worker" }: TopBarProps) {
           className="relative flex items-center gap-3 cursor-pointer"
           onClick={() => setShowProfile(!showProfile)}
         >
-          <div className="w-12 h-12 rounded-full bg-linear-to-br from-[#4CAF50] to-[#81C784] flex items-center justify-center">
-            <span className="text-white font-bold">
-              {getInitials(displayName)}
-            </span>
-          </div>
+          {" "}
+          {getAvatarUrl(profile?.avatar) ? (
+            <img
+              key={profile?.avatar}
+              src={getAvatarUrl(profile?.avatar)!}
+              alt={displayName}
+              className="w-12 h-12 rounded-full object-cover"
+              onError={(e) => {
+                e.currentTarget.style.display = "none";
+              }}
+            />
+          ) : (
+            <div className="w-12 h-12 rounded-full bg-linear-to-br from-[#4CAF50] to-[#81C784] flex items-center justify-center">
+              <span className="text-white font-bold">
+                {getInitials(displayName)}
+              </span>
+            </div>
+          )}
           <div className="flex flex-col">
             <span className="font-semibold text-[#1F2937]">
               {profile?.name || user?.name || "User"}

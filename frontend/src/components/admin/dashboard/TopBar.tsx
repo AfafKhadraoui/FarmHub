@@ -3,8 +3,8 @@
 import { Bell, User } from "lucide-react";
 import { useState } from "react";
 import { useNotifications } from "@/hooks/useNotifications";
-import { useQuery } from '@tanstack/react-query'; // Added
-import { adminProfileService } from '@/services/admin.profile.service'; // Added
+import { useQuery } from "@tanstack/react-query"; // Added
+import { adminProfileService } from "@/services/admin.profile.service"; // Added
 import NotificationDropdown from "./NotificationDropdown";
 import ProfileDropdown from "./ProfileDropdown";
 
@@ -18,9 +18,11 @@ export default function TopBar({ pageTitle, onNavigate }: TopBarProps) {
   const [isProfileOpen, setIsProfileOpen] = useState(false);
 
   // Fetch real profile data using the same logic as the dropdown
-  const { data: profile } = useQuery({
-    queryKey: ['admin-profile'],
+  const { data: profile, refetch } = useQuery({
+    queryKey: ["admin-profile"],
     queryFn: adminProfileService.getProfile,
+    refetchInterval: 30000, // Refetch every 30 seconds
+    staleTime: 0, // Always consider data stale
   });
 
   // Get real unread count
@@ -28,10 +30,10 @@ export default function TopBar({ pageTitle, onNavigate }: TopBarProps) {
 
   // Helper to match the role display in ProfileDropdown
   const getRoleDisplay = (role?: string) => {
-    if (role === 'platform_admin') return 'Platform Admin';
-    if (role === 'admin') return 'Farm Owner';
-    if (role === 'worker') return 'Worker';
-    return role || 'User';
+    if (role === "platform_admin") return "Platform Admin";
+    if (role === "admin") return "Farm Owner";
+    if (role === "worker") return "Worker";
+    return role || "User";
   };
 
   const handleNotificationClick = () => {
@@ -42,6 +44,14 @@ export default function TopBar({ pageTitle, onNavigate }: TopBarProps) {
   const handleProfileClick = () => {
     setIsProfileOpen(!isProfileOpen);
     setIsNotificationOpen(false);
+  };
+
+  // Convert relative avatar URL to absolute URL
+  const getAvatarUrl = (avatarUrl?: string | null) => {
+    if (!avatarUrl) return null;
+    if (avatarUrl.startsWith("http")) return avatarUrl;
+    const apiBase = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000";
+    return `${apiBase}${avatarUrl}`;
   };
 
   return (
@@ -87,11 +97,15 @@ export default function TopBar({ pageTitle, onNavigate }: TopBarProps) {
               className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-[var(--admin-bg-gray)] transition-colors"
             >
               {/* Dynamic Avatar */}
-              {profile?.avatarUrl ? (
-                <img 
-                  src={profile.avatarUrl} 
-                  alt={profile.name} 
+              {getAvatarUrl(profile?.avatarUrl) ? (
+                <img
+                  key={profile?.avatarUrl}
+                  src={getAvatarUrl(profile?.avatarUrl)!}
+                  alt={profile.name}
                   className="w-9 h-9 rounded-full object-cover"
+                  onError={(e) => {
+                    e.currentTarget.style.display = "none";
+                  }}
                 />
               ) : (
                 <div className="w-9 h-9 rounded-full bg-gradient-to-br from-[var(--admin-primary)] to-[var(--admin-secondary)] flex items-center justify-center">
@@ -104,7 +118,7 @@ export default function TopBar({ pageTitle, onNavigate }: TopBarProps) {
                   className="text-[var(--admin-text-dark)] text-sm leading-tight"
                   style={{ fontFamily: "Inter, sans-serif", fontWeight: 600 }}
                 >
-                  {profile?.name || 'Loading...'}
+                  {profile?.name || "Loading..."}
                 </div>
                 <div
                   className="text-[var(--admin-text-muted)] text-xs"

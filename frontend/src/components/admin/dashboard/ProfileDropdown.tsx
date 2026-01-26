@@ -3,10 +3,10 @@
 import { User, Settings, Shield, Bell, HelpCircle, LogOut } from "lucide-react";
 import { useRef, useEffect, useState } from "react";
 import { createPortal } from "react-dom";
-import { useQuery } from '@tanstack/react-query';
-import { adminProfileService } from '@/services/admin.profile.service';
-import { authService } from '@/services/auth.service';
-import { useRouter } from 'next/navigation';
+import { useQuery } from "@tanstack/react-query";
+import { adminProfileService } from "@/services/admin.profile.service";
+import { authService } from "@/services/auth.service";
+import { useRouter } from "next/navigation";
 
 interface ProfileDropdownProps {
   isOpen: boolean;
@@ -32,7 +32,7 @@ export default function ProfileDropdown({
 
   // Fetch profile data
   const { data: profile, isLoading } = useQuery({
-    queryKey: ['admin-profile'],
+    queryKey: ["admin-profile"],
     queryFn: adminProfileService.getProfile,
     enabled: isOpen, // Only fetch when dropdown is open
   });
@@ -75,7 +75,7 @@ export default function ProfileDropdown({
     authService.logout();
     setShowLogoutModal(false);
     onClose();
-    router.push('/admin/login');
+    router.push("/admin/login");
   };
 
   const menuItems: MenuItem[] = [
@@ -107,10 +107,18 @@ export default function ProfileDropdown({
 
   // Get role display name
   const getRoleDisplay = (role?: string) => {
-    if (role === 'platform_admin') return 'Platform Admin';
-    if (role === 'admin') return 'Farm Owner';
-    if (role === 'worker') return 'Worker';
-    return role || 'User';
+    if (role === "platform_admin") return "Platform Admin";
+    if (role === "admin") return "Farm Owner";
+    if (role === "worker") return "Worker";
+    return role || "User";
+  };
+
+  // Convert relative avatar URL to absolute URL
+  const getAvatarUrl = (avatarUrl?: string | null) => {
+    if (!avatarUrl) return null;
+    if (avatarUrl.startsWith("http")) return avatarUrl;
+    const apiBase = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000";
+    return `${apiBase}${avatarUrl}`;
   };
 
   return (
@@ -135,11 +143,15 @@ export default function ProfileDropdown({
               </div>
             ) : (
               <div className="flex items-center gap-3">
-                {profile?.avatarUrl ? (
+                {getAvatarUrl(profile?.avatarUrl) ? (
                   <img
-                    src={profile.avatarUrl}
+                    key={profile?.avatarUrl}
+                    src={getAvatarUrl(profile?.avatarUrl)!}
                     alt={profile.name}
                     className="w-12 h-12 rounded-full object-cover flex-shrink-0"
+                    onError={(e) => {
+                      e.currentTarget.style.display = "none";
+                    }}
                   />
                 ) : (
                   <div className="w-12 h-12 rounded-full bg-gradient-to-br from-[var(--admin-primary)] to-[var(--admin-secondary)] flex items-center justify-center flex-shrink-0">
@@ -151,7 +163,7 @@ export default function ProfileDropdown({
                     className="text-gray-900 font-semibold text-base truncate"
                     style={{ fontFamily: "Inter, sans-serif" }}
                   >
-                    {profile?.name || 'Loading...'}
+                    {profile?.name || "Loading..."}
                   </p>
                   <p
                     className="text-gray-600 text-sm truncate"
@@ -163,7 +175,7 @@ export default function ProfileDropdown({
                     className="text-gray-400 text-xs truncate"
                     style={{ fontFamily: "Inter, sans-serif" }}
                   >
-                    {profile?.email || ''}
+                    {profile?.email || ""}
                   </p>
                 </div>
               </div>
@@ -201,7 +213,7 @@ export default function ProfileDropdown({
           </div>
         </div>
       )}
-      
+
       {/* Logout Confirmation Modal - Rendered as Portal */}
       {isMounted &&
         showLogoutModal &&
@@ -255,7 +267,7 @@ export default function ProfileDropdown({
               </div>
             </div>
           </div>,
-          document.body
+          document.body,
         )}
     </>
   );

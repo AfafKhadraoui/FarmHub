@@ -1,7 +1,7 @@
 "use client";
 
 import { AuthPanelLeft } from "@/components/auth/AuthPanelLeft";
-import { useState } from "react";
+import { useState, useRef } from "react";
 import Link from "next/link";
 import { RoleSelector } from "./RoleSelector";
 import { Button } from "@/components/ui/button";
@@ -19,6 +19,7 @@ import {
   Lock,
   User,
   Phone,
+  Camera,
 } from "lucide-react";
 import { authService } from "@/services/auth.service";
 
@@ -31,6 +32,9 @@ export function RegisterForm() {
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [farmCode, setFarmCode] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
+  const [avatarFile, setAvatarFile] = useState<File | null>(null);
+  const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [formData, setFormData] = useState({
     email: "",
@@ -66,7 +70,36 @@ export function RegisterForm() {
       });
     }
   };
-
+  const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      if (file.size > 5 * 1024 * 1024) {
+        setFieldErrors((prev) => ({
+          ...prev,
+          avatar: "File size must be less than 5MB",
+        }));
+        return;
+      }
+      if (!file.type.startsWith("image/")) {
+        setFieldErrors((prev) => ({
+          ...prev,
+          avatar: "Please select an image file",
+        }));
+        return;
+      }
+      setAvatarFile(file);
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setAvatarPreview(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+      setFieldErrors((prev) => {
+        const newErrors = { ...prev };
+        delete newErrors.avatar;
+        return newErrors;
+      });
+    }
+  };
   const validateForm = (): boolean => {
     const errors: Record<string, string> = {};
     if (!formData.email) {
@@ -109,7 +142,7 @@ export function RegisterForm() {
     try {
       let response;
       if (role === "admin") {
-        const response = await authService.registerAdmin({
+        const adminResponse = await authService.registerAdmin({
           name: formData.name,
           email: formData.email,
           password: formData.password,
@@ -118,10 +151,53 @@ export function RegisterForm() {
           farmLocation: formData.farmLocation,
         });
 
-        setFarmCode(response.data.joinCode ?? null);
+        // Save auth data to auto-login the admin
+        authService.saveAuthData?.(adminResponse.data.token, {
+          id: adminResponse.data.userId,
+          email: adminResponse.data.email,
+          name: adminResponse.data.name,
+          role: adminResponse.data.role || "admin",
+          farmId: adminResponse.data.farmId,
+          farmName: adminResponse.data.farmName,
+        });
+
+        // If avatar was selected, upload it
+        if (avatarFile && adminResponse.data.token) {
+          try {
+            const formData = new FormData();
+            formData.append("avatar", avatarFile);
+            const uploadResponse = await fetch(
+              `${process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000"}/api/profile/avatar`,
+              {
+                method: "POST",
+                headers: {
+                  Authorization: `Bearer ${adminResponse.data.token}`,
+                },
+                body: formData,
+              },
+            );
+
+            if (!uploadResponse.ok) {
+              console.error(
+                "Avatar upload failed with status:",
+                uploadResponse.status,
+              );
+            }
+          } catch (avatarError) {
+            console.error("Avatar upload failed:", avatarError);
+            // Continue anyway - avatar upload is not critical
+          }
+        }
+
+        setFarmCode(adminResponse.data.joinCode ?? null);
         setSuccess(true);
         setIsLoading(false);
-        return; // show join code, admin will log in separately
+
+        // Auto-redirect to dashboard after showing farm code
+        setTimeout(() => {
+          window.location.href = "/dashboard";
+        }, 3000);
+        return;
       } else {
         response = await authService.registerWorker({
           name: formData.name,
@@ -131,8 +207,7 @@ export function RegisterForm() {
           farmCode: formData.farmCode,
         });
 
-        // Make sure backend returns user including role,
-        // and save both token + user to your auth store
+        // Save auth data first
         authService.saveAuthData?.(response.data.token, {
           id: response.data.userId,
           email: response.data.email,
@@ -142,11 +217,38 @@ export function RegisterForm() {
           farmName: response.data.farmName,
         });
 
+        // Upload avatar if one was selected
+        if (avatarFile) {
+          try {
+            const formData = new FormData();
+            formData.append("avatar", avatarFile);
+            const uploadResponse = await fetch(
+              `${process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000"}/api/profile/avatar`,
+              {
+                method: "POST",
+                headers: {
+                  Authorization: `Bearer ${response.data.token}`,
+                },
+                body: formData,
+              },
+            );
+
+            if (!uploadResponse.ok) {
+              console.error(
+                "Avatar upload failed with status:",
+                uploadResponse.status,
+              );
+            }
+          } catch (avatarError) {
+            console.error("Avatar upload failed:", avatarError);
+            // Continue anyway - avatar upload is not critical
+          }
+        }
 
         setSuccess(true);
         setIsLoading(false);
 
-        // Shared dashboard route; dashboard reads user.role
+        // Redirect to dashboard
         setTimeout(() => {
           window.location.href = "/dashboard";
         }, 1500);
@@ -158,7 +260,7 @@ export function RegisterForm() {
         error?.response?.data?.error ||
           error?.error ||
           error?.message ||
-          "Registration failed"
+          "Registration failed",
       );
       if (error?.response?.data?.details) {
         setFieldErrors(error.response.data.details);
@@ -224,7 +326,6 @@ export function RegisterForm() {
             </Alert>
           )}
 
-
           {/* Success message and farm code for admin */}
           {farmCode && role === "admin" && (
             <Alert
@@ -259,7 +360,8 @@ export function RegisterForm() {
                   </div>
 
                   <span className="text-sm text-green-800/80">
-                    Share this code with your workers so they can join your farm.
+                    Share this code with your workers so they can join your
+                    farm.
                   </span>
 
                   <div className="flex flex-col gap-2 w-full mt-2">
@@ -281,8 +383,6 @@ export function RegisterForm() {
             </Alert>
           )}
 
-
-
           {/* Error alert */}
           {error && (
             <Alert variant="destructive" className="mb-6">
@@ -294,6 +394,61 @@ export function RegisterForm() {
           {showForm && (
             <form onSubmit={handleSubmit} className="space-y-5">
               <RoleSelector selectedRole={role} onRoleChange={setRole} />
+
+              {/* Avatar Upload */}
+              <div>
+                <Label className="text-[#333333] font-medium">
+                  Profile Photo{" "}
+                  <span className="text-[#999999] text-xs font-normal">
+                    (optional)
+                  </span>
+                </Label>
+                <div className="mt-2 flex items-center gap-4">
+                  <div className="relative group">
+                    {avatarPreview ? (
+                      <img
+                        src={avatarPreview}
+                        alt="Avatar preview"
+                        className="w-20 h-20 rounded-full object-cover border-2 border-[#e0e0e0]"
+                      />
+                    ) : (
+                      <div className="w-20 h-20 rounded-full bg-[#f8f8f8] border-2 border-[#e0e0e0] flex items-center justify-center">
+                        <User className="w-10 h-10 text-[#999999]" />
+                      </div>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => fileInputRef.current?.click()}
+                      className="absolute inset-0 rounded-full bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center cursor-pointer"
+                    >
+                      <Camera className="w-6 h-6 text-white" />
+                    </button>
+                  </div>
+                  <div className="flex-1">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => fileInputRef.current?.click()}
+                      className="w-full h-10"
+                    >
+                      <Camera className="w-4 h-4 mr-2" />
+                      {avatarFile ? "Change Photo" : "Upload Photo"}
+                    </Button>
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      accept="image/*"
+                      onChange={handleAvatarChange}
+                      className="hidden"
+                    />
+                    {fieldErrors.avatar && (
+                      <p className="text-sm text-[#dc3545] mt-1">
+                        {fieldErrors.avatar}
+                      </p>
+                    )}
+                  </div>
+                </div>
+              </div>
 
               {/* Name */}
               <div>
@@ -388,7 +543,9 @@ export function RegisterForm() {
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
                     className="absolute right-4 top-1/2 -translate-y-1/2 text-[#999999] hover:text-[#333333]"
-                    aria-label={showPassword ? 'Hide password' : 'Show password'}
+                    aria-label={
+                      showPassword ? "Hide password" : "Show password"
+                    }
                   >
                     {showPassword ? (
                       <Eye className="w-5 h-5" />
@@ -428,11 +585,13 @@ export function RegisterForm() {
                   />
                   <button
                     type="button"
-                    onClick={() =>
-                      setShowConfirmPassword(!showConfirmPassword)
-                    }
+                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
                     className="absolute right-4 top-1/2 -translate-y-1/2 text-[#999999] hover:text-[#333333]"
-                    aria-label={showConfirmPassword ? 'Hide confirm password' : 'Show confirm password'}
+                    aria-label={
+                      showConfirmPassword
+                        ? "Hide confirm password"
+                        : "Show confirm password"
+                    }
                   >
                     {showConfirmPassword ? (
                       <Eye className="w-5 h-5" />
