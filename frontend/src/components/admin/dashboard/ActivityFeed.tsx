@@ -2,6 +2,7 @@
 
 import { Activity as ActivityIcon } from "lucide-react";
 import { Activity } from "@/services/adminService";
+import { useState } from "react";
 
 interface ActivityFeedProps {
   activities: Activity[];
@@ -28,6 +29,8 @@ export default function ActivityFeed({
   loading,
   error,
 }: ActivityFeedProps) {
+  const [showAll, setShowAll] = useState(false);
+  const displayedActivities = showAll ? activities : activities.slice(0, 4);
   return (
     <div
       className="bg-white border border-[var(--admin-border)] rounded-2xl p-6"
@@ -63,57 +66,71 @@ export default function ActivityFeed({
       ) : activities.length === 0 ? (
         <div className="text-center py-8 text-gray-500">No recent activity</div>
       ) : (
-        <div className="space-y-4">
-          {activities.map((activity) => (
-            <div
-              key={activity.id}
-              className="p-4 rounded-lg border-l-[3px] bg-[var(--admin-bg-gray)] hover:bg-gray-100 transition-colors"
-              style={{
-                borderLeftColor: "var(--admin-primary)",
-              }}
-            >
-              <div className="flex items-start gap-3">
-                <div
-                  className="mt-1 p-2 rounded-lg"
-                  style={{ backgroundColor: "rgba(34, 197, 94, 0.1)" }}
-                >
-                  <ActivityIcon
-                    size={20}
-                    className="text-[var(--admin-primary)]"
-                  />
-                </div>
+        <>
+          <div className="space-y-4">
+            {displayedActivities.map((activity) => (
+              <div
+                key={activity.id}
+                className="p-4 rounded-lg border-l-[3px] bg-[var(--admin-bg-gray)] hover:bg-gray-100 transition-colors"
+                style={{
+                  borderLeftColor: "var(--admin-primary)",
+                }}
+              >
+                <div className="flex items-start gap-3">
+                  <div
+                    className="mt-1 p-2 rounded-lg"
+                    style={{ backgroundColor: "rgba(34, 197, 94, 0.1)" }}
+                  >
+                    <ActivityIcon
+                      size={20}
+                      className="text-[var(--admin-primary)]"
+                    />
+                  </div>
 
-                <div className="flex-1">
-                  <div
-                    className="text-[var(--admin-text-dark)] mb-1"
-                    style={{
-                      fontFamily: "Inter, sans-serif",
-                      fontWeight: 600,
-                      fontSize: "15px",
-                    }}
-                  >
-                    {activity.title}
-                  </div>
-                  <div
-                    className="text-[var(--admin-text-muted)] mb-2"
-                    style={{
-                      fontFamily: "Inter, sans-serif",
-                      fontSize: "14px",
-                    }}
-                  >
-                    {activity.message}
-                  </div>
-                  <div
-                    className="text-[var(--admin-text-muted)] text-xs"
-                    style={{ fontFamily: "Inter, sans-serif" }}
-                  >
-                    {getTimeAgo(activity.timestamp)}
+                  <div className="flex-1">
+                    <div
+                      className="text-[var(--admin-text-dark)] mb-1"
+                      style={{
+                        fontFamily: "Inter, sans-serif",
+                        fontWeight: 600,
+                        fontSize: "15px",
+                      }}
+                    >
+                      {activity.title}
+                    </div>
+                    <div
+                      className="text-[var(--admin-text-muted)] mb-2"
+                      style={{
+                        fontFamily: "Inter, sans-serif",
+                        fontSize: "14px",
+                      }}
+                    >
+                      {activity.message}
+                    </div>
+                    <div
+                      className="text-[var(--admin-text-muted)] text-xs"
+                      style={{ fontFamily: "Inter, sans-serif" }}
+                    >
+                      {getTimeAgo(activity.timestamp)}
+                    </div>
                   </div>
                 </div>
               </div>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+
+          {activities.length > 4 && (
+            <button
+              onClick={() => setShowAll(!showAll)}
+              className="w-full mt-4 py-2 text-sm font-medium text-[var(--admin-primary)] hover:bg-gray-50 rounded-lg transition-colors"
+              style={{ fontFamily: "Inter, sans-serif" }}
+            >
+              {showAll
+                ? "Show Less"
+                : `Show More (${activities.length - 4} more)`}
+            </button>
+          )}
+        </>
       )}
     </div>
   );
